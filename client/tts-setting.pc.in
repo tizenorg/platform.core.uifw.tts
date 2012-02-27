@@ -1,0 +1,11 @@
+prefix=@PREFIX@
+exec_prefix=@EXEC_PREFIX@
+libdir=@LIBDIR@
+includedir=@INCLUDEDIR@
+
+Name: lib@PROJECT_NAME@_setting
+Description: Text To Speech client library
+Requires: glib-2.0 dbus-1 
+Version: @VERSION@
+Libs: -L${libdir} -l@PROJECT_NAME@_setting
+Cflags: -I${includedir}

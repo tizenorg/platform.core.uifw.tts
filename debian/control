@@ -1,0 +1,25 @@
+Source: tts
+Section: libs
+Priority: standard
+Maintainer: Dongyeol Lee <dy3.lee@samsung.com>
+Build-Depends: debhelper (>= 5), libglib2.0-dev, libdbus-1-dev, 
+ libmm-player-dev, libmm-common-dev, dlog-dev, libecore-dev
+Standards-Version: 3.7.2
+
+Package: libtts-dev
+Section: libdevel
+Architecture: any
+Depends: libtts (= ${Source-Version})
+Description: Text To Speech header files for TTS development
+
+Package: libtts
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Text To Speech client library and daemon
+
+Package: libtts-dbg
+Section: debug
+Architecture: any
+Depends: libtts (= ${Source-Version})
+Description: Text To Speech library (unstripped)

@@ -1,0 +1,2 @@
+@PREFIX@/lib/lib*.so*
+@PREFIX@/bin/tts-daemon
