@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -18,6 +18,8 @@
 #include "tts_setting.h"
 #include "tts_setting_dbus.h"
 
+#define CONNECTION_RETRY_COUNT 2
+
 static bool g_is_setting_initialized = false;
 
 static int __check_tts_daemon();
@@ -28,14 +30,11 @@ int tts_setting_initialize()
 {
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Initialize TTS Setting");
 
-	/* Check daemon */
-	__check_tts_daemon();
-
 	if (true == g_is_setting_initialized) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] TTS Setting has already been initialized. \n");
+		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] TTS Setting has already been initialized. \n");
 		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 		SLOG(LOG_DEBUG, TAG_TTSC, " ");
-		return TTS_SETTING_ERROR_INVALID_STATE;
+		return TTS_SETTING_ERROR_NONE;
 	}
 
 	if( 0 != tts_setting_dbus_open_connection() ) {
@@ -45,8 +44,13 @@ int tts_setting_initialize()
 		return TTS_SETTING_ERROR_OPERATION_FAILED;
 	}
 	
+	/* Send hello */
+	if (0 != tts_setting_dbus_request_hello()) {
+		__check_tts_daemon();
+	}
+
 	/* do request */
-	int i = 0;
+	int i = 1;
 	int ret = 0;
 	while(1) {
 		ret = tts_setting_dbus_request_initialize();
@@ -55,8 +59,8 @@ int tts_setting_initialize()
 			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Engine not found");
 			break;
 		} else if(ret) {
-			sleep(1);
-			if (i == 10) {
+			usleep(1);
+			if (i == CONNECTION_RETRY_COUNT) {
 				SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Connection Time out");
 				ret = TTS_SETTING_ERROR_TIMED_OUT;			    
 				break;
@@ -68,7 +72,7 @@ int tts_setting_initialize()
 		}
 	}
 
-	if (0 == ret) {
+	if (TTS_SETTING_ERROR_NONE == ret) {
 		g_is_setting_initialized = true;
 		SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Initialize");
 	}
@@ -85,10 +89,10 @@ int tts_setting_finalize()
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Finalize TTS Setting");
 
 	if (false == g_is_setting_initialized) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Not initialized");
+		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] Not initialized");
 		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 		SLOG(LOG_DEBUG, TAG_TTSC, " ");
-		return TTS_SETTING_ERROR_INVALID_STATE;
+		return TTS_SETTING_ERROR_NONE;
 	}
 
 	int ret = tts_setting_dbus_request_finalilze(); 
@@ -207,7 +211,7 @@ int tts_setting_set_engine(const char* engine_id)
 	return ret;
 }
 
-int tts_setting_foreach_surppoted_voices(tts_setting_supported_voice_cb callback, void* user_data)
+int tts_setting_foreach_surpported_voices(tts_setting_supported_voice_cb callback, void* user_data)
 {
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Foreach supported voices");
 
@@ -447,23 +451,18 @@ static bool __tts_is_alive()
 	FILE *fp = NULL;
 	char buff[256];
 	char cmd[256];
-	int i=0;
 
-	memset(buff, 0, sizeof(char));
-	memset(cmd, 0, sizeof(char));
+	memset(buff, '\0', sizeof(char) * 256);
+	memset(cmd, '\0', sizeof(char) * 256);
 
-	if ((fp = popen("ps -eo \"cmd\"", "r")) == NULL) {
-		SLOG(LOG_DEBUG, TAG_TTSC, "[TTS ERROR] popen error ");
+	fp = popen("ps", "r");
+	if (NULL == fp) {
+		SLOG(LOG_DEBUG, TAG_TTSC, "[TTS SETTING ERROR] popen error \n");
 		return FALSE;
 	}
 
 	while (fgets(buff, 255, fp)) {
-		if (i == 0) {
-			i++;
-			continue;
-		}
-
-		sscanf(buff, "%s", cmd);
+		strcpy(cmd, buff + 26);
 
 		if( 0 == strncmp(cmd, "[tts-daemon]", strlen("[tts-daemon]")) ||
 			0 == strncmp(cmd, "tts-daemon", strlen("tts-daemon")) ||
@@ -474,9 +473,10 @@ static bool __tts_is_alive()
 			return TRUE;
 		}
 
-		i++;
 	}
 	fclose(fp);
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "THERE IS NO tts-daemon !! \n");
 
 	return FALSE;
 }
@@ -503,8 +503,6 @@ static int __check_tts_daemon()
 		return 0;
 
 	/* fork-exec tts-daemom */
-	SLOG(LOG_DEBUG, TAG_TTSC, "tts-daemon is NOT alive. start tts-daemon.");
-
 	int pid, i;
 	struct sigaction act, dummy;
 

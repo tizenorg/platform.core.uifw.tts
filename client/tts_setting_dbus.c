@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -87,6 +87,45 @@ int tts_setting_dbus_close_connection()
 	return 0;
 }
 
+int tts_setting_dbus_request_hello()
+{
+	DBusMessage* msg;
+
+	msg = dbus_message_new_method_call(
+		TTS_SERVER_SERVICE_NAME, 
+		TTS_SERVER_SERVICE_OBJECT_PATH, 
+		TTS_SERVER_SERVICE_INTERFACE, 
+		TTS_SETTING_METHOD_HELLO);
+
+	if (NULL == msg) { 
+		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request setting hello : Fail to make message \n"); 
+		return TTS_SETTING_ERROR_OPERATION_FAILED;
+	} else {
+		SLOG(LOG_DEBUG, TAG_TTSC, ">>>> Request setting hello");
+	}
+
+	DBusError err;
+	dbus_error_init(&err);
+
+	DBusMessage* result_msg = NULL;
+	int result = 0;
+
+	result_msg = dbus_connection_send_with_reply_and_block(g_conn, msg, 500, &err);
+
+	dbus_message_unref(msg);
+
+	if (NULL != result_msg) {
+		dbus_message_unref(result_msg);
+
+		SLOG(LOG_DEBUG, TAG_TTSC, "<<<< setting hello");
+		result = 0;
+	} else {
+		SLOG(LOG_ERROR, TAG_TTSC, "<<<< setting hello : no response");
+		result = -1;
+	}
+
+	return result;
+}
 
 int tts_setting_dbus_request_initialize()
 {

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -696,7 +696,7 @@ static int msg_callback(int message, void *data, void *user_param)
 				pid = ttsd_data_get_pid(uid);
 
 				/* send utterance start message */
-				if (0 == ttsdc_send_utt_start_signal(pid, uid, utt_id)) {
+				if (0 == ttsdc_send_utt_start_message(pid, uid, utt_id)) {
 					SLOG(LOG_DEBUG, TAG_TTSD, "[Send SUCCESS] Send Utterance Start Signal : pid(%d), uid(%d), uttid(%d)", pid, uid, utt_id);
 				} else 
 					SLOG(LOG_ERROR, TAG_TTSD, "[Send ERROR] Fail to send Utterance Start Signal : pid(%d), uid(%d), uttid(%d)", pid, uid, utt_id);
@@ -763,13 +763,13 @@ static int msg_callback(int message, void *data, void *user_param)
 
 			/* send utterence finish signal */
 			if (TTSP_RESULT_EVENT_FINISH == current->event) {
-				if (0 == ttsdc_send_utt_finish_signal(pid, uid, utt_id))
+				if (0 == ttsdc_send_utt_finish_message(pid, uid, utt_id))
 					SLOG(LOG_DEBUG, TAG_TTSD, "[Send SUCCESS] Send Utterance Completed Signal : pid(%d), uid(%d), uttid(%d)", pid, uid, utt_id);
 				else 
 					SLOG(LOG_ERROR, TAG_TTSD, "[Send ERROR] Fail to send Utterance Completed Signal : pid(%d), uid(%d), uttid(%d)", pid, uid, utt_id);
 			}
 
-			ttsd_send_start_next_play(uid);
+			ttsd_send_start_next_play_message(uid);
 
 			SLOG(LOG_DEBUG, TAG_TTSD, "=====");
 			SLOG(LOG_DEBUG, TAG_TTSD, "  ");

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -406,43 +406,71 @@ int __internal_update_engine_list()
 	/* get file name from engine directory and get engine information from each filename */
 	DIR *dp;
 	struct dirent *dirp;
-	dp = opendir(ENGINE_DIRECTORY);
+	dp = opendir(ENGINE_DIRECTORY_DEFAULT);
 
-	if (dp == NULL) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Engine Agent ERROR] __internal_update_engine_list : error opendir \n");
-		return TTSD_ERROR_OPERATION_FAILED;
-	}
+	if (dp != NULL) {
+		while ((dirp = readdir(dp)) != NULL) {
+			ttsengine_info_s* info;
+			char* filepath = NULL;
+			int file_size;
 
-	SLOG(LOG_DEBUG, TAG_TTSD, "[Engine Agent] Search TTS Engines");
+			file_size = strlen(ENGINE_DIRECTORY_DEFAULT) + strlen(dirp->d_name) + 5;
+			filepath = (char*)g_malloc0( sizeof(char) * file_size);
 
-	while ((dirp = readdir(dp)) != NULL) {
-		ttsengine_info_s* info;
-		char* filepath = NULL;
-		int file_size;
+			if (NULL != filepath) { 
+				strncpy(filepath, ENGINE_DIRECTORY_DEFAULT, strlen(ENGINE_DIRECTORY_DEFAULT) );
+				strncat(filepath, "/", strlen("/") );
+				strncat(filepath, dirp->d_name, strlen(dirp->d_name) );
+			} else {
+				SLOG(LOG_ERROR, TAG_TTSD, "[Engine Agent ERROR] Not enough memory!! \n" );
+				continue;	
+			}
 
-		file_size = strlen(ENGINE_DIRECTORY) + strlen(dirp->d_name) + 5;
-		filepath = (char*)g_malloc0( sizeof(char) * file_size);
+			/* get its info and update engine list */
+			if (0 == __internal_get_engine_info(filepath, &info)) {
+				/* add engine info to g_engine_list */
+				g_engine_list = g_list_append(g_engine_list, info);
+			}
 
-		if (NULL != filepath) { 
-			strncpy(filepath, ENGINE_DIRECTORY, strlen(ENGINE_DIRECTORY) );
-			strncat(filepath, "/", strlen("/") );
-			strncat(filepath, dirp->d_name, strlen(dirp->d_name) );
-		} else {
-			SLOG(LOG_ERROR, TAG_TTSD, "[Engine Agent ERROR] Not enough memory!! \n" );
-			continue;	
+			if (NULL != filepath)
+				g_free(filepath);
 		}
 
-		/* get its info and update engine list */
-		if (0 == __internal_get_engine_info(filepath, &info)) {
-			/* add engine info to g_engine_list */
-			g_engine_list = g_list_append(g_engine_list, info);
-		}
-
-		if (NULL != filepath)
-			g_free(filepath);
+		closedir(dp);
 	}
 
-	closedir(dp);
+	dp = opendir(ENGINE_DIRECTORY_DOWNLOAD);
+
+	if (dp != NULL) {
+		while ((dirp = readdir(dp)) != NULL) {
+			ttsengine_info_s* info;
+			char* filepath = NULL;
+			int file_size;
+
+			file_size = strlen(ENGINE_DIRECTORY_DOWNLOAD) + strlen(dirp->d_name) + 5;
+			filepath = (char*)g_malloc0( sizeof(char) * file_size);
+
+			if (NULL != filepath) { 
+				strncpy(filepath, ENGINE_DIRECTORY_DOWNLOAD, strlen(ENGINE_DIRECTORY_DOWNLOAD) );
+				strncat(filepath, "/", strlen("/") );
+				strncat(filepath, dirp->d_name, strlen(dirp->d_name) );
+			} else {
+				SLOG(LOG_ERROR, TAG_TTSD, "[Engine Agent ERROR] Not enough memory!! \n" );
+				continue;	
+			}
+
+			/* get its info and update engine list */
+			if (0 == __internal_get_engine_info(filepath, &info)) {
+				/* add engine info to g_engine_list */
+				g_engine_list = g_list_append(g_engine_list, info);
+			}
+
+			if (NULL != filepath)
+				g_free(filepath);
+		}
+
+		closedir(dp);
+	}
 
 	if (g_list_length(g_engine_list) <= 0) {
 		SLOG(LOG_ERROR, TAG_TTSD, "[Engine Agent ERROR] No Engine\n");

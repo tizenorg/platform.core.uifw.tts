@@ -1,15 +1,18 @@
 /*
-* Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
-*  Licensed under the Apache License, Version 2.0 (the "License");
-*  you may not use this file except in compliance with the License.
-*  You may obtain a copy of the License at
-*  http://www.apache.org/licenses/LICENSE-2.0
-*  Unless required by applicable law or agreed to in writing, software
-*  distributed under the License is distributed on an "AS IS" BASIS,
-*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-*  See the License for the specific language governing permissions and
-*  limitations under the License.
-*/
+ * Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved
+ *
+ * Licensed under the Apache License, Version 2.0 (the License);
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an AS IS BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License. 
+ */
 
 
 #ifndef __TTS_H__
@@ -281,7 +284,7 @@ int tts_get_state(tts_h tts, tts_state_e* state);
 * @param[in] language The language selected from the foreach function
 * @param[in] voice_type The voice type selected from the foreach function
 * @param[in] speed A speaking speed
-* @param[out] utt_id The utterance ID passed to the callback function.
+* @param[out] utt_id The utterance ID passed to the callback function
 *
 * @return 0 on success, otherwise a negative error value
 * @retval #TTS_ERROR_NONE Successful

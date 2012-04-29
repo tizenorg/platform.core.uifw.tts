@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -19,7 +19,7 @@
 #include "tts_dbus.h"
 
 #define MAX_TEXT_COUNT 1000
-#define CONNECTION_RETRY_COUNT 3
+#define CONNECTION_RETRY_COUNT 2
 
 /* Function definition */
 int __tts_check_tts_daemon();
@@ -38,16 +38,18 @@ int tts_create(tts_h* tts)
 		return TTS_ERROR_INVALID_PARAMETER;
 	}	
 
-	/* Check daemon is running */
-	__tts_check_tts_daemon();
-
 	if (0 == tts_client_get_size()) {
 		if (0 != tts_dbus_open_connection()) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to open dbus connection\n ");
+			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to open dbus connection");
 			SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 			SLOG(LOG_DEBUG, TAG_TTSC, " ");
 			return TTS_ERROR_OPERATION_FAILED;
 		}
+	}
+
+	/* Send hello */
+	if (0 != tts_dbus_request_hello()) {
+		__tts_check_tts_daemon();
 	}
 
 	if (0 != tts_client_new(tts)) {
@@ -58,7 +60,7 @@ int tts_create(tts_h* tts)
 	}
 
 	/* do request initialize */
-	int i = 0;
+	int i = 1;
 	while(1) {
 		ret = tts_dbus_request_initialize((*tts)->handle);
 
@@ -68,11 +70,10 @@ int tts_create(tts_h* tts)
 			SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 			SLOG(LOG_DEBUG, TAG_TTSC, " ");
 			return ret;
-		} else if( ret ) {
-			sleep(1);
+		} else if (TTS_ERROR_NONE != ret) {
+			usleep(1);
 			if (i == CONNECTION_RETRY_COUNT) {
-			    tts_client_destroy(*tts);
-			    SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Connection Time out");
+			    SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to connection");
 			    SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 			    SLOG(LOG_DEBUG, TAG_TTSC, " ");
 			    return TTS_ERROR_TIMED_OUT;			    
@@ -767,10 +768,9 @@ static bool _tts_is_alive()
 	FILE *fp = NULL;
 	char buff[256];
 	char cmd[256];
-	int i=0;
 
-	memset(buff, 0, sizeof(char));
-	memset(cmd, 0, sizeof(char));
+	memset(buff, '\0', sizeof(char) * 256);
+	memset(cmd, '\0', sizeof(char) * 256);
 
 	if ((fp = popen("ps -eo \"cmd\"", "r")) == NULL) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] popen error \n");
@@ -778,11 +778,6 @@ static bool _tts_is_alive()
 	}
 
 	while(fgets(buff, 255, fp)) {
-		if (0 == i) {
-			i++;
-			continue;
-		}
-
 		sscanf(buff, "%s", cmd);
 
 		if (0 == strncmp(cmd, "[tts-daemon]", strlen("[tts-daemon]")) ||
@@ -792,10 +787,11 @@ static bool _tts_is_alive()
 			fclose(fp);
 			return TRUE;
 		}
-
-		i++;
 	}
+
 	fclose(fp);
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "THERE IS NO tts-daemon !! \n");
 
 	return FALSE;
 }
@@ -823,9 +819,6 @@ int __tts_check_tts_daemon()
 		return 0;
 	
 	/* fork-exec tts-daemom */
-	SLOG(LOG_DEBUG, TAG_TTSC, "THERE IS NO tts-daemon \n");
-	SLOG(LOG_DEBUG, TAG_TTSC, "START TTS-DAEMON \n");
-
 	int pid, i;
 	struct sigaction act, dummy;
 

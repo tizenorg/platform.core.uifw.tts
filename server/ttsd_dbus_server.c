@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -22,6 +22,30 @@ extern int ttsd_data_get_pid(const int uid);
 /*
 * Dbus Client-Daemon Server
 */ 
+
+int ttsd_dbus_server_hello(DBusConnection* conn, DBusMessage* msg)
+{
+	SLOG(LOG_DEBUG, TAG_TTSD, ">>>>> TTS Hello");
+
+	DBusMessage* reply;
+	reply = dbus_message_new_method_return(msg);
+
+	if (NULL != reply) {
+		if (!dbus_connection_send(conn, reply, NULL)) {
+			SLOG(LOG_ERROR, TAG_TTSD, "[OUT ERROR] Out Of Memory!");
+		}
+
+		dbus_connection_flush(conn);
+		dbus_message_unref(reply);
+	} else {
+		SLOG(LOG_ERROR, TAG_TTSD, "[OUT ERROR] Fail to create reply message!!"); 
+	}
+
+	SLOG(LOG_DEBUG, TAG_TTSD, "<<<<<");
+	SLOG(LOG_DEBUG, TAG_TTSD, "  ");
+
+	return 0;
+}
 
 int ttsd_dbus_server_initialize(DBusConnection* conn, DBusMessage* msg)
 {

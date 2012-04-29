@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -90,12 +90,12 @@ typedef bool(*tts_setting_supported_engine_cb)(const char* engine_id, const char
 *		followed by ISO 639-1 for the two-letter language code. 
 *		For example, "ko_KR" for Korean, "en_US" for American English..
 * @param[in] voice_type Voice type.
-* @param[in] user_data User data passed from the tts_setting_foreach_surppoted_voices().
+* @param[in] user_data User data passed from the tts_setting_foreach_surpported_voices().
 *
 * @return @c true to continue with the next iteration of the loop, \n @c false to break out of the loop.
-* @pre tts_setting_foreach_surppoted_voices() will invoke this callback. 
+* @pre tts_setting_foreach_surpported_voices() will invoke this callback. 
 *
-* @see tts_setting_foreach_surppoted_voices()
+* @see tts_setting_foreach_surpported_voices()
 */
 typedef bool(*tts_setting_supported_voice_cb)(const char* engine_id, const char* language, tts_setting_voice_type_e voice_type, void* user_data);
 
@@ -205,7 +205,7 @@ int tts_setting_set_engine(const char* engine_id);
 *
 * @see tts_setting_supported_voice_cb()
 */
-int tts_setting_foreach_surppoted_voices(tts_setting_supported_voice_cb callback, void* user_data);
+int tts_setting_foreach_surpported_voices(tts_setting_supported_voice_cb callback, void* user_data);
 
 /**
 * @brief Get a default voice of current engine.

@@ -40,6 +40,7 @@ extern "C" {
 * Message Definition for APIs
 *******************************************************************************************/
 
+#define TTS_METHOD_HELLO		"tts_method_hello"
 #define TTS_METHOD_INITIALIZE		"tts_method_initialize"
 #define TTS_METHOD_FINALIZE		"tts_method_finalilze"
 #define TTS_METHOD_GET_SUPPORT_VOICES	"tts_method_get_support_voices"
@@ -49,16 +50,17 @@ extern "C" {
 #define TTS_METHOD_STOP			"tts_method_stop"
 #define TTS_METHOD_PAUSE		"tts_method_pause"
 
-#define TTS_SIGNAL_INTERRUPT		"tts_signal_interrupt"
-#define TTS_SIGNAL_UTTERANCE_STARTED	"tts_utterance_started"
-#define TTS_SIGNAL_UTTERANCE_COMPLETED	"tts_utterance_completed"
-#define TTS_SIGNAL_ERROR		"tts_signal_error"
+#define TTS_METHOD_INTERRUPT		"tts_method_interrupt"
+#define TTS_METHOD_UTTERANCE_STARTED	"tts_method_utterance_started"
+#define TTS_METHOD_UTTERANCE_COMPLETED	"tts_method_utterance_completed"
+#define TTS_METHOD_ERROR		"tts_method_error"
 
 
 /******************************************************************************************
 * Message Definition for Setting
 *******************************************************************************************/
 
+#define TTS_SETTING_METHOD_HELLO		"tts_setting_method_hello"
 #define TTS_SETTING_METHOD_INITIALIZE		"tts_setting_method_initialize"
 #define TTS_SETTING_METHOD_FINALIZE		"tts_setting_method_finalilze"
 #define TTS_SETTING_METHOD_GET_ENGINE_LIST	"tts_setting_method_get_engine_list"
@@ -76,8 +78,9 @@ extern "C" {
 * Message Definition for tts-daemon internal
 *******************************************************************************************/
 
-#define TTS_SIGNAL_NEXT_PLAY		"tts_signal_start_play"
-#define TTS_SIGNAL_NEXT_SYNTHESIS	"tts_signal_start_synthesis"
+#define TTS_METHOD_NEXT_PLAY		"tts_method_start_play"
+#define TTS_METHOD_NEXT_SYNTHESIS	"tts_method_start_synthesis"
+
 
 #ifdef __cplusplus
 }

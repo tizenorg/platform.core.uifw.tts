@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -51,7 +51,7 @@ int __server_send_error(int uid, int utt_id, int error_code)
 	int pid = ttsd_data_get_pid(uid);
 
 	/* send error */
-	if ( 0 != ttsdc_send_error_signal(pid, uid, utt_id, error_code)) {
+	if ( 0 != ttsdc_send_error_message(pid, uid, utt_id, error_code)) {
 		ttsd_data_delete_client(uid);			
 	} 
 	
@@ -68,7 +68,7 @@ int __server_interrupt_client(int org_uid)
 	} 
 
 	/* send message to client about changing state */
-	ttsdc_send_interrupt_signal (pid, org_uid, TTSD_INTERRUPTED_PAUSED);
+	ttsdc_send_interrupt_message (pid, org_uid, TTSD_INTERRUPTED_PAUSED);
 
 	/* change state */
 	ttsd_data_set_client_state(org_uid, APP_STATE_PAUSED);
@@ -330,7 +330,7 @@ int __synthesis_result_callback(ttsp_result_event_e event, const void* data, uns
 		if (event == TTSP_RESULT_EVENT_FINISH) {
 			__server_set_is_synthesizing(false);
 			
-			if (0 != ttsd_send_start_next_synthesis(uid)) {
+			if (0 != ttsd_send_start_next_synthesis_message(uid)) {
 				/* critical error */
 				SLOG(LOG_ERROR, TAG_TTSD, "[SERVER ERROR] IPC ERROR FOR NEXT SYNTHESIS \n");
 			}
@@ -341,7 +341,7 @@ int __synthesis_result_callback(ttsp_result_event_e event, const void* data, uns
 		SLOG(LOG_DEBUG, TAG_TTSD, "[SERVER] Event : TTSP_RESULT_EVENT_CANCEL");
 		__server_set_is_synthesizing(false);
 
-		if (0 != ttsd_send_start_next_synthesis(uid)) {
+		if (0 != ttsd_send_start_next_synthesis_message(uid)) {
 			/* critical error */
 			SLOG(LOG_ERROR, TAG_TTSD, "[SERVER ERROR] IPC ERROR FOR NEXT SYNTHESIS \n");
 		}
@@ -351,7 +351,7 @@ int __synthesis_result_callback(ttsp_result_event_e event, const void* data, uns
 		SLOG(LOG_DEBUG, TAG_TTSD, "[SERVER] Event : TTSP_RESULT_EVENT_CANCEL");
 		
 		__server_set_is_synthesizing(false);
-		if (0 != ttsd_send_start_next_synthesis(uid)) {
+		if (0 != ttsd_send_start_next_synthesis_message(uid)) {
 			/* critical error */
 			SLOG(LOG_ERROR, TAG_TTSD, "[SERVER ERROR] IPC ERROR FOR NEXT SYNTHESIS \n");
 		}
@@ -536,7 +536,7 @@ int ttsd_server_play(int uid)
 	if (ttsd_engine_agent_need_network()) {
 		if (false == ttsd_network_is_connected()) {
 			SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Disconnect network. Current engine needs network service!!!.\n");
-			return TTSD_ERROR_OPERATION_FAILED;
+			return TTSD_ERROR_OUT_OF_NETWORK;
 		}
 	}
 
@@ -550,8 +550,8 @@ int ttsd_server_play(int uid)
 	
 	/* Change current play */
 	if (0 != ttsd_data_set_client_state(uid, APP_STATE_PLAYING)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Current play has already existed \n");
-		return 0;
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Fail to set state : uid(%d)\n", uid);
+		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
 	if (0 != __server_play_internal(uid, state)) {
@@ -571,6 +571,9 @@ int ttsd_server_stop(int uid)
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
+	/* Reset all data */
+	ttsd_data_clear_data(uid);
+
 	if (APP_STATE_PLAYING == state || APP_STATE_PAUSED == state) {
 		ttsd_data_set_client_state(uid, APP_STATE_READY);
 
@@ -587,9 +590,6 @@ int ttsd_server_stop(int uid)
 
 			__server_set_is_synthesizing(false);
 		} 
-
-		/* Reset all data */
-		ttsd_data_clear_data(uid);
 	} else {
 		SLOG(LOG_WARN, TAG_TTSD, "[Server WARNING] Current state is 'ready' \n");
 	}
@@ -765,7 +765,7 @@ bool __get_client_cb(int pid, int uid, app_state_e state, void* user_data)
 	ttsd_data_set_client_state(uid, APP_STATE_READY);
 
 	/* send message */
-	if ( 0 != ttsdc_send_interrupt_signal(pid, uid, TTSD_INTERRUPTED_STOPPED)) {
+	if ( 0 != ttsdc_send_interrupt_message(pid, uid, TTSD_INTERRUPTED_STOPPED)) {
 		/* remove client */
 		ttsd_data_delete_client(uid);
 	} 

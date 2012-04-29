@@ -1,10 +1,10 @@
 Name:       tts
 Summary:    Text To Speech client library and daemon
 Version:    0.1.1
-Release:    2.1
+Release:    1
 Group:      libs
-License:    Apache-2.0
-Source0:    tts-%{version}.tar.bz2
+License:    Samsung
+Source0:    tts-0.1.1.tar.gz
 Requires(post): /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
 BuildRequires:  pkgconfig(glib-2.0)
@@ -13,7 +13,7 @@ BuildRequires:  pkgconfig(mm-player)
 BuildRequires:  pkgconfig(mm-common)
 BuildRequires:  pkgconfig(dlog)
 BuildRequires:  pkgconfig(vconf)
-BuildRequires:  pkgconfig(ecore-input)
+BuildRequires:  pkgconfig(ecore)
 BuildRequires:  pkgconfig(openssl)
 
 BuildRequires:  cmake
