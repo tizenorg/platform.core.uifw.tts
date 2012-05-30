@@ -5,6 +5,7 @@ Release:    1
 Group:      libs
 License:    Samsung
 Source0:    tts-0.1.1.tar.gz
+Source1001: packaging/tts.manifest 
 Requires(post): /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
 BuildRequires:  pkgconfig(glib-2.0)
@@ -36,6 +37,7 @@ Text To Speech header files for TTS development.
 
 
 %build
+cp %{SOURCE1001} .
 cmake . -DCMAKE_INSTALL_PREFIX=/usr
 make %{?jobs:-j%jobs}
 
@@ -53,12 +55,14 @@ rm -rf %{buildroot}
 
 
 %files
+%manifest tts.manifest
 %defattr(-,root,root,-)
 %{_libdir}/lib*.so
 %{_bindir}/tts-daemon
 
 
 %files devel
+%manifest tts.manifest
 %defattr(-,root,root,-)
 %{_libdir}/pkgconfig/tts.pc
 %{_libdir}/pkgconfig/tts-setting.pc
