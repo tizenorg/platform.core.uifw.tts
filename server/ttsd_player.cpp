@@ -15,6 +15,7 @@
 #include <mm_types.h>
 #include <mm_player.h>
 #include <mm_error.h>
+#include <Ecore.h>
 
 #include "ttsd_main.h"
 #include "ttsd_player.h"
@@ -199,12 +200,6 @@ int ttsd_player_destroy_instance(int uid)
 	switch (player_state) {
 		case MM_PLAYER_STATE_PLAYING:
 		case MM_PLAYER_STATE_PAUSED:
-			ret = mm_player_stop(current->player_handle);
-			if (MM_ERROR_NONE != ret) {
-				SLOG(LOG_ERROR, TAG_TTSD, "[Player WARNING] fail mm_player_stop() : %x", ret);
-			}
-			/* NO break for unrealize */
-
 		case MM_PLAYER_STATE_READY:
 			ret = mm_player_unrealize(current->player_handle);
 			if (MM_ERROR_NONE != ret) {
@@ -213,13 +208,16 @@ int ttsd_player_destroy_instance(int uid)
 			/* NO break for destroy */
 
 		case MM_PLAYER_STATE_NULL:
-			mm_player_destroy(current->player_handle);
+			ret = mm_player_destroy(current->player_handle);
+			if (MM_ERROR_NONE != ret) {
+				SLOG(LOG_ERROR, TAG_TTSD, "[Player ERROR] fail mm_player_destroy() : %x", ret);
+			} 
 			break;
 
 		default:
 			break;
 	}
-
+		
 	GList *iter = NULL;
 	player_s *data = NULL;
 
@@ -244,6 +242,8 @@ int ttsd_player_destroy_instance(int uid)
 			iter = g_list_next(iter);
 		}
 	}
+
+	SLOG(LOG_DEBUG, TAG_TTSD, "[PLAYER Success] Destroy instance");
 
 	return 0;
 }
@@ -340,7 +340,7 @@ int ttsd_player_next_play(int uid)
 			return 0;
 		}
 	} else {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Player ERROR] Current player do NOT exist"); 
+		SLOG(LOG_WARN, TAG_TTSD, "[Player WARNING] Current player do NOT exist"); 
 		return -1;
 	}
 
@@ -354,12 +354,6 @@ int ttsd_player_next_play(int uid)
 	switch (player_state) {
 		case MM_PLAYER_STATE_PLAYING:
 		case MM_PLAYER_STATE_PAUSED:
-			ret = mm_player_stop(current->player_handle);
-			if (MM_ERROR_NONE != ret) {
-				SLOG(LOG_ERROR, TAG_TTSD, "[Player WARNING] fail mm_player_stop() : %x", ret);
-			}
-			/* NO break for unrealize */
-
 		case MM_PLAYER_STATE_READY:
 			ret = mm_player_unrealize(current->player_handle);
 			if (MM_ERROR_NONE != ret) {
@@ -431,12 +425,6 @@ int ttsd_player_stop(const int uid)
 	switch (player_state) {
 		case MM_PLAYER_STATE_PLAYING:
 		case MM_PLAYER_STATE_PAUSED:
-			ret = mm_player_stop(current->player_handle);
-			if (MM_ERROR_NONE != ret) {
-				SLOG(LOG_ERROR, TAG_TTSD, "[Player WARNING] fail mm_player_stop() : %x", ret);
-			}
-			/* NO break for unrealize */
-
 		case MM_PLAYER_STATE_READY:
 			ret = mm_player_unrealize(current->player_handle);
 			if (MM_ERROR_NONE != ret) {
@@ -536,6 +524,8 @@ int ttsd_player_resume(const int uid)
 		if (MM_ERROR_NONE != ret) {
 			SLOG(LOG_ERROR, TAG_TTSD, "[Player ERROR] fail mm_player_resume() : %d", ret);
 			return -1;
+		} else {
+			SLOG(LOG_DEBUG, TAG_TTSD, "[Player] Resume player");
 		}
 
 		g_playing_info = current;
@@ -611,11 +601,6 @@ int ttsd_player_all_stop()
 			}
 
 			if (APP_STATE_PLAYING == state || APP_STATE_PAUSED == state) {
-				ret = mm_player_stop(data->player_handle);
-				if (MM_ERROR_NONE != ret) {
-					SLOG(LOG_WARN, TAG_TTSD, "[player WARNING] fail mm_player_stop() : %x ", ret);
-				}
-
 				/* unrealize player */
 				ret = mm_player_unrealize(data->player_handle);
 				if (MM_ERROR_NONE != ret) {
@@ -634,6 +619,27 @@ int ttsd_player_all_stop()
 	SLOG(LOG_DEBUG, TAG_TTSD, "[Player SUCCESS] player all stop!! ");
 
 	return 0;
+}
+
+static Eina_Bool __player_next_play(void *data)
+{
+	SLOG(LOG_DEBUG, TAG_TTSD, "===== PLAYER NEXT PLAY");
+
+	int* uid = (int*)data;
+
+	SLOG(LOG_DEBUG, TAG_TTSD, "[PLAYER] uid = %d", *uid);
+	
+	if (0 != ttsd_player_next_play(*uid)) {
+		SLOG(LOG_WARN, TAG_TTSD, "[PLAYER WARNING] Fail to play next");
+	}
+
+	if (NULL != uid)
+		free(uid);
+
+	SLOG(LOG_DEBUG, TAG_TTSD, "=====");
+	SLOG(LOG_DEBUG, TAG_TTSD, "  ");
+
+	return EINA_FALSE;
 }
 
 static int msg_callback(int message, void *data, void *user_param) 
@@ -769,7 +775,12 @@ static int msg_callback(int message, void *data, void *user_param)
 					SLOG(LOG_ERROR, TAG_TTSD, "[Send ERROR] Fail to send Utterance Completed Signal : pid(%d), uid(%d), uttid(%d)", pid, uid, utt_id);
 			}
 
-			ttsd_send_start_next_play_message(uid);
+			int* uid_data = (int*) g_malloc0(sizeof(int));
+			*uid_data = uid;
+
+			SLOG(LOG_DEBUG, TAG_TTSD, "[PLAYER] uid = %d", *uid_data);
+
+			ecore_timer_add(0, __player_next_play, (void*)uid_data);
 
 			SLOG(LOG_DEBUG, TAG_TTSD, "=====");
 			SLOG(LOG_DEBUG, TAG_TTSD, "  ");

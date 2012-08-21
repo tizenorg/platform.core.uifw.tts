@@ -73,14 +73,6 @@ int ttsd_dbus_server_setting_get_engine_setting(DBusConnection* conn, DBusMessag
 int ttsd_dbus_server_setting_set_engine_setting(DBusConnection* conn, DBusMessage* msg);
 
 
-/*
-* Dbus Server functions for tts daemon internal
-*/ 
-
-int ttsd_dbus_server_start_next_play(DBusMessage* msg);
-
-int ttsd_dbus_server_start_next_synthesis(DBusMessage* msg);
-
 #ifdef __cplusplus
 }
 #endif

@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2012 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -67,6 +67,14 @@ typedef enum {
 	TTS_SETTING_VOICE_TYPE_USER3		/**< Engine defined */
 } tts_setting_voice_type_e;
 
+/** 
+* @brief Enumerations of setting state.
+*/
+typedef enum {
+	TTS_SETTING_STATE_NONE = 0,
+	TTS_SETTING_STATE_READY
+} tts_setting_state_e;
+
 /**
 * @brief Called to get a engine information.
 *
@@ -114,9 +122,21 @@ typedef bool(*tts_setting_supported_voice_cb)(const char* engine_id, const char*
 */
 typedef bool(*tts_setting_engine_setting_cb)(const char* engine_id, const char* key, const char* value, void* user_data);
 
+/**
+* @brief Called to initialize setting.
+*
+* @param[in] state Current state.
+* @param[in] reason Error reason.
+* @param[in] user_data User data passed from the tts_setting_initialize_async().
+*
+* @pre tts_setting_initialize_async() will invoke this callback. 
+*
+* @see tts_setting_initialize_async()
+*/
+typedef void(*tts_setting_initialized_cb)(tts_setting_state_e state, tts_setting_error_e reason, void* user_data);
 
 /**
-* @brief Initialize TTS setting and connect to tts-daemon.
+* @brief Initialize TTS setting and connect to tts-daemon asynchronously.
 *
 * @return 0 on success, otherwise a negative error value.
 * @retval #TTS_SETTING_ERROR_NONE Success.
@@ -126,7 +146,9 @@ typedef bool(*tts_setting_engine_setting_cb)(const char* engine_id, const char* 
 *
 * @see tts_setting_finalize()
 */
-int tts_setting_initialize(void);
+int tts_setting_initialize();
+
+int tts_setting_initialize_async(tts_setting_initialized_cb callback, void* user_data);
 
 /**
 * @brief finalize tts setting and disconnect to tts-daemon. 

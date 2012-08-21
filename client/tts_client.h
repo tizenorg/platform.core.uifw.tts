@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2012 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -31,8 +31,8 @@ typedef struct {
 	int	current_utt_id;
 
 	/* callback info */
-	tts_interrupted_cb		interrupted_cb;
-	void*				interrupted_user_data;
+	tts_state_changed_cb		state_changed_cb;
+	void*				state_changed_user_data;
 	tts_utterance_started_cb	utt_started_cb;
 	void*				utt_started_user_data;
 	tts_utterance_completed_cb	utt_completeted_cb;
@@ -41,10 +41,15 @@ typedef struct {
 	void*				error_user_data;
 
 	/* state */
+	tts_state_e	before_state;
 	tts_state_e	current_state;
 
 	/* semaphore */
 	int		cb_ref_count;
+
+	/* callback data */
+	int		utt_id;
+	int		reason;
 }tts_client_s;
 
 int tts_client_new(tts_h* tts);

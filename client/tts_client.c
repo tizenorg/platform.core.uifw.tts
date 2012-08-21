@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2012 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -48,8 +48,8 @@ int tts_client_new(tts_h* tts)
 	client->uid = temp->handle;
 	client->current_utt_id = 0;
 
-	client->interrupted_cb = NULL;
-	client->interrupted_user_data = NULL;
+	client->state_changed_cb = NULL;
+	client->state_changed_user_data = NULL;
 	
 	client->utt_started_cb = NULL;
 	client->utt_started_user_data = NULL;
@@ -59,7 +59,8 @@ int tts_client_new(tts_h* tts)
 	client->error_cb = NULL;
 	client->error_user_data = NULL;
 
-	client->current_state = TTS_STATE_READY; 
+	client->before_state = TTS_STATE_CREATED; 
+	client->current_state = TTS_STATE_CREATED; 
 
 	client->cb_ref_count = 0;
 

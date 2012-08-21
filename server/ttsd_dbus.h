@@ -24,17 +24,15 @@ int ttsd_dbus_open_connection();
 int ttsd_dbus_close_connection();
 
 
+int ttsdc_send_hello(int pid, int uid);
+
 int ttsdc_send_utt_start_message(int pid, int uid, int uttid);
 
 int ttsdc_send_utt_finish_message(int pid, int uid, int uttid);
 
 int ttsdc_send_error_message(int pid, int uid, int uttid, int reason);
 
-int ttsdc_send_interrupt_message(int pid, int uid, ttsd_interrupted_code_e code);
-
-int ttsd_send_start_next_play_message(int uid);
-
-int ttsd_send_start_next_synthesis_message(int uid);
+int ttsdc_send_set_state_message(int pid, int uid, int state);
 
 #ifdef __cplusplus
 }

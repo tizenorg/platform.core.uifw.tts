@@ -33,7 +33,7 @@ INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/../common")
 ## Dependent packages ##
 INCLUDE(FindPkgConfig)
 pkg_check_modules(pkgs REQUIRED 
-	mm-player mm-common vconf dbus-1 
+	mm-player vconf mm-common dbus-1 
 	dlog openssl
 )
 
@@ -66,3 +66,5 @@ TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${pkgs_LDFLAGS})
 ## Install ##
 INSTALL(TARGETS ${PROJECT_NAME} DESTINATION bin)
 INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/ttsp.h DESTINATION include)
+INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/ttsd.conf DESTINATION lib/voice/tts/1.0)
+

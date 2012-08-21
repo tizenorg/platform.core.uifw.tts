@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2012 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -13,21 +13,23 @@
 
 
 #include <sys/wait.h>
+#include <Ecore.h>
 
 #include "tts_main.h"
 #include "tts_client.h"
 #include "tts_dbus.h"
 
 #define MAX_TEXT_COUNT 1000
-#define CONNECTION_RETRY_COUNT 2
+
+static bool g_is_daemon_started = false;
 
 /* Function definition */
-int __tts_check_tts_daemon();
+static int __tts_check_tts_daemon();
+static Eina_Bool __tts_notify_state_changed(void *data);
+static Eina_Bool __tts_notify_error(void *data);
 
 int tts_create(tts_h* tts)
 {
-	int ret = 0; 
-
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Create TTS");
 	
 	/* check param */
@@ -47,45 +49,12 @@ int tts_create(tts_h* tts)
 		}
 	}
 
-	/* Send hello */
-	if (0 != tts_dbus_request_hello()) {
-		__tts_check_tts_daemon();
-	}
-
 	if (0 != tts_client_new(tts)) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to create client!!!!!");
 		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_ERROR_OUT_OF_MEMORY;
 	}
-
-	/* do request initialize */
-	int i = 1;
-	while(1) {
-		ret = tts_dbus_request_initialize((*tts)->handle);
-
-		if (TTS_ERROR_ENGINE_NOT_FOUND == ret) {
-			tts_client_destroy(*tts);
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Engine not found");
-			SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-			SLOG(LOG_DEBUG, TAG_TTSC, " ");
-			return ret;
-		} else if (TTS_ERROR_NONE != ret) {
-			usleep(1);
-			if (i == CONNECTION_RETRY_COUNT) {
-			    SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to connection");
-			    SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-			    SLOG(LOG_DEBUG, TAG_TTSC, " ");
-			    return TTS_ERROR_TIMED_OUT;			    
-			}    
-			i++;
-		} else {
-			/* success to connect tts-daemon */
-			break;
-		}
-	}
-
-	SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] uid(%d)", (*tts)->handle);
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
@@ -114,20 +83,160 @@ int tts_destroy(tts_h tts)
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
 
-	/* Request Finalize */
-	int ret = tts_dbus_request_finalize(client->uid);
-	if (0 != ret) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to request finalize ");
-	}    
+	int ret = -1;
 
-	/* Free resources */
-	tts_client_destroy(tts);
-
+	/* check state */
+	switch (client->current_state) {
+	case TTS_STATE_PAUSED:
+	case TTS_STATE_PLAYING:
+	case TTS_STATE_READY:
+		/* Request Finalize */
+		ret = tts_dbus_request_finalize(client->uid);
+		if (0 != ret) {
+			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to request finalize");
+		}   
+	case TTS_STATE_CREATED:
+		/* Free resources */
+		tts_client_destroy(tts);
+		break;
+	}
+ 
 	if (0 == tts_client_get_size()) {
 		if (0 != tts_dbus_close_connection()) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to close connection\n ");
+			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to close connection");
 		}
 	}
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+	SLOG(LOG_DEBUG, TAG_TTSC, " ");
+
+	return TTS_ERROR_NONE;
+}
+
+static Eina_Bool __tts_connect_daemon(void *data)
+{
+	SLOG(LOG_DEBUG, TAG_TTSC, "===== Connect daemon");
+
+	tts_h tts = (tts_h)data;
+
+	tts_client_s* client = tts_client_get(tts);
+
+	/* check handle */
+	if (NULL == client) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] A handle is not valid");
+		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+		SLOG(LOG_DEBUG, TAG_TTSC, " ");
+		return EINA_FALSE;
+	}
+
+	/* Send hello */
+	if (0 != tts_dbus_request_hello()) {
+		if (false == g_is_daemon_started) {
+			g_is_daemon_started = true;
+			__tts_check_tts_daemon();
+		}
+		return EINA_TRUE;
+	}
+
+	/* do request initialize */
+	int ret = -1;
+
+	ret = tts_dbus_request_initialize(client->uid);
+
+	if (TTS_ERROR_ENGINE_NOT_FOUND == ret) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Engine not found");
+		
+		client->reason = TTS_ERROR_ENGINE_NOT_FOUND;
+		client->utt_id = -1;
+
+		ecore_timer_add(0, __tts_notify_error, (void*)client->tts);
+		return EINA_FALSE;
+
+	} else if (TTS_ERROR_NONE != ret) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to connection");
+
+		client->reason = TTS_ERROR_TIMED_OUT;
+		client->utt_id = -1;
+
+		ecore_timer_add(0, __tts_notify_error, (void*)client->tts);
+		return EINA_FALSE;
+	} else {
+		/* success to connect tts-daemon */
+	}
+
+	client->before_state = client->current_state;
+	client->current_state = TTS_STATE_READY;
+
+	ecore_timer_add(0, __tts_notify_state_changed, (void*)client->tts);
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] uid(%d)", client->uid);
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+	SLOG(LOG_DEBUG, TAG_TTSC, " ");
+
+	return EINA_FALSE;
+}
+
+
+int tts_prepare(tts_h tts)
+{
+	SLOG(LOG_DEBUG, TAG_TTSC, "===== Prepare TTS");
+
+	tts_client_s* client = tts_client_get(tts);
+
+	/* check handle */
+	if (NULL == client) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] A handle is not available");
+		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+		SLOG(LOG_DEBUG, TAG_TTSC, " ");
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+
+	/* check state */
+	if (client->current_state != TTS_STATE_CREATED) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Invalid State: Current state is not 'CREATED'"); 
+		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+		SLOG(LOG_DEBUG, TAG_TTSC, " ");
+		return TTS_ERROR_INVALID_STATE;
+	}
+
+	ecore_timer_add(0, __tts_connect_daemon, (void*)tts);
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+	SLOG(LOG_DEBUG, TAG_TTSC, " ");
+
+	return TTS_ERROR_NONE;
+}
+
+int tts_unprepare(tts_h tts)
+{
+	SLOG(LOG_DEBUG, TAG_TTSC, "===== Unprepare TTS");
+
+	tts_client_s* client = tts_client_get(tts);
+
+	/* check handle */
+	if (NULL == client) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] A handle is not available");
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+
+	/* check state */
+	if (client->current_state != TTS_STATE_READY) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Invalid State: Current state is not 'READY'"); 
+		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+		SLOG(LOG_DEBUG, TAG_TTSC, " ");
+		return TTS_ERROR_INVALID_STATE;
+	}
+
+	int ret = tts_dbus_request_finalize(client->uid);
+	if (0 != ret) {
+		SLOG(LOG_WARN, TAG_TTSC, "[ERROR] Fail to request finalize");
+	}
+
+	client->before_state = client->current_state;
+	client->current_state = TTS_STATE_CREATED;
+
+	ecore_timer_add(0, __tts_notify_state_changed, (void*)tts);
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
@@ -258,6 +367,7 @@ int tts_get_state(tts_h tts, tts_state_e* state)
 	*state = client->current_state;
 
 	switch(*state) {
+		case TTS_STATE_CREATED:	SLOG(LOG_DEBUG, TAG_TTSC, "Current state is 'Created'");	break;
 		case TTS_STATE_READY:	SLOG(LOG_DEBUG, TAG_TTSC, "Current state is 'Ready'");		break;
 		case TTS_STATE_PLAYING:	SLOG(LOG_DEBUG, TAG_TTSC, "Current state is 'Playing'");	break;
 		case TTS_STATE_PAUSED:	SLOG(LOG_DEBUG, TAG_TTSC, "Current state is 'Paused'");		break;
@@ -284,6 +394,11 @@ int tts_add_text(tts_h tts, const char* text, const char* language, tts_voice_ty
 		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_ERROR_INVALID_PARAMETER;
+	}
+
+	if (TTS_STATE_CREATED == client->current_state) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Current state is 'CREATED'."); 
+		return TTS_ERROR_INVALID_STATE;
 	}
 
 	/* change default language value */
@@ -322,7 +437,7 @@ int tts_play(tts_h tts)
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Play tts");
 
 	if (NULL == tts) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input handle is null");
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input handle is null.");
 		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_ERROR_INVALID_PARAMETER;
@@ -331,28 +446,34 @@ int tts_play(tts_h tts)
 	tts_client_s* client = tts_client_get(tts);
 
 	if (NULL == client) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] A handle is not valid");
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] A handle is not valid.");
 		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
 
-	if (TTS_STATE_PLAYING == client->current_state) {
-		SLOG(LOG_ERROR, TAG_TTSC, "Current state is 'playing'. This request should be skipped.\n"); 
+	if (TTS_STATE_PLAYING == client->current_state || TTS_STATE_CREATED == client->current_state) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] The current state is invalid."); 
 		return TTS_ERROR_INVALID_STATE;
 	} 
 
 	int ret = 0;
 	ret = tts_dbus_request_play(client->uid);
 	if (0 != ret) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] result : %d", ret);
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Request play : result(%d)", ret);
 		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return ret;
 	}
 
-	/* change state */
+	client->before_state = client->current_state;
 	client->current_state = TTS_STATE_PLAYING;
+
+	if (NULL != client->state_changed_cb) {
+		ecore_timer_add(0, __tts_notify_state_changed, (void*)tts);
+	} else {
+		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] State changed callback is null");
+	}
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
@@ -381,8 +502,10 @@ int tts_stop(tts_h tts)
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
 
-	SLOG(LOG_DEBUG, TAG_TTSC, "change state to ready\n");
-	client->current_state = TTS_STATE_READY;
+	if (TTS_STATE_CREATED == client->current_state) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Current state is 'CREATED'."); 
+		return TTS_ERROR_INVALID_STATE;
+	}
 
 	int ret = 0;
 	ret = tts_dbus_request_stop(client->uid);
@@ -392,6 +515,15 @@ int tts_stop(tts_h tts)
 		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return ret;
 	}	
+
+	client->before_state = client->current_state;
+	client->current_state = TTS_STATE_READY;
+
+	if (NULL != client->state_changed_cb) {
+		ecore_timer_add(0, __tts_notify_state_changed, (void*)tts);
+	} else {
+		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] State changed callback is null");
+	}
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
@@ -421,7 +553,7 @@ int tts_pause(tts_h tts)
 	}
 
 	if (TTS_STATE_PLAYING != client->current_state) {
-		SLOG(LOG_ERROR, TAG_TTSC, "Error : Current state is NOT 'playing'. So this request should be not running.\n");    
+		SLOG(LOG_ERROR, TAG_TTSC, "[Error] The Current state is NOT 'playing'. So this request should be not running.");    
 		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_ERROR_INVALID_STATE;
@@ -430,18 +562,49 @@ int tts_pause(tts_h tts)
 	int ret = 0;
 	ret = tts_dbus_request_pause(client->uid);
 	if (0 != ret) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] result : %d", ret);
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Request pause : result(%d)", ret);
 		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return ret;
 	}
 
+	client->before_state = client->current_state;
 	client->current_state = TTS_STATE_PAUSED;
+
+	if (NULL != client->state_changed_cb) {
+		ecore_timer_add(0, __tts_notify_state_changed, (void*)tts);
+	} else {
+		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] State changed callback is null");
+	}
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
 
 	return TTS_ERROR_NONE;
+}
+
+static Eina_Bool __tts_notify_error(void *data)
+{
+	tts_h tts = (tts_h)data;
+
+	tts_client_s* client = tts_client_get(tts);
+
+	/* check handle */
+	if (NULL == client) {
+		SLOG(LOG_WARN, TAG_TTSC, "Fail to notify error : A handle is not valid");
+		return EINA_FALSE;
+	}
+
+	if (NULL != client->error_cb) {
+		SLOG(LOG_DEBUG, TAG_TTSC, "Call callback function of error");
+		tts_client_use_callback(client);
+		client->error_cb(client->tts, client->utt_id, client->reason, client->error_user_data );
+		tts_client_not_use_callback(client);
+	} else {
+		SLOG(LOG_WARN, TAG_TTSC, "No registered callback function of error \n");
+	}
+
+	return EINA_FALSE;
 }
 
 int __tts_cb_error(int uid, tts_error_e reason, int utt_id)
@@ -453,12 +616,12 @@ int __tts_cb_error(int uid, tts_error_e reason, int utt_id)
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
 
+	client->utt_id = utt_id;
+	client->reason = reason;
+
 	/* call callback function */
 	if (NULL != client->error_cb) {
-		SLOG(LOG_DEBUG, TAG_TTSC, "Call callback function of error");
-		tts_client_use_callback(client);
-		client->error_cb(client->tts, utt_id, reason, client->error_user_data );
-		tts_client_not_use_callback(client);
+		ecore_timer_add(0, __tts_notify_error, client->tts);
 	} else {
 		SLOG(LOG_WARN, TAG_TTSC, "No registered callback function of error \n");
 	}
@@ -466,38 +629,79 @@ int __tts_cb_error(int uid, tts_error_e reason, int utt_id)
 	return 0;
 }
 
-int __tts_cb_interrupt(int uid, tts_interrupted_code_e code)
+static Eina_Bool __tts_notify_state_changed(void *data)
 {
-	tts_client_s* client = tts_client_get_by_uid(uid);
+	tts_h tts = (tts_h)data;
 
+	tts_client_s* client = tts_client_get(tts);
+
+	/* check handle */
 	if (NULL == client) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] A handle is not valid");
-		return TTS_ERROR_INVALID_PARAMETER;
+		SLOG(LOG_WARN, TAG_TTSC, "Fail to notify error : A handle is not valid");
+		return EINA_FALSE;
 	}
 
-	/* change state by interrupt code */
-	if (TTS_INTERRUPTED_PAUSED == code) {
-		SLOG(LOG_DEBUG, TAG_TTSC, "change state to ready");
-		client->current_state = TTS_STATE_PAUSED;
-	} else if (TTS_INTERRUPTED_STOPPED == code) {
-		SLOG(LOG_DEBUG, TAG_TTSC, "change state to ready");
-		client->current_state = TTS_STATE_READY;
+	if (NULL != client->state_changed_cb) {
+		tts_client_use_callback(client);
+		client->state_changed_cb(client->tts, client->before_state, client->current_state, client->state_changed_user_data); 
+		tts_client_not_use_callback(client);
+		SLOG(LOG_DEBUG, TAG_TTSC, "State changed callback is called");
 	} else {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Interrupt code is not available");
+		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] State changed callback is null");
+	}
+
+	return EINA_FALSE;
+}
+
+int __tts_cb_set_state(int uid, int state)
+{
+	tts_client_s* client = tts_client_get_by_uid(uid);
+	if( NULL == client ) {
+		SLOG(LOG_ERROR, TAG_TTSC, "Handle not found");
 		return -1;
 	}
 
-	/* call callback function */
-	if (NULL != client->interrupted_cb) {
-		SLOG(LOG_DEBUG, TAG_TTSC, "Call callback function of stopped \n");
-		tts_client_use_callback(client);
-		client->interrupted_cb(client->tts, code, client->interrupted_user_data);
-		tts_client_not_use_callback(client);
-	} else {
-		SLOG(LOG_WARN, TAG_TTSC, "No registered callback function of stopped \n");
+	tts_state_e state_from_daemon = (tts_state_e)state;
+
+	if (client->current_state == state_from_daemon) {
+		SLOG(LOG_DEBUG, TAG_TTSC, "Current state has already been %d", client->current_state);
+		return 0;
 	}
 
+	if (NULL != client->state_changed_cb) {
+		ecore_timer_add(0, __tts_notify_state_changed, client->tts);
+	} else {
+		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] State changed callback is null");
+	}
+
+	client->before_state = client->current_state;
+	client->current_state = state_from_daemon;
+
 	return 0;
+}
+
+static Eina_Bool __tts_notify_utt_started(void *data)
+{
+	tts_h tts = (tts_h)data;
+
+	tts_client_s* client = tts_client_get(tts);
+
+	/* check handle */
+	if (NULL == client) {
+		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] Fail to notify utt started : A handle is not valid");
+		return EINA_FALSE;
+	}
+	
+	if (NULL != client->utt_started_cb) {
+		SLOG(LOG_DEBUG, TAG_TTSC, "Call callback function of utterance started \n");
+		tts_client_use_callback(client);
+		client->utt_started_cb(client->tts, client->utt_id, client->utt_started_user_data);
+		tts_client_not_use_callback(client);
+	} else {
+		SLOG(LOG_WARN, TAG_TTSC, "No registered callback function of utterance started \n");
+	}
+
+	return EINA_FALSE;
 }
 
 int __tts_cb_utt_started(int uid, int utt_id)
@@ -511,17 +715,40 @@ int __tts_cb_utt_started(int uid, int utt_id)
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "utterance started : uttid(%d) \n", utt_id);
 
+	client->utt_id = utt_id;
+
 	/* call callback function */
 	if (NULL != client->utt_started_cb) {
-		SLOG(LOG_DEBUG, TAG_TTSC, "Call callback function of utterance started \n");
-		tts_client_use_callback(client);
-		client->utt_started_cb(client->tts, utt_id, client->utt_started_user_data);
-		tts_client_not_use_callback(client);
+		ecore_timer_add(0, __tts_notify_utt_started, client->tts);
 	} else {
 		SLOG(LOG_WARN, TAG_TTSC, "No registered callback function of utterance started \n");
 	}
 
 	return 0;
+}
+
+static Eina_Bool __tts_notify_utt_completed(void *data)
+{
+	tts_h tts = (tts_h)data;
+
+	tts_client_s* client = tts_client_get(tts);
+
+	/* check handle */
+	if (NULL == client) {
+		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] Fail to notify utt completed : A handle is not valid");
+		return EINA_FALSE;
+	}
+
+	if (NULL != client->utt_completeted_cb) {
+		SLOG(LOG_DEBUG, TAG_TTSC, "Call callback function of utterance completed \n");
+		tts_client_use_callback(client);
+		client->utt_completeted_cb(client->tts, client->utt_id, client->utt_completed_user_data);
+		tts_client_not_use_callback(client);
+	} else {
+		SLOG(LOG_WARN, TAG_TTSC, "No registered callback function of utterance completed \n");
+	}
+
+	return EINA_FALSE;
 }
 
 int __tts_cb_utt_completed(int uid, int utt_id)
@@ -535,12 +762,11 @@ int __tts_cb_utt_completed(int uid, int utt_id)
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "utterance completed : uttid(%d) \n", utt_id);
 
+	client->utt_id = utt_id;
+
 	/* call callback function */
 	if (NULL != client->utt_completeted_cb) {
-		SLOG(LOG_DEBUG, TAG_TTSC, "Call callback function of utterance completed \n");
-		tts_client_use_callback(client);
-		client->utt_completeted_cb(client->tts, utt_id, client->utt_completed_user_data);
-		tts_client_not_use_callback(client);
+		ecore_timer_add(0, __tts_notify_utt_completed, client->tts);
 	} else {
 		SLOG(LOG_WARN, TAG_TTSC, "No registered callback function of utterance completed \n");
 	}
@@ -548,56 +774,56 @@ int __tts_cb_utt_completed(int uid, int utt_id)
 	return 0;
 }
 
-int tts_set_interrupted_cb(tts_h tts, tts_interrupted_cb callback, void* user_data)
+int tts_set_state_changed_cb(tts_h tts, tts_state_changed_cb callback, void* user_data)
 {
 	if (NULL == tts || NULL == callback) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Set interrupted cb : Input parameter is null");
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Set state changed cb : Input parameter is null");
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
 
 	tts_client_s* client = tts_client_get(tts);
 
 	if (NULL == client) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Set interrupted cb : A handle is not valid");
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Set state changed cb : A handle is not valid");
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
 
-	if (TTS_STATE_READY != client->current_state) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Set interrupted cb : Current state is not 'ready'."); 
+	if (TTS_STATE_CREATED != client->current_state) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Set state changed cb : Current state is not 'Created'."); 
 		return TTS_ERROR_INVALID_STATE;
 	}
 
-	client->interrupted_cb = callback;
-	client->interrupted_user_data = user_data;
+	client->state_changed_cb = callback;
+	client->state_changed_user_data = user_data;
 
-	SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Set interrupted cb");
+	SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Set state changed cb");
 
 	return 0;
 }
 
-int tts_unset_interrupted_cb(tts_h tts)
+int tts_unset_state_changed_cb(tts_h tts)
 {
 	if (NULL == tts) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Unset interrupted cb : Input parameter is null");
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Unset state changed cb : Input parameter is null");
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
 
 	tts_client_s* client = tts_client_get(tts);
 
 	if (NULL == client) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Unset interrupted cb : A handle is not valid");
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Unset state changed cb : A handle is not valid");
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
 
-	if (TTS_STATE_READY != client->current_state) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Unset interrupted cb : Current state is not 'ready'."); 
+	if (TTS_STATE_CREATED != client->current_state) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Unset state changed cb : Current state is not 'Created'."); 
 		return TTS_ERROR_INVALID_STATE;
 	}
 
-	client->interrupted_cb = NULL;
-	client->interrupted_user_data = NULL;
+	client->state_changed_cb = NULL;
+	client->state_changed_user_data = NULL;
 
-	SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Unset interrupted cb");
+	SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Unset state changed cb");
 
 	return 0;
 }
@@ -616,8 +842,8 @@ int tts_set_utterance_started_cb(tts_h tts, tts_utterance_started_cb callback, v
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
 
-	if (TTS_STATE_READY != client->current_state) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Set utt started cb : Current state is not 'ready'."); 
+	if (TTS_STATE_CREATED != client->current_state) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Set utt started cb : Current state is not 'Created'."); 
 		return TTS_ERROR_INVALID_STATE;
 	}
 
@@ -643,8 +869,8 @@ int tts_unset_utterance_started_cb(tts_h tts)
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
 
-	if (TTS_STATE_READY != client->current_state) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Unset utt started cb : Current state is not 'ready'."); 
+	if (TTS_STATE_CREATED != client->current_state) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Unset utt started cb : Current state is not 'Created'."); 
 		return TTS_ERROR_INVALID_STATE;
 	}
 
@@ -670,8 +896,8 @@ int tts_set_utterance_completed_cb(tts_h tts, tts_utterance_completed_cb callbac
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
 
-	if (TTS_STATE_READY != client->current_state) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Set utt completed cb : Current state is not 'ready'."); 
+	if (TTS_STATE_CREATED != client->current_state) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Set utt completed cb : Current state is not 'Created'."); 
 		return TTS_ERROR_INVALID_STATE;
 	}
 
@@ -697,8 +923,8 @@ int tts_unset_utterance_completed_cb(tts_h tts)
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
 
-	if (TTS_STATE_READY != client->current_state) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Unset utt completed cb : Current state is not 'ready'."); 
+	if (TTS_STATE_CREATED != client->current_state) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Unset utt completed cb : Current state is not 'Created'."); 
 		return TTS_ERROR_INVALID_STATE;
 	}
 
@@ -723,8 +949,8 @@ int tts_set_error_cb(tts_h tts, tts_error_cb callback, void* user_data)
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
 
-	if (TTS_STATE_READY != client->current_state) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Set error cb : Current state is not 'ready'."); 
+	if (TTS_STATE_CREATED != client->current_state) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Set error cb : Current state is not 'Created'."); 
 		return TTS_ERROR_INVALID_STATE;
 	}
 
@@ -750,8 +976,8 @@ int tts_unset_error_cb(tts_h tts)
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
 	
-	if (TTS_STATE_READY != client->current_state) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Unset error cb : Current state is not 'ready'."); 
+	if (TTS_STATE_CREATED != client->current_state) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Unset error cb : Current state is not 'Created'."); 
 		return TTS_ERROR_INVALID_STATE;
 	}
 
@@ -773,7 +999,7 @@ static bool _tts_is_alive()
 	memset(cmd, '\0', sizeof(char) * 256);
 
 	if ((fp = popen("ps -eo \"cmd\"", "r")) == NULL) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] popen error \n");
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] popen error");
 		return FALSE;
 	}
 
@@ -783,7 +1009,7 @@ static bool _tts_is_alive()
 		if (0 == strncmp(cmd, "[tts-daemon]", strlen("[tts-daemon]")) ||
 			0 == strncmp(cmd, "tts-daemon", strlen("tts-daemon")) ||
 			0 == strncmp(cmd, "/usr/bin/tts-daemon", strlen("/usr/bin/tts-daemon"))) {
-			SLOG(LOG_DEBUG, TAG_TTSC, "tts-daemon is ALIVE !! \n");
+			SLOG(LOG_DEBUG, TAG_TTSC, "tts-daemon is ALIVE !!");
 			fclose(fp);
 			return TRUE;
 		}
@@ -791,7 +1017,7 @@ static bool _tts_is_alive()
 
 	fclose(fp);
 
-	SLOG(LOG_DEBUG, TAG_TTSC, "THERE IS NO tts-daemon !! \n");
+	SLOG(LOG_DEBUG, TAG_TTSC, "THERE IS NO tts-daemon !!");
 
 	return FALSE;
 }
@@ -813,7 +1039,7 @@ static void __my_sig_child(int signo, siginfo_t *info, void *data)
 	return;
 }
 
-int __tts_check_tts_daemon()
+static int __tts_check_tts_daemon()
 {
 	if (TRUE == _tts_is_alive())
 		return 0;
@@ -836,7 +1062,7 @@ int __tts_check_tts_daemon()
 
 	switch(pid) {
 	case -1:
-		SLOG(LOG_ERROR, TAG_TTSC, "fail to create TTS-DAEMON \n");
+		SLOG(LOG_ERROR, TAG_TTSC, "Fail to create tts-daemon");
 		break;
 
 	case 0:
@@ -848,7 +1074,6 @@ int __tts_check_tts_daemon()
 		break;
 
 	default:
-		sleep(1);
 		break;
 	}
 

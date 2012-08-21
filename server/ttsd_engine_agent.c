@@ -120,17 +120,16 @@ int ttsd_engine_agent_init(synth_result_callback result_cb)
 
 	g_agent_init = true;
 
-	if (0 != ttsd_config_get_char_type(CONFIG_KEY_DEFAULT_LANGUAGE, &(g_cur_engine.default_lang)) &&
-		0 != ttsd_config_get_int_type(CONFIG_KEY_DEFAULT_VOICE_TYPE, &(g_cur_engine.default_vctype)) ) {
-		/* Set default voice */
+	if (0 != ttsd_config_get_default_voice(&(g_cur_engine.default_lang), &(g_cur_engine.default_vctype))) {
 		SLOG(LOG_WARN, TAG_TTSD, "[Server WARNING] There is No default voice in config\n"); 
+		/* Set default voice */
 		g_cur_engine.default_lang = strdup("en_US");
 		g_cur_engine.default_vctype = TTSP_VOICE_TYPE_FEMALE;
 	}
 
-	if (0 != ttsd_config_get_int_type(CONFIG_KEY_DEFAULT_SPEED, &(g_cur_engine.default_speed))) {
+	if (0 != ttsd_config_get_default_speed(&(g_cur_engine.default_speed))) {
 		SLOG(LOG_WARN, TAG_TTSD, "[Server WARNING] There is No default speed in config\n"); 
-		ttsd_config_set_int_type(CONFIG_KEY_DEFAULT_SPEED, TTSP_SPEED_NORMAL);
+		ttsd_config_set_default_speed((int)TTSP_SPEED_NORMAL);
 		g_cur_engine.default_speed = TTSP_SPEED_NORMAL;
 	}
 
@@ -169,14 +168,18 @@ int ttsd_engine_agent_release()
 	g_list_free(iter);
 
 	/* release current engine data */
-	if( g_cur_engine.pefuncs != NULL)
+	if (g_cur_engine.pefuncs != NULL)
 		g_free(g_cur_engine.pefuncs);
 	
-	if( g_cur_engine.pdfuncs != NULL)
+	if (g_cur_engine.pdfuncs != NULL)
 		g_free(g_cur_engine.pdfuncs);
 
 	g_result_cb = NULL;
 	g_agent_init = false;
+
+	if (g_cur_engine.default_lang != NULL) 
+		g_free(g_cur_engine.default_lang);
+
 
 	SLOG(LOG_DEBUG, TAG_TTSD, "[Engine Agent SUCCESS] Release Engine Agent\n");
 
@@ -200,7 +203,7 @@ int ttsd_engine_agent_initialize_current_engine()
 	char* cur_engine_uuid = NULL;
 	bool is_get_engineid_from_config = false;
 
-	if (0 != ttsd_config_get_char_type(CONFIG_KEY_DEFAULT_ENGINE_ID ,&cur_engine_uuid)) {
+	if (0 != ttsd_config_get_default_engine(&cur_engine_uuid)) {
 		/*not set current engine */
 		/*set system default engine*/
 		GList *iter = NULL;
@@ -273,7 +276,7 @@ int ttsd_engine_agent_initialize_current_engine()
 	} 
 
 	if (false == is_get_engineid_from_config) {
-		if (0 != ttsd_config_set_char_type(CONFIG_KEY_DEFAULT_ENGINE_ID ,cur_engine_uuid))
+		if (0 != ttsd_config_set_default_engine(cur_engine_uuid))
 			SLOG(LOG_ERROR, TAG_TTSD, "[Engine Agent ERROR] fail to set id to config \n"); 
 	}
 
@@ -526,6 +529,11 @@ int __internal_set_current_engine(const char* engine_uuid)
 	if (g_cur_engine.engine_name != NULL)	g_free(g_cur_engine.engine_name);
 	if (g_cur_engine.engine_path != NULL)	g_free(g_cur_engine.engine_path);
 
+	if (NULL == data->engine_uuid || NULL == data->engine_name || NULL == data->engine_path) {
+		SLOG(LOG_ERROR, TAG_TTSD, "[Engine Agent ERROR] __internal_set_current_engine : Engine data is NULL");
+		return TTSD_ERROR_OPERATION_FAILED;
+	}
+
 	g_cur_engine.engine_uuid = g_strdup(data->engine_uuid);
 	g_cur_engine.engine_name = g_strdup(data->engine_name);
 	g_cur_engine.engine_path = g_strdup(data->engine_path);
@@ -661,9 +669,8 @@ int ttsd_engine_agent_load_current_engine()
 					return TTSD_ERROR_OPERATION_FAILED;
 				}
 
-				ttsd_config_set_char_type(CONFIG_KEY_DEFAULT_LANGUAGE, voice->language);
-				ttsd_config_set_int_type(CONFIG_KEY_DEFAULT_VOICE_TYPE, voice->type);
-
+				ttsd_config_set_default_voice(voice->language, (int)voice->type);
+				
 				g_cur_engine.default_lang = g_strdup(voice->language);
 				g_cur_engine.default_vctype = voice->type;
 
@@ -1100,10 +1107,9 @@ int ttsd_engine_get_default_voice( char** lang, ttsp_voice_type_e* vctype )
 					SLOG(LOG_ERROR, TAG_TTSD, "[Engine ERROR] Fail voice is NOT valid ");
 					return TTSD_ERROR_OPERATION_FAILED;
 				}
-
-				ttsd_config_set_char_type(CONFIG_KEY_DEFAULT_LANGUAGE, voice->language);
-				ttsd_config_set_int_type(CONFIG_KEY_DEFAULT_VOICE_TYPE, voice->type);
-
+				
+				ttsd_config_set_default_voice(voice->language, (int)voice->type);
+				
 				if (NULL != g_cur_engine.default_lang)
 					g_free(g_cur_engine.default_lang);
 
@@ -1228,8 +1234,9 @@ int ttsd_engine_setting_set_engine(const char* engine_id)
 
 		/* roll back to old current engine. */
 		__internal_set_current_engine(tmp_uuid);
-
-		if( tmp_uuid != NULL )	
+		ttsd_engine_agent_load_current_engine();
+		
+		if (tmp_uuid != NULL)	
 			free(tmp_uuid);
 
 		return TTSD_ERROR_OPERATION_FAILED;
@@ -1248,7 +1255,7 @@ int ttsd_engine_setting_set_engine(const char* engine_id)
 	}
 
 	/* save engine id to config */
-	if (0 != ttsd_config_set_char_type(CONFIG_KEY_DEFAULT_ENGINE_ID, engine_id)) {
+	if (0 != ttsd_config_set_default_engine(engine_id)) {
 		SLOG(LOG_WARN, TAG_TTSD, "[Engine Agent WARNING] Fail to save engine id to config \n"); 
 	}
 
@@ -1348,15 +1355,10 @@ int ttsd_engine_setting_set_default_voice(const char* language, ttsp_voice_type_
 	g_cur_engine.default_lang = strdup(language);
 	g_cur_engine.default_vctype = vctype;
 
-	ret = ttsd_config_set_char_type(CONFIG_KEY_DEFAULT_LANGUAGE, language);
+	ret = ttsd_config_set_default_voice(language, (int)vctype);
 	if (0 == ret) {
-		ret = ttsd_config_set_int_type(CONFIG_KEY_DEFAULT_VOICE_TYPE, vctype);
-		if (0 != ret) {
-			SLOG(LOG_ERROR, TAG_TTSD, "[Engine Agent ERROR] fail to write default voice to config (%d) \n", ret); 
-		} else {
-			SLOG(LOG_DEBUG, TAG_TTSD, "[Engine Agent SUCCESS] Set default voice : lang(%s), type(%d) \n",
+		SLOG(LOG_DEBUG, TAG_TTSD, "[Engine Agent SUCCESS] Set default voice : lang(%s), type(%d) \n",
 				g_cur_engine.default_lang, g_cur_engine.default_vctype); 
-		}
 	} else {
 		SLOG(LOG_ERROR, TAG_TTSD, "[Engine Agent ERROR] fail to write default voice to config (%d) \n", ret); 
 	}
@@ -1396,7 +1398,7 @@ int ttsd_engine_setting_set_default_speed(const ttsp_speed_e speed)
 
 	g_cur_engine.default_speed = speed;
 
-	if (0 != ttsd_config_set_int_type(CONFIG_KEY_DEFAULT_SPEED, speed)) {
+	if (0 != ttsd_config_set_default_speed(speed)) {
 		SLOG(LOG_ERROR, TAG_TTSD, "[Engine Agent ERROR] fail to set default speed to config");
 	}
 

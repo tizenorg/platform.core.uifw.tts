@@ -4,7 +4,7 @@ Version:    0.1.1
 Release:    1
 Group:      libs
 License:    Samsung
-Source0:    tts-0.1.1.tar.gz
+Source0:    %{name}-%{version}.tar.gz
 Requires(post): /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
 BuildRequires:  pkgconfig(glib-2.0)
@@ -55,6 +55,7 @@ rm -rf %{buildroot}
 %files
 %defattr(-,root,root,-)
 %{_libdir}/lib*.so
+%{_libdir}/voice/tts/1.0/ttsd.conf
 %{_bindir}/tts-daemon
 
 

@@ -11,7 +11,7 @@
 *  limitations under the License.
 */
 
-
+#include <Ecore.h>
 #include "ttsd_main.h"
 #include "ttsd_player.h"
 #include "ttsd_data.h"
@@ -30,10 +30,18 @@ typedef struct {
 } utterance_t;
 
 /* If current engine exist */
-static bool g_is_engine;
+static bool	g_is_engine;
 
 /* If engine is running */
-static bool g_is_synthesizing;
+static bool	g_is_synthesizing;
+
+/* If the daemon get the result */
+Ecore_Timer*	g_timer;
+static bool	g_is_next_synthesis;
+
+/* Function definitions */
+int __server_next_synthesis(int uid);
+
 
 int __server_set_is_synthesizing(bool flag)
 {
@@ -58,38 +66,20 @@ int __server_send_error(int uid, int utt_id, int error_code)
 	return 0;
 }
 
-int __server_interrupt_client(int org_uid)
-{
-	int pid = ttsd_data_get_pid(org_uid);
-
-	/* pause player */
-	if (0 != ttsd_player_pause(org_uid)) {
-		SLOG(LOG_WARN, TAG_TTSD, "[Server ERROR] fail to ttsd_player_pause() : uid (%d)\n", org_uid);
-	} 
-
-	/* send message to client about changing state */
-	ttsdc_send_interrupt_message (pid, org_uid, TTSD_INTERRUPTED_PAUSED);
-
-	/* change state */
-	ttsd_data_set_client_state(org_uid, APP_STATE_PAUSED);
-
-	return 0;
-}
-
-int __server_start_synthesis(int uid)
+int __server_start_synthesis(int uid, int mode)
 {
 	int result = 0;
 
 	/* check if tts-engine is running */
 	if (true == __server_get_current_synthesis()) {
-		SLOG(LOG_DEBUG, TAG_TTSD, "[Server] TTS-engine is running \n");
+		SLOG(LOG_DEBUG, TAG_TTSD, "[Server] TTS-engine is running ");
 	} else {
 		speak_data_s sdata;
 		if (0 == ttsd_data_get_speak_data(uid, &sdata)) {
 			utterance_t* utt = (utterance_t*)g_malloc0(sizeof(utterance_t));
 
 			if (NULL == utt) {
-				SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Out of memory : utterance \n");
+				SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Out of memory : utterance ");
 				return TTSD_ERROR_OUT_OF_MEMORY;
 			}
 
@@ -104,7 +94,7 @@ int __server_start_synthesis(int uid)
 
 			__server_set_is_synthesizing(true);
 			int ret = 0;
-			ret = ttsd_engine_start_synthesis( sdata.lang, sdata.vctype, sdata.text, sdata.speed, (void*)utt);
+			ret = ttsd_engine_start_synthesis(sdata.lang, sdata.vctype, sdata.text, sdata.speed, (void*)utt);
 			if (0 != ret) {
 				SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] * FAIL to start SYNTHESIS !!!! * ");
 
@@ -113,6 +103,14 @@ int __server_start_synthesis(int uid)
 				result = TTSD_ERROR_OPERATION_FAILED;
 
 				g_free(utt);
+
+				if (2 == mode) {
+					__server_send_error(uid, sdata.utt_id, TTSD_ERROR_OPERATION_FAILED);
+					ttsd_server_stop(uid);
+
+					int pid = ttsd_data_get_pid(uid);
+					ttsdc_send_set_state_message(pid, uid, APP_STATE_READY);
+				}
 			} else {
 				SLOG(LOG_DEBUG, TAG_TTSD, "[Server] SUCCESS to start synthesis");
 			}
@@ -142,16 +140,17 @@ int __server_play_internal(int uid, app_state_e state)
 
 		/* resume player and start speech synthesis */
 		if (0 != ttsd_player_resume(uid)) {
-			SLOG(LOG_WARN, TAG_TTSD, "[Server WARNING] fail to ttsd_player_resume() \n");
+			SLOG(LOG_WARN, TAG_TTSD, "[Server WARNING] fail to ttsd_player_resume()");
 		} 
 		
-		ret = __server_start_synthesis(uid);
+		/* mode 1 for play */
+		ret = __server_start_synthesis(uid, 1);
 
 	} else if(APP_STATE_READY == state) {
-
 		SLOG(LOG_DEBUG, TAG_TTSD, "[Server] uid(%d) is 'Ready' state : Next step is start synthesis ", uid);
-
-		ret = __server_start_synthesis(uid);
+		
+		/* mode 1 for play */
+		ret = __server_start_synthesis(uid, 1);
 	} else {
 		/* NO this case */
 	}
@@ -174,7 +173,7 @@ int __server_next_synthesis(int uid)
 	}
 
 	if (true == __server_get_current_synthesis()) {
-		SLOG(LOG_WARN, TAG_TTSD, "[Server WARNING] Engine has already been running. \n");
+		SLOG(LOG_WARN, TAG_TTSD, "[Server WARNING] Engine has already been running. ");
 		SLOG(LOG_DEBUG, TAG_TTSD, "=====");
 		SLOG(LOG_DEBUG, TAG_TTSD, "  ");
 		return 0;
@@ -187,7 +186,7 @@ int __server_next_synthesis(int uid)
 		utterance_t* utt = (utterance_t*)g_malloc0(sizeof(utterance_t));
 
 		if (NULL == utt) {
-			SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] fail to allocate memory : utterance \n");
+			SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] fail to allocate memory : utterance ");
 
 			__server_send_error(current_uid, sdata.utt_id, TTSD_ERROR_OUT_OF_MEMORY);
 			return TTSD_ERROR_OUT_OF_MEMORY;
@@ -214,6 +213,11 @@ int __server_next_synthesis(int uid)
 			__server_send_error(current_uid, sdata.utt_id, TTSD_ERROR_OPERATION_FAILED);
 
 			g_free(utt);
+
+			ttsd_server_stop(current_uid);
+
+			int pid = ttsd_data_get_pid(current_uid);
+			ttsdc_send_set_state_message(pid, current_uid, APP_STATE_READY);
 		}
 
 		if(sdata.text != NULL)	
@@ -221,7 +225,7 @@ int __server_next_synthesis(int uid)
 	}
 
 	if (0 != ttsd_player_play(current_uid)) {
-		SLOG(LOG_WARN, TAG_TTSD, "[Server WARNING] __synthesis_result_callback : fail ttsd_player_play() \n");
+		SLOG(LOG_WARN, TAG_TTSD, "[Server WARNING] __synthesis_result_callback : fail ttsd_player_play() ");
 	} else {
 		/* success playing */
 		SLOG(LOG_DEBUG, TAG_TTSD, "[Server] Success to start player");
@@ -245,13 +249,13 @@ int __player_result_callback(player_event_e event, int uid, int utt_id)
 		if (false == __server_get_current_synthesis()) {
 			/* check text queue is empty */
 			if (0 == ttsd_data_get_speak_data_size(uid) && 0 == ttsd_data_get_sound_data_size(uid)) {
-				SLOG(LOG_DEBUG, TAG_TTSD, "[SERVER Callback] all play completed \n");
+				SLOG(LOG_DEBUG, TAG_TTSD, "[SERVER Callback] all play completed ");
 			}
 		} 
 		break;
 
 	case PLAYER_ERROR:
-		SLOG(LOG_ERROR, TAG_TTSD, "[SERVER Callback ERROR] callback : player error \n");
+		SLOG(LOG_ERROR, TAG_TTSD, "[SERVER Callback ERROR] callback : player error ");
 
 		__server_send_error(uid, utt_id, TTSD_ERROR_OPERATION_FAILED);
 		break;
@@ -263,9 +267,29 @@ int __player_result_callback(player_event_e event, int uid, int utt_id)
 	return 0;
 }
 
+Eina_Bool __start_next_synthesis(void *data)
+{
+	/* get current play */
+	int uid = ttsd_data_is_current_playing();
+
+	if (uid < 0)
+		return EINA_FALSE;
+
+	if (true == g_is_next_synthesis) {
+		SLOG(LOG_DEBUG, TAG_TTSD, "===== NEXT SYNTHESIS START");
+		__server_next_synthesis(uid);
+		SLOG(LOG_DEBUG, TAG_TTSD, "===== ");
+		SLOG(LOG_DEBUG, TAG_TTSD, " ");
+
+		g_is_next_synthesis = false;
+	}
+
+	return EINA_TRUE;	
+}
+
 int __synthesis_result_callback(ttsp_result_event_e event, const void* data, unsigned int data_size, void *user_data)
 {
-	SLOG(LOG_DEBUG, TAG_TTSD, "===== SYNTHESIS RESULT CALLBACK");
+	SLOG(LOG_DEBUG, TAG_TTSD, "===== SYNTHESIS RESULT CALLBACK START");
 
 	utterance_t* utt_get_param;
 	utt_get_param = (utterance_t*)user_data;
@@ -274,7 +298,7 @@ int __synthesis_result_callback(ttsp_result_event_e event, const void* data, uns
 	int uttid = utt_get_param->uttid;
 
 	if (NULL == utt_get_param) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[SERVER ERROR] User data is NULL \n" );
+		SLOG(LOG_ERROR, TAG_TTSD, "[SERVER ERROR] User data is NULL " );
 		SLOG(LOG_DEBUG, TAG_TTSD, "=====");
 		SLOG(LOG_DEBUG, TAG_TTSD, "  ");
 		return -1;
@@ -288,7 +312,7 @@ int __synthesis_result_callback(ttsp_result_event_e event, const void* data, uns
 		if (TTSP_RESULT_EVENT_FINISH == event)		SLOG(LOG_DEBUG, TAG_TTSD, "[SERVER] Event : TTSP_RESULT_EVENT_FINISH");
 
 		if (false == ttsd_data_is_uttid_valid(uid, uttid)) {
-			SLOG(LOG_ERROR, TAG_TTSD, "[SERVER ERROR] uttid is NOT valid !!!! \n" );
+			SLOG(LOG_ERROR, TAG_TTSD, "[SERVER ERROR] uttid is NOT valid !!!! " );
 			SLOG(LOG_DEBUG, TAG_TTSD, "=====");
 			SLOG(LOG_DEBUG, TAG_TTSD, "  ");
 
@@ -296,7 +320,7 @@ int __synthesis_result_callback(ttsp_result_event_e event, const void* data, uns
 		}
 
 
-		SLOG(LOG_DEBUG, TAG_TTSD, "[SERVER] Result Info : uid(%d), utt(%d), data(%p), data size(%d) \n", 
+		SLOG(LOG_DEBUG, TAG_TTSD, "[SERVER] Result Info : uid(%d), utt(%d), data(%p), data size(%d) ", 
 			uid, uttid, data, data_size);
 
 		/* add wav data */
@@ -324,16 +348,13 @@ int __synthesis_result_callback(ttsp_result_event_e event, const void* data, uns
 		temp_data.channels = channels;
 		
 		if (0 != ttsd_data_add_sound_data(uid, temp_data)) {
-			SLOG(LOG_ERROR, TAG_TTSD, "[SERVER ERROR] Fail to add sound data : uid(%d)\n", utt_get_param->uid);
+			SLOG(LOG_ERROR, TAG_TTSD, "[SERVER ERROR] Fail to add sound data : uid(%d)", utt_get_param->uid);
 		}
 
 		if (event == TTSP_RESULT_EVENT_FINISH) {
 			__server_set_is_synthesizing(false);
-			
-			if (0 != ttsd_send_start_next_synthesis_message(uid)) {
-				/* critical error */
-				SLOG(LOG_ERROR, TAG_TTSD, "[SERVER ERROR] IPC ERROR FOR NEXT SYNTHESIS \n");
-			}
+
+			g_is_next_synthesis = true;
 		}
 	} 
 	
@@ -341,20 +362,15 @@ int __synthesis_result_callback(ttsp_result_event_e event, const void* data, uns
 		SLOG(LOG_DEBUG, TAG_TTSD, "[SERVER] Event : TTSP_RESULT_EVENT_CANCEL");
 		__server_set_is_synthesizing(false);
 
-		if (0 != ttsd_send_start_next_synthesis_message(uid)) {
-			/* critical error */
-			SLOG(LOG_ERROR, TAG_TTSD, "[SERVER ERROR] IPC ERROR FOR NEXT SYNTHESIS \n");
-		}
+		g_is_next_synthesis = true;
 	} 
 	
 	else {
-		SLOG(LOG_DEBUG, TAG_TTSD, "[SERVER] Event : TTSP_RESULT_EVENT_CANCEL");
+		SLOG(LOG_DEBUG, TAG_TTSD, "[SERVER] Event : etc");
 		
 		__server_set_is_synthesizing(false);
-		if (0 != ttsd_send_start_next_synthesis_message(uid)) {
-			/* critical error */
-			SLOG(LOG_ERROR, TAG_TTSD, "[SERVER ERROR] IPC ERROR FOR NEXT SYNTHESIS \n");
-		}
+		
+		g_is_next_synthesis = true;
 	} 
 
 	if (TTSP_RESULT_EVENT_FINISH == event || TTSP_RESULT_EVENT_CANCEL == event || TTSP_RESULT_EVENT_FAIL == event) {
@@ -362,7 +378,7 @@ int __synthesis_result_callback(ttsp_result_event_e event, const void* data, uns
 			free(utt_get_param);
 	}
 
-	SLOG(LOG_DEBUG, TAG_TTSD, "=====");
+	SLOG(LOG_DEBUG, TAG_TTSD, "===== SYNTHESIS RESULT CALLBACK END");
 	SLOG(LOG_DEBUG, TAG_TTSD, "  ");
 
 	return 0;
@@ -374,28 +390,61 @@ int __synthesis_result_callback(ttsp_result_event_e event, const void* data, uns
 
 int ttsd_initialize()
 {
+	if (ttsd_config_initialize()) {
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server WARNING] Fail to initialize config.");
+	}
+
 	/* player init */
 	if (ttsd_player_init(__player_result_callback)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Fail to initialize player init \n");
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Fail to initialize player init.");
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
 	/* Engine Agent initialize */
 	if (0 != ttsd_engine_agent_init(__synthesis_result_callback)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Fail to engine agent initialize \n");
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Fail to engine agent initialize.");
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
 	/* set current engine */
 	if (0 != ttsd_engine_agent_initialize_current_engine()) {
-		SLOG(LOG_WARN, TAG_TTSD, "[Server WARNING] No Engine !!! \n" );
+		SLOG(LOG_WARN, TAG_TTSD, "[Server WARNING] No Engine !!!" );
 		g_is_engine = false;
 	} else 
 		g_is_engine = true;
 
+	g_timer = NULL;
+
 	return TTSD_ERROR_NONE;
 }
 
+
+bool __get_client_for_clean_up(int pid, int uid, app_state_e state, void* user_data)
+{
+	int result = 1;
+
+	result = ttsdc_send_hello(pid, uid);
+
+	if (0 == result) {
+		SLOG(LOG_DEBUG, TAG_TTSD, "[Server] uid(%d) should be removed.", uid); 
+		ttsd_server_finalize(uid);
+	} else if (-1 == result) {
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Hello result has error"); 
+	}
+
+	return true;
+}
+
+
+Eina_Bool ttsd_cleanup_client(void *data)
+{
+	SLOG(LOG_DEBUG, TAG_TTSD, "===== CLEAN UP CLIENT START");
+	ttsd_data_foreach_clients(__get_client_for_clean_up, NULL);
+	SLOG(LOG_DEBUG, TAG_TTSD, "=====");
+	SLOG(LOG_DEBUG, TAG_TTSD, "  ");
+
+	return EINA_TRUE;
+}
 
 /*
 * TTS Server Functions for Client
@@ -405,7 +454,7 @@ int ttsd_server_initialize(int pid, int uid)
 {
 	if (false == g_is_engine) {
 		if (0 != ttsd_engine_agent_initialize_current_engine()) {
-			SLOG(LOG_WARN, TAG_TTSD, "[Server WARNING] No Engine !!! \n" );
+			SLOG(LOG_WARN, TAG_TTSD, "[Server WARNING] No Engine !!! " );
 			g_is_engine = false;
 
 			return TTSD_ERROR_ENGINE_NOT_FOUND;
@@ -415,24 +464,24 @@ int ttsd_server_initialize(int pid, int uid)
 	}
 
 	if (-1 != ttsd_data_is_client(uid)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Uid has already been registered \n");
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Uid has already been registered ");
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
 	if (0 == ttsd_data_get_client_count()) {
 		if (0 != ttsd_engine_agent_load_current_engine()) {
-			SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Fail to load current engine \n");
+			SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Fail to load current engine ");
 			return TTSD_ERROR_OPERATION_FAILED;
 		}
 	}
 
 	if (0 != ttsd_data_new_client(pid, uid)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Fail to add client info \n");
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Fail to add client info ");
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
 	if (0 != ttsd_player_create_instance(uid)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Fail to create player \n");
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Fail to create player ");
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
@@ -444,7 +493,7 @@ int ttsd_server_finalize(int uid)
 {
 	app_state_e state;
 	if (0 > ttsd_data_get_client_state(uid, &state)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] ttsd_server_finalize : uid is not valid  \n");
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] ttsd_server_finalize : uid is not valid  ");
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
@@ -457,9 +506,9 @@ int ttsd_server_finalize(int uid)
 	/* unload engine, if ref count of client is 0 */
 	if (0 == ttsd_data_get_client_count()) {
 		if (0 != ttsd_engine_agent_unload_current_engine()) {
-			SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] fail to unload current engine \n");
+			SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] fail to unload current engine ");
 		} else {
-			SLOG(LOG_DEBUG, TAG_TTSD, "[Server SUCCESS] unload current engine \n");
+			SLOG(LOG_DEBUG, TAG_TTSD, "[Server SUCCESS] unload current engine ");
 		}
 	}
 
@@ -470,7 +519,7 @@ int ttsd_server_add_queue(int uid, const char* text, const char* lang, int voice
 {
 	app_state_e state;
 	if (0 > ttsd_data_get_client_state(uid, &state)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] ttsd_server_add_queue : uid is not valid  \n");
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] ttsd_server_add_queue : uid is not valid  ");
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
@@ -478,7 +527,7 @@ int ttsd_server_add_queue(int uid, const char* text, const char* lang, int voice
 	char* temp_lang = NULL;
 	ttsp_voice_type_e temp_type;
 	if (true != ttsd_engine_select_valid_voice((const char*)lang, (const ttsp_voice_type_e)voice_type, &temp_lang, &temp_type)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Fail to select valid voice \n");
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Fail to select valid voice ");
 		return TTSD_ERROR_INVALID_VOICE;
 	} else {		
 		if (NULL == temp_lang)
@@ -497,7 +546,7 @@ int ttsd_server_add_queue(int uid, const char* text, const char* lang, int voice
 
 	/* if state is APP_STATE_READY , APP_STATE_PAUSED , only need to add speak data to queue*/
 	if (0 != ttsd_data_add_speak_data(uid, data)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] ttsd_server_add_queue : Current state of uid is not 'ready' \n");
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] ttsd_server_add_queue : Current state of uid is not 'ready' ");
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
@@ -505,13 +554,14 @@ int ttsd_server_add_queue(int uid, const char* text, const char* lang, int voice
 		/* check if engine use network */
 		if (ttsd_engine_agent_need_network()) {
 			if (false == ttsd_network_is_connected()) {
-				SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Disconnect network. Current engine needs network.\n");
+				SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Disconnect network. Current engine needs network.");
 				return TTSD_ERROR_OPERATION_FAILED;
 			}
 		}
 
-		if (0 != __server_start_synthesis(uid)) {
-			SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] fail to schedule synthesis : uid(%d)\n", uid);
+		/* mode 2 for add text */
+		if (0 != __server_start_synthesis(uid, 2)) {
+			SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] fail to schedule synthesis : uid(%d)", uid);
 			return TTSD_ERROR_OPERATION_FAILED;
 		}
 	}
@@ -519,23 +569,36 @@ int ttsd_server_add_queue(int uid, const char* text, const char* lang, int voice
 	return TTSD_ERROR_NONE;
 }
 
+Eina_Bool __send_interrupt_client(void *data)
+{
+	int* uid = (int*)data;
+	
+	if (NULL != uid) {
+		int pid = ttsd_data_get_pid(*uid);
+		/* send message to client about changing state */
+		ttsdc_send_set_state_message (pid, *uid, APP_STATE_PAUSED);
+		free(uid);
+	}
+	return EINA_FALSE;
+}
+
 int ttsd_server_play(int uid)
 {
 	app_state_e state;
 	if (0 > ttsd_data_get_client_state(uid, &state)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] uid(%d) is NOT valid  \n", uid);
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] uid(%d) is NOT valid  ", uid);
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 	
 	if (APP_STATE_PLAYING == state) {
-		SLOG(LOG_WARN, TAG_TTSD, "[Server WARNING] Current state(%d) is 'play' \n", uid);
+		SLOG(LOG_WARN, TAG_TTSD, "[Server WARNING] Current state(%d) is 'play' ", uid);
 		return TTSD_ERROR_NONE;
 	}
 
 	/* check if engine use network */
 	if (ttsd_engine_agent_need_network()) {
 		if (false == ttsd_network_is_connected()) {
-			SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Disconnect network. Current engine needs network service!!!.\n");
+			SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Disconnect network. Current engine needs network service!!!.");
 			return TTSD_ERROR_OUT_OF_NETWORK;
 		}
 	}
@@ -544,20 +607,34 @@ int ttsd_server_play(int uid)
 
 	if (uid != current_uid && -1 != current_uid) {
 		/* Send interrupt message */
-		SLOG(LOG_DEBUG, TAG_TTSD, "[Server] Old uid(%d) will be interrupted into 'Pause' state \n", current_uid);
-		__server_interrupt_client(current_uid);
+		SLOG(LOG_DEBUG, TAG_TTSD, "[Server] Old uid(%d) will be interrupted into 'Pause' state ", current_uid);
+
+		/* pause player */
+		if (0 != ttsd_player_pause(current_uid)) {
+			SLOG(LOG_WARN, TAG_TTSD, "[Server ERROR] fail to ttsd_player_pause() : uid (%d)", current_uid);
+		} 
+
+		/* change state */
+		ttsd_data_set_client_state(current_uid, APP_STATE_PAUSED);
+
+		int* temp_uid = (int*)malloc(sizeof(int));
+		*temp_uid = current_uid;
+		ecore_timer_add(0, __send_interrupt_client, temp_uid);
 	}
 	
 	/* Change current play */
 	if (0 != ttsd_data_set_client_state(uid, APP_STATE_PLAYING)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Fail to set state : uid(%d)\n", uid);
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Fail to set state : uid(%d)", uid);
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
 	if (0 != __server_play_internal(uid, state)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Fail to start synthesis : uid(%d)\n", uid);
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Fail to start synthesis : uid(%d)", uid);
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
+
+	if (NULL == g_timer)
+		ecore_timer_add(0, __start_next_synthesis, NULL);
 
 	return TTSD_ERROR_NONE;
 }
@@ -567,7 +644,7 @@ int ttsd_server_stop(int uid)
 {
 	app_state_e state;
 	if (0 > ttsd_data_get_client_state(uid, &state)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] uid is not valid  \n");
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] uid is not valid  ");
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
@@ -578,10 +655,10 @@ int ttsd_server_stop(int uid)
 		ttsd_data_set_client_state(uid, APP_STATE_READY);
 
 		if (0 != ttsd_player_stop(uid)) 
-			SLOG(LOG_WARN, TAG_TTSD, "[Server] Fail to ttsd_player_stop()\n");
+			SLOG(LOG_WARN, TAG_TTSD, "[Server] Fail to ttsd_player_stop()");
 
 		if (true == __server_get_current_synthesis()) {
-			SLOG(LOG_DEBUG, TAG_TTSD, "[Server] TTS-engine is running \n");
+			SLOG(LOG_DEBUG, TAG_TTSD, "[Server] TTS-engine is running ");
 
 			int ret = 0;
 			ret = ttsd_engine_cancel_synthesis();
@@ -591,7 +668,7 @@ int ttsd_server_stop(int uid)
 			__server_set_is_synthesizing(false);
 		} 
 	} else {
-		SLOG(LOG_WARN, TAG_TTSD, "[Server WARNING] Current state is 'ready' \n");
+		SLOG(LOG_WARN, TAG_TTSD, "[Server WARNING] Current state is 'ready' ");
 	}
 
 	return TTSD_ERROR_NONE;
@@ -601,19 +678,19 @@ int ttsd_server_pause(int uid, int* utt_id)
 {
 	app_state_e state;
 	if (0 > ttsd_data_get_client_state(uid, &state)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] ttsd_server_pause : uid is not valid  \n");
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] ttsd_server_pause : uid is not valid  ");
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
 	if (APP_STATE_PLAYING != state)	{
-		SLOG(LOG_WARN, TAG_TTSD, "[Server WARNING] Current state is not 'play' \n");
+		SLOG(LOG_WARN, TAG_TTSD, "[Server WARNING] Current state is not 'play' ");
 		return TTSD_ERROR_INVALID_STATE;
 	}
 
 	int ret = 0;
 	ret = ttsd_player_pause(uid);
 	if (0 != ret) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] fail player_pause() : ret(%d)\n", ret);
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] fail player_pause() : ret(%d)", ret);
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
@@ -626,17 +703,17 @@ int ttsd_server_get_support_voices(int uid, GList** voice_list)
 {
 	app_state_e state;
 	if (0 > ttsd_data_get_client_state(uid, &state)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] uid is not valid  \n");
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] uid is not valid  ");
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
 	/* get voice list*/
 	if (0 != ttsd_engine_get_voice_list(voice_list)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Fail ttsd_server_get_support_voices() \n");
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] Fail ttsd_server_get_support_voices() ");
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
-	SLOG(LOG_DEBUG, TAG_TTSD, "[Server SUCCESS] Get supported voices \n");
+	SLOG(LOG_DEBUG, TAG_TTSD, "[Server SUCCESS] Get supported voices ");
 
 	return TTSD_ERROR_NONE;
 }
@@ -645,18 +722,18 @@ int ttsd_server_get_current_voice(int uid, char** language, int* voice_type)
 {
 	app_state_e state;
 	if (0 > ttsd_data_get_client_state(uid, &state)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] ttsd_server_get_current_voice : uid is not valid  \n");
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] ttsd_server_get_current_voice : uid is not valid  ");
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}		
 
 	/* get current voice */
 	int ret = ttsd_engine_get_default_voice(language, (ttsp_voice_type_e*)voice_type);
 	if (0 != ret) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] fail ttsd_server_get_support_voices() \n");
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] fail ttsd_server_get_support_voices() ");
 		return ret;
 	}
 
-	SLOG(LOG_DEBUG, TAG_TTSD, "[Server] Get default language (%s), voice type(%d) \n", *language, *voice_type); 
+	SLOG(LOG_DEBUG, TAG_TTSD, "[Server] Get default language (%s), voice type(%d) ", *language, *voice_type); 
 
 	return TTSD_ERROR_NONE;
 }
@@ -670,7 +747,7 @@ int ttsd_server_setting_initialize(int uid)
 {
 	if (false == g_is_engine) {
 		if (0 != ttsd_engine_agent_initialize_current_engine()) {
-			SLOG(LOG_WARN, TAG_TTSD, "[Server Setting WARNING] No Engine !!! \n" );
+			SLOG(LOG_WARN, TAG_TTSD, "[Server Setting WARNING] No Engine !!! " );
 			g_is_engine = false;
 			return TTSD_ERROR_ENGINE_NOT_FOUND;
 		} else {
@@ -678,21 +755,21 @@ int ttsd_server_setting_initialize(int uid)
 		}
 	}
 
-	if (-1 != ttsd_data_is_client(uid)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] pid has already been registered \n");
+	if (-1 != ttsd_setting_data_is_setting(uid)) {
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] pid has already been registered ");
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
 	if (0 == ttsd_data_get_client_count()) {
 		if( 0 != ttsd_engine_agent_load_current_engine() ) {
-			SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] Fail to load current engine \n");
+			SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] Fail to load current engine ");
 			return TTSD_ERROR_OPERATION_FAILED;
 		}
 	}
 
 	/* register pid */
-	if (0 != ttsd_data_new_client(uid, uid)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] Fail to add client info \n");
+	if (0 != ttsd_setting_data_add(uid)) {
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] Fail to add client info ");
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
@@ -701,21 +778,20 @@ int ttsd_server_setting_initialize(int uid)
 
 int ttsd_server_setting_finalize(int uid)
 {
-	app_state_e state;
-	if (0 > ttsd_data_get_client_state(uid, &state)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] uid is not valid  (%s)\n", uid);
+	if (-1 == ttsd_setting_data_is_setting(uid)) {
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] uid is not valid  (%s)", uid);
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
-	ttsd_data_delete_client(uid);
+	ttsd_setting_data_delete(uid);
 
 	/* unload engine, if ref count of client is 0 */
 	if (0 == ttsd_data_get_client_count())
 	{
 		if (0 != ttsd_engine_agent_unload_current_engine()) 
-			SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] fail to unload current engine \n");
+			SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] fail to unload current engine ");
 		else
-			SLOG(LOG_DEBUG, TAG_TTSD, "[Server Setting SUCCESS] unload current engine \n");
+			SLOG(LOG_DEBUG, TAG_TTSD, "[Server Setting SUCCESS] unload current engine ");
 	}
 
 	return TTSD_ERROR_NONE;
@@ -723,16 +799,15 @@ int ttsd_server_setting_finalize(int uid)
 
 int ttsd_server_setting_get_engine_list(int uid, GList** engine_list)
 {
-	app_state_e state;
-	if (0 > ttsd_data_get_client_state(uid, &state)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] uid is not valid  \n");
+	if (-1 == ttsd_setting_data_is_setting(uid)) {
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] uid is not valid  (%s)", uid);
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
 	int ret = 0;
 	ret = ttsd_engine_setting_get_engine_list(engine_list);
 	if (0 != ret) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] fail to get engine list : result(%d)\n", ret);
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] fail to get engine list : result(%d)", ret);
 		return ret;
 	}
 
@@ -741,16 +816,15 @@ int ttsd_server_setting_get_engine_list(int uid, GList** engine_list)
 
 int ttsd_server_setting_get_current_engine(int uid, char** engine_id)
 {
-	app_state_e state;
-	if (0 > ttsd_data_get_client_state(uid, &state)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] uid is not valid  \n");
+	if (-1 == ttsd_setting_data_is_setting(uid)) {
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] uid is not valid  (%s)", uid);
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
 	int ret = 0;
 	ret = ttsd_engine_setting_get_engine(engine_id);
 	if (0 != ret) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] Fail to get current engine : result(%d) \n", ret);
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] Fail to get current engine : result(%d) ", ret);
 		return ret;
 	}
 
@@ -765,7 +839,7 @@ bool __get_client_cb(int pid, int uid, app_state_e state, void* user_data)
 	ttsd_data_set_client_state(uid, APP_STATE_READY);
 
 	/* send message */
-	if ( 0 != ttsdc_send_interrupt_message(pid, uid, TTSD_INTERRUPTED_STOPPED)) {
+	if ( 0 != ttsdc_send_set_state_message(pid, uid, APP_STATE_READY)) {
 		/* remove client */
 		ttsd_data_delete_client(uid);
 	} 
@@ -775,15 +849,14 @@ bool __get_client_cb(int pid, int uid, app_state_e state, void* user_data)
 
 int ttsd_server_setting_set_current_engine(int uid, const char* engine_id)
 {
-	/* check if pid is valid */
-	app_state_e state;
-	if (0 > ttsd_data_get_client_state(uid, &state)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] uid is not valid  \n");
+	/* check if uid is valid */
+	if (-1 == ttsd_setting_data_is_setting(uid)) {
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] uid is not valid  (%s)", uid);
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
 	if (true == ttsd_engine_agent_is_same_engine(engine_id)) {
-		SLOG(LOG_DEBUG, TAG_TTSD, "[Server Setting] new engine is the same as current engine \n");
+		SLOG(LOG_DEBUG, TAG_TTSD, "[Server Setting] new engine is the same as current engine ");
 		return TTSD_ERROR_NONE;
 	}
 
@@ -797,7 +870,7 @@ int ttsd_server_setting_set_current_engine(int uid, const char* engine_id)
 	int ret = 0;
 	ret = ttsd_engine_setting_set_engine(engine_id);
 	if (0 != ret) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] fail to set current engine : result(%d) \n", ret);
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] fail to set current engine : result(%d) ", ret);
 		return ret;
 	}
 
@@ -806,9 +879,9 @@ int ttsd_server_setting_set_current_engine(int uid, const char* engine_id)
 
 int ttsd_server_setting_get_voice_list(int uid, char** engine_id, GList** voice_list)
 {
-	app_state_e state;
-	if (0 > ttsd_data_get_client_state(uid, &state)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] uid is not valid  \n");
+	/* check if uid is valid */
+	if (-1 == ttsd_setting_data_is_setting(uid)) {
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] uid is not valid  (%s)", uid);
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
@@ -816,7 +889,7 @@ int ttsd_server_setting_get_voice_list(int uid, char** engine_id, GList** voice_
 	int ret = 0;
 	ret = ttsd_engine_setting_get_voice_list(engine_id, voice_list);
 	if (0 != ret) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] Fail to get voice list : result(%d)\n", ret);
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] Fail to get voice list : result(%d)", ret);
 		return ret;
 	}
 
@@ -825,16 +898,16 @@ int ttsd_server_setting_get_voice_list(int uid, char** engine_id, GList** voice_
 
 int ttsd_server_setting_get_default_voice(int uid, char** language, ttsp_voice_type_e* vctype)
 {
-	app_state_e state;
-	if (0 > ttsd_data_get_client_state(uid, &state)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] uid is not valid  \n");
+	/* check if uid is valid */
+	if (-1 == ttsd_setting_data_is_setting(uid)) {
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] uid is not valid  (%s)", uid);
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 	
 	int ret = 0;
 	ret = ttsd_engine_setting_get_default_voice(language, vctype);
 	if (0 != ret) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] Fail to get default voice : result(%d) \n", ret);
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] Fail to get default voice : result(%d) ", ret);
 		return ret;
 	}
 
@@ -843,9 +916,9 @@ int ttsd_server_setting_get_default_voice(int uid, char** language, ttsp_voice_t
 
 int ttsd_server_setting_set_default_voice(int uid, const char* language, int vctype)
 {
-	app_state_e state;
-	if (0 > ttsd_data_get_client_state(uid, &state)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] uid is not valid  \n");
+	/* check if uid is valid */
+	if (-1 == ttsd_setting_data_is_setting(uid)) {
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] uid is not valid  (%s)", uid);
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
@@ -853,7 +926,7 @@ int ttsd_server_setting_set_default_voice(int uid, const char* language, int vct
 	int ret = 0;
 	ret = ttsd_engine_setting_set_default_voice((const char*)language, (const ttsp_voice_type_e)vctype);
 	if (0 != ret) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] fail to set default voice : result(%d) \n", ret);
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] fail to set default voice : result(%d) ", ret);
 		return ret;
 	}	
 
@@ -862,16 +935,16 @@ int ttsd_server_setting_set_default_voice(int uid, const char* language, int vct
 
 int ttsd_server_setting_get_engine_setting(int uid, char** engine_id, GList** engine_setting_list)
 {
-	app_state_e state;
-	if (0 > ttsd_data_get_client_state(uid, &state)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] uid is not valid  \n");
+	/* check if uid is valid */
+	if (-1 == ttsd_setting_data_is_setting(uid)) {
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] uid is not valid  (%s)", uid);
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
 	int ret = 0;
 	ret = ttsd_engine_setting_get_engine_setting_info(engine_id, engine_setting_list);
 	if (0 != ret) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] fail to get engine setting info : result(%d)\n", ret);
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] fail to get engine setting info : result(%d)", ret);
 		return ret;
 	}
 
@@ -880,16 +953,16 @@ int ttsd_server_setting_get_engine_setting(int uid, char** engine_id, GList** en
 
 int ttsd_server_setting_set_engine_setting(int uid, const char* key, const char* value)
 {
-	app_state_e state;
-	if (0 > ttsd_data_get_client_state(uid, &state)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] uid is not valid  \n");
+	/* check if uid is valid */
+	if (-1 == ttsd_setting_data_is_setting(uid)) {
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] uid is not valid  (%s)", uid);
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
 	int ret = 0;
 	ret = ttsd_engine_setting_set_engine_setting(key, value);
 	if (0 != ret) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] fail to set engine setting info : result(%d)\n", ret);
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] fail to set engine setting info : result(%d)", ret);
 		return ret;
 	}
 
@@ -898,9 +971,9 @@ int ttsd_server_setting_set_engine_setting(int uid, const char* key, const char*
 
 int ttsd_server_setting_get_default_speed(int uid, int* default_speed)
 {
-	app_state_e state;
-	if (0 > ttsd_data_get_client_state(uid, &state)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] uid is not valid  \n");
+	/* check if uid is valid */
+	if (-1 == ttsd_setting_data_is_setting(uid)) {
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] uid is not valid  (%s)", uid);
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
@@ -908,7 +981,7 @@ int ttsd_server_setting_get_default_speed(int uid, int* default_speed)
 	int ret = 0;
 	ret = ttsd_engine_setting_get_default_speed((ttsp_speed_e*)default_speed);
 	if (0 != ret) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] fail to get default speed : result(%d)\n", ret);
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] fail to get default speed : result(%d)", ret);
 		return ret;
 	}	
 
@@ -917,9 +990,9 @@ int ttsd_server_setting_get_default_speed(int uid, int* default_speed)
 
 int ttsd_server_setting_set_default_speed(int uid, int default_speed)
 {
-	app_state_e state;
-	if (0 > ttsd_data_get_client_state(uid, &state)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] uid is not valid  \n");
+	/* check if uid is valid */
+	if (-1 == ttsd_setting_data_is_setting(uid)) {
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] uid is not valid  (%s)", uid);
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
@@ -927,32 +1000,11 @@ int ttsd_server_setting_set_default_speed(int uid, int default_speed)
 	int ret = 0;
 	ret = ttsd_engine_setting_set_default_speed((ttsp_speed_e)default_speed);
 	if (0 != ret) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] fail to set default speed : result(%d)\n", ret);
+		SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] fail to set default speed : result(%d)", ret);
 		return ret;
 	}	
 
 	return TTSD_ERROR_NONE;
-}
-
-/*
-* Server API for Internal event
-*/
-
-int ttsd_server_start_next_play(int uid)
-{
-	SLOG(LOG_DEBUG, TAG_TTSD, "===== NEXT PLAY START");
-	
-	int ret = ttsd_player_next_play(uid);
-
-	SLOG(LOG_DEBUG, TAG_TTSD, "===== ");
-	SLOG(LOG_DEBUG, TAG_TTSD, " ");
-
-	return ret ;
-}
-
-int ttsd_server_start_next_synthesis(int uid)
-{
-	return __server_next_synthesis(uid);
 }
 
 

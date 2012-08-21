@@ -23,7 +23,63 @@
 
 static DBusConnection* g_conn;
 
-int ttsdc_send_message(int pid, int uid, int uttid, char *method)
+static int g_waiting_time = 3000;
+
+int ttsdc_send_hello(int pid, int uid)
+{
+	char service_name[64];
+	memset(service_name, 0, 64);
+	snprintf(service_name, 64, "%s%d", TTS_CLIENT_SERVICE_NAME, pid);
+
+	char target_if_name[64];
+	snprintf(target_if_name, sizeof(target_if_name), "%s%d", TTS_CLIENT_SERVICE_INTERFACE, pid);
+
+	DBusMessage* msg;
+
+	/* create a message & check for errors */
+	msg = dbus_message_new_method_call(
+		service_name, 
+		TTS_CLIENT_SERVICE_OBJECT_PATH, 
+		target_if_name, 
+		TTSD_METHOD_HELLO);
+
+	if (NULL == msg) { 
+		SLOG(LOG_ERROR, TAG_TTSD, "<<<< [Dbus ERROR] Fail to create hello message : uid(%d)", uid); 
+		return -1;
+	} else {
+		SLOG(LOG_DEBUG, TAG_TTSD, "<<<< [Dbus] Send hello message : uid(%d)", uid);
+	}
+
+	dbus_message_append_args(msg, DBUS_TYPE_INT32, &uid, DBUS_TYPE_INVALID);
+
+	DBusError err;
+	dbus_error_init(&err);
+
+	DBusMessage* result_msg;
+	int result = -1;
+
+	result_msg = dbus_connection_send_with_reply_and_block(g_conn, msg, g_waiting_time, &err);
+	dbus_message_unref(msg);
+
+	if (NULL != result_msg) {
+		dbus_message_get_args(result_msg, &err, DBUS_TYPE_INT32, &result, DBUS_TYPE_INVALID);
+
+		if (dbus_error_is_set(&err)) { 
+			SLOG(LOG_ERROR, TAG_TTSD, ">>>> [Dbus] Get arguments error (%s)", err.message);
+			dbus_error_free(&err); 
+			result = -1;
+		}
+
+		dbus_message_unref(result_msg);
+	} else {
+		SLOG(LOG_DEBUG, TAG_TTSD, ">>>> [Dbus] Result message is NULL. Client is not available");
+		result = 0;
+	}
+
+	return result;
+}
+
+int ttsdc_send_message(int pid, int uid, int data, char *method)
 {   
 	char service_name[64];
 	memset(service_name, 0, 64);
@@ -44,15 +100,15 @@ int ttsdc_send_message(int pid, int uid, int uttid, char *method)
 	if (NULL == msg) { 
 		SLOG(LOG_ERROR, TAG_TTSD, "[Dbus ERROR] Fail to create message : type(%s), uid(%d)\n", method, uid); 
 		return -1;
-	}
+	} 
 
-	dbus_message_append_args(msg, DBUS_TYPE_INT32, &uid, DBUS_TYPE_INT32, &uttid, DBUS_TYPE_INVALID);
+	dbus_message_append_args(msg, DBUS_TYPE_INT32, &uid, DBUS_TYPE_INT32, &data, DBUS_TYPE_INVALID);
 
 	/* send the message and flush the connection */
 	if (!dbus_connection_send(g_conn, msg, NULL)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Dbus ERROR] <<<< send message : Out Of Memory, type(%s), ifname(%s), uid(%d), uttid(%d)", method, target_if_name, uid, uttid); 
+		SLOG(LOG_ERROR, TAG_TTSD, "[Dbus ERROR] <<<< send message : Out Of Memory, type(%s), ifname(%s), uid(%d), data(%d)", method, target_if_name, uid, data); 
 	} else {
-		SLOG(LOG_DEBUG, TAG_TTSD, "<<<< send message : type(%s), uid(%d), uttid(%d)", method, uid, uttid);
+		SLOG(LOG_DEBUG, TAG_TTSD, "<<<< send message : type(%s), uid(%d), data(%d)", method, uid, data);
 
 		dbus_connection_flush(g_conn);
 	}
@@ -64,17 +120,17 @@ int ttsdc_send_message(int pid, int uid, int uttid, char *method)
 
 int ttsdc_send_utt_start_message(int pid, int uid, int uttid)
 {
-	return ttsdc_send_message(pid, uid, uttid, TTS_METHOD_UTTERANCE_STARTED);
+	return ttsdc_send_message(pid, uid, uttid, TTSD_METHOD_UTTERANCE_STARTED);
 }
 
 int ttsdc_send_utt_finish_message(int pid, int uid, int uttid) 
 {
-	return ttsdc_send_message(pid, uid, uttid, TTS_METHOD_UTTERANCE_COMPLETED);
+	return ttsdc_send_message(pid, uid, uttid, TTSD_METHOD_UTTERANCE_COMPLETED);
 }
 
-int ttsdc_send_interrupt_message(int pid, int uid, ttsd_interrupted_code_e code)
+int ttsdc_send_set_state_message(int pid, int uid, int state)
 {
-	return ttsdc_send_message(pid, uid, (int)code, TTS_METHOD_INTERRUPT);
+	return ttsdc_send_message(pid, uid, state, TTSD_METHOD_SET_STATE);
 }
 
 int ttsdc_send_error_message(int pid, int uid, int uttid, int reason)
@@ -92,7 +148,7 @@ int ttsdc_send_error_message(int pid, int uid, int uttid, int reason)
 		service_name, 
 		TTS_CLIENT_SERVICE_OBJECT_PATH, 
 		target_if_name, 
-		TTS_METHOD_ERROR);
+		TTSD_METHOD_ERROR);
 
 	if (NULL == msg) { 
 		SLOG(LOG_ERROR, TAG_TTSD, "[Dbus ERROR] Fail to create error message : uid(%d)\n", uid); 
@@ -201,13 +257,6 @@ static Eina_Bool listener_event_callback(void* data, Ecore_Fd_Handler *fd_handle
 
 	else if (dbus_message_is_method_call(msg, TTS_SERVER_SERVICE_INTERFACE, TTS_SETTING_METHOD_SET_ENGINE_SETTING) )
 		ttsd_dbus_server_setting_set_engine_setting(conn, msg);
-
-
-	else if (dbus_message_is_method_call(msg, TTS_SERVER_SERVICE_INTERFACE, TTS_METHOD_NEXT_PLAY)) 
-		ttsd_dbus_server_start_next_play(msg);
-
-	else if (dbus_message_is_method_call(msg, TTS_SERVER_SERVICE_INTERFACE, TTS_METHOD_NEXT_SYNTHESIS)) 
-		ttsd_dbus_server_start_next_synthesis(msg);
 	
 
 	/* free the message */
@@ -294,62 +343,6 @@ int ttsd_dbus_close_connection()
 	}
 
 	SLOG(LOG_DEBUG, TAG_TTSD, "[Dbus SUCCESS] Close connection. ");
-
-	return 0;
-}
-
-int ttsd_send_start_next_play_message(int uid)
-{
-	DBusMessage* msg;
-
-	msg = dbus_message_new_method_call(
-		TTS_SERVER_SERVICE_NAME, 
-		TTS_SERVER_SERVICE_OBJECT_PATH, 
-		TTS_SERVER_SERVICE_INTERFACE, 
-		TTS_METHOD_NEXT_PLAY);
-
-	if (NULL == msg) { 
-		SLOG(LOG_ERROR, TAG_TTSD, "[Dbus ERROR] >>>> Fail to make message for 'start next play'"); 
-		return -1;
-	} 
-
-	dbus_message_append_args(msg, DBUS_TYPE_INT32, &uid, DBUS_TYPE_INVALID);	
-
-	if (!dbus_connection_send(g_conn, msg, NULL)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Dbus ERROR] >>>> Fail to send message for 'start next play'\n"); 
-		return -1;
-	}
-
-	dbus_connection_flush(g_conn);
-	dbus_message_unref(msg);
-
-	return 0;
-}
-
-int ttsd_send_start_next_synthesis_message(int uid)
-{
-	DBusMessage* msg;
-
-	msg = dbus_message_new_method_call(
-		TTS_SERVER_SERVICE_NAME, 
-		TTS_SERVER_SERVICE_OBJECT_PATH, 
-		TTS_SERVER_SERVICE_INTERFACE, 
-		TTS_METHOD_NEXT_SYNTHESIS);
-
-	if (NULL == msg) { 
-		SLOG(LOG_ERROR, TAG_TTSD, "[Dbus ERROR] >>>> Fail to make message for 'start next synthesis'\n"); 
-		return -1;
-	} 
-	
-	dbus_message_append_args(msg, DBUS_TYPE_INT32, &uid, DBUS_TYPE_INVALID);	
-	
-	if (!dbus_connection_send(g_conn, msg, NULL)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Dbus ERROR] >>>> Fail to send message for 'start next synthesis'\n"); 
-		return -1;
-	}
-
-	dbus_connection_flush(g_conn);
-	dbus_message_unref(msg);
 
 	return 0;
 }

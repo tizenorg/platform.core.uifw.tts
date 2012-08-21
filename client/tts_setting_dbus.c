@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2012 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -81,6 +81,8 @@ int tts_setting_dbus_close_connection()
 	snprintf(service_name, 64, "%s%d", TTS_SETTING_SERVICE_NAME, pid);
 
 	dbus_bus_release_name(g_conn, service_name, &err);
+
+	dbus_connection_close(g_conn);
 
 	g_conn = NULL;
 

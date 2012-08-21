@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved
+ * Copyright (c) 2012 Samsung Electronics Co., Ltd All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
@@ -50,42 +50,35 @@ typedef enum {
 * @brief Enumerations of speaking speed.
 */
 typedef enum {
-	TTS_SPEED_AUTO,		/**< Speed from settings */
-	TTS_SPEED_VERY_SLOW,	/**< Very slow */
-	TTS_SPEED_SLOW,		/**< Slow */
-	TTS_SPEED_NORMAL,	/**< Normal */
-	TTS_SPEED_FAST,		/**< Fast */
-	TTS_SPEED_VERY_FAST	/**< Very fast */
+	TTS_SPEED_AUTO,			/**< Speed from settings */
+	TTS_SPEED_VERY_SLOW,		/**< Very slow */
+	TTS_SPEED_SLOW,			/**< Slow */
+	TTS_SPEED_NORMAL,		/**< Normal */
+	TTS_SPEED_FAST,			/**< Fast */
+	TTS_SPEED_VERY_FAST		/**< Very fast */
 } tts_speed_e;
 
 /** 
 * @brief Enumerations of voice type.
 */
 typedef enum {
-	TTS_VOICE_TYPE_AUTO,	/**< Voice type from settings or auto selection based language */
-	TTS_VOICE_TYPE_MALE,	/**< Male */
-	TTS_VOICE_TYPE_FEMALE,	/**< Female */
-	TTS_VOICE_TYPE_CHILD,	/**< Child */
-	TTS_VOICE_TYPE_USER1,	/**< Engine defined */
-	TTS_VOICE_TYPE_USER2,	/**< Engine defined */
-	TTS_VOICE_TYPE_USER3	/**< Engine defined */
+	TTS_VOICE_TYPE_AUTO,		/**< Voice type from settings or auto selection based language */
+	TTS_VOICE_TYPE_MALE,		/**< Male */
+	TTS_VOICE_TYPE_FEMALE,		/**< Female */
+	TTS_VOICE_TYPE_CHILD,		/**< Child */
+	TTS_VOICE_TYPE_USER1,		/**< Engine defined */
+	TTS_VOICE_TYPE_USER2,		/**< Engine defined */
+	TTS_VOICE_TYPE_USER3		/**< Engine defined */
 } tts_voice_type_e;
-
-/** 
-* @brief Enumerations of interrupted code.
-*/
-typedef enum {
-	TTS_INTERRUPTED_PAUSED = 0,	/**< The current state be changed #TTS_STATE_PAUSED by the daemon */
-	TTS_INTERRUPTED_STOPPED		/**< The current state be changed #TTS_STATE_READY by the daemon */
-} tts_interrupted_code_e;
 
 /** 
 * @brief Enumerations of state.
 */
 typedef enum {
-	TTS_STATE_READY = 0,	/**< 'READY' state */
-	TTS_STATE_PLAYING,	/**< 'PLAYING' state */
-	TTS_STATE_PAUSED	/**< 'PAUSED' state*/
+	TTS_STATE_CREATED = 0,		/**< 'CREATED' state */
+	TTS_STATE_READY,		/**< 'READY' state */
+	TTS_STATE_PLAYING,		/**< 'PLAYING' state */
+	TTS_STATE_PAUSED		/**< 'PAUSED' state*/
 }tts_state_e;
 
 /** 
@@ -95,22 +88,22 @@ typedef struct tts_s *tts_h;
 
 
 /**
-* @brief Called when the TTS state has changed by the daemon. 
+* @brief Called when the state of TTS is changed. 
 *
 * @details If the daemon must stop player because of changing engine and 
 *	the daemon must pause player because of other requests, this callback function is called.
 *
 * @param[in] tts The handle for TTS
-* @param[in] code The interrupt type
-* @param[in] user_data The user data passed from the the callback registration function
+* @param[in] previous A previous state
+* @param[in] current A current state
+* @param[in] user_data The user data passed from the callback registration function.
 *
-* @pre An application registers this callback using tts_set_interrupted_cb() to detect interrupts.
-* @post If this function is called, the TTS state will be #TTS_STATE_READY or #TTS_STATE_PAUSED.
+* @pre An application registers this callback using tts_set_state_changed_cb() to detect changing state.
 *
-* @see tts_set_interrupted_cb()
-* @see tts_unset_interrupted_cb()
+* @see tts_set_state_changed_cb()
+* @see tts_unset_state_changed_cb()
 */
-typedef void (*tts_interrupted_cb)(tts_h tts, tts_interrupted_code_e code, void* user_data); 
+typedef void (*tts_state_changed_cb)(tts_h tts, tts_state_e previous, tts_state_e current, void* user_data);
 
 /**
 * @brief Called when utterance has started.
@@ -177,17 +170,15 @@ typedef void (*tts_error_cb)(tts_h tts, int utt_id, tts_error_e reason, void* us
 */
 typedef bool(*tts_supported_voice_cb)(tts_h tts, const char* language, tts_voice_type_e voice_type, void* user_data);
 
+
 /**
-* @brief Creates a handle for TTS and connects the daemon. 
+* @brief Creates a handle for TTS. 
 *
 * @param[out] tts The handle for TTS
 *
 * @return 0 on success, otherwise a negative error value
 * @retval #TTS_ERROR_NONE Successful
-* @retval #TTS_ERROR_TIMED_OUT The daemon is blocked or do not exist
-* @retval #TTS_ERROR_ENGINE_NOT_FOUND No available engine \n Engine should be installed
 * @retval #TTS_ERROR_INVALID_PARAMETER Invalid parameter
-* @retval #TTS_ERROR_OUT_OF_MEMORY Out of memory
 *
 * @see tts_destroy()
 */
@@ -207,6 +198,40 @@ int tts_create(tts_h* tts);
 int tts_destroy(tts_h tts);
 
 /**
+* @brief Connects the daemon asynchronously. 
+*
+* @param[in] tts The handle for TTS
+*
+* @return 0 on success, otherwise a negative error value
+* @retval #TTS_ERROR_NONE Successful
+* @retval #TTS_ERROR_INVALID_PARAMETER Invalid parameter
+* @retval #TTS_ERROR_INVALID_STATE Invalid state
+*
+* @pre The state should be #TTS_STATE_CREATED.
+* @post If this function is called, the TTS state will be #TTS_STATE_READY.
+*
+* @see tts_unprepare()
+*/
+int tts_prepare(tts_h tts);
+
+/**
+* @brief Disconnects the daemon.
+*
+* @param[in] tts The handle for TTS
+*
+* @return 0 on success, otherwise a negative error value
+* @retval #TTS_ERROR_NONE Successful
+* @retval #TTS_ERROR_INVALID_PARAMETER Invalid parameter
+* @retval #STT_ERROR_INVALID_STATE Invalid state
+*
+* @pre The state should be #TTS_STATE_READY.
+* @post If this function is called, the TTS state will be #TTS_STATE_CREATED.
+*
+* @see tts_prepare()
+*/
+int tts_unprepare(tts_h tts);
+
+/**
 * @brief Retrieves all supported voices of the current engine using callback function.
 *
 * @param[in] tts The handle for TTS
@@ -217,6 +242,8 @@ int tts_destroy(tts_h tts);
 * @retval #TTS_ERROR_NONE Successful
 * @retval #TTS_ERROR_INVALID_PARAMETER Invalid parameter
 * @retval #TTS_ERROR_OPERATION_FAILED Operation failure
+*
+* @pre The state should be #TTS_STATE_READY.
 * @post	This function invokes tts_supported_voice_cb() repeatedly for getting voices. 
 *
 * @see tts_get_default_voice()
@@ -240,6 +267,8 @@ int tts_foreach_supported_voices(tts_h tts, tts_supported_voice_cb callback, voi
 * @retval #TTS_ERROR_OUT_OF_MEMORY Out of memory
 * @retval #TTS_ERROR_OPERATION_FAILED Operation failure
 *
+* @pre The state should be #TTS_STATE_READY.
+*
 * @see tts_foreach_supported_voices()
 */
 int tts_get_default_voice(tts_h tts, char** language, tts_voice_type_e* voice_type);
@@ -254,6 +283,8 @@ int tts_get_default_voice(tts_h tts, char** language, tts_voice_type_e* voice_ty
 * @retval #TTS_ERROR_NONE Successful
 * @retval #TTS_ERROR_INVALID_PARAMETER Invalid parameter
 * @retval #TTS_ERROR_OPERATION_FAILED Operation failure
+*
+* @pre The state should be #TTS_STATE_READY.
 *
 * @see tts_add_text()
 */
@@ -293,6 +324,7 @@ int tts_get_state(tts_h tts, tts_state_e* state);
 * @retval #TTS_ERROR_OUT_OF_MEMORY Out of memory
 * @retval #TTS_ERROR_OPERATION_FAILED Operation failure
 *
+* @pre The state should be #TTS_STATE_READY, #TTS_STATE_PLAYING or #TTS_STATE_PAUSED.
 * @see tts_get_max_text_count()
 */
 int tts_add_text(tts_h tts, const char* text, const char* language, tts_voice_type_e voice_type, tts_speed_e speed, int* utt_id);
@@ -363,7 +395,7 @@ int tts_stop(tts_h tts);
 int tts_pause(tts_h tts);
 
 /**
-* @brief Registers a callback function for detecting player interrupted.
+* @brief Registers a callback function to be called when TTS state changes.
 *
 * @param[in] tts The handle for TTS
 * @param[in] callback The callback function to register
@@ -373,10 +405,12 @@ int tts_pause(tts_h tts);
 * @retval #TTS_ERROR_NONE Successful
 * @retval #TTS_ERROR_INVALID_PARAMETER Invalid parameter
 *
-* @see tts_interrupted_cb()
-* @see tts_unset_interrupted_cb()
+* @pre The state should be #TTS_STATE_CREATED.
+*
+* @see tts_state_changed_cb()
+* @see tts_unset_state_changed_cb()
 */
-int tts_set_interrupted_cb(tts_h tts, tts_interrupted_cb callback, void* user_data);
+int tts_set_state_changed_cb(tts_h tts, tts_state_changed_cb callback, void* user_data);
 
 /**
 * @brief Unregisters the callback function.
@@ -387,9 +421,11 @@ int tts_set_interrupted_cb(tts_h tts, tts_interrupted_cb callback, void* user_da
 * @retval #TTS_ERROR_NONE Successful
 * @retval #TTS_ERROR_INVALID_PARAMETER Invalid parameter
 *
-* @see tts_set_interrupted_cb()
+* @pre The state should be #TTS_STATE_CREATED.
+*
+* @see tts_set_state_changed_cb()
 */
-int tts_unset_interrupted_cb(tts_h tts);
+int tts_unset_state_changed_cb(tts_h tts);
 
 /**
 * @brief Registers a callback function for detecting utterance started.
@@ -401,6 +437,8 @@ int tts_unset_interrupted_cb(tts_h tts);
 * @return 0 on success, otherwise a negative error value
 * @retval #TTS_ERROR_NONE Successful
 * @retval #TTS_ERROR_INVALID_PARAMETER Invalid parameter
+*
+* @pre The state should be #TTS_STATE_CREATED.
 *
 * @see tts_utterance_started_cb()
 * @see tts_unset_utterance_started_cb()
@@ -415,6 +453,8 @@ int tts_set_utterance_started_cb(tts_h tts, tts_utterance_started_cb callback, v
 * @return 0 on success, otherwise a negative error value
 * @retval #TTS_ERROR_NONE Successful
 * @retval #TTS_ERROR_INVALID_PARAMETER Invalid parameter
+*
+* @pre The state should be #TTS_STATE_CREATED.
 *
 * @see tts_set_utterance_started_cb()
 */
@@ -431,6 +471,8 @@ int tts_unset_utterance_started_cb(tts_h tts);
 * @retval #TTS_ERROR_NONE Successful
 * @retval #TTS_ERROR_INVALID_PARAMETER Invalid parameter
 *
+* @pre The state should be #TTS_STATE_CREATED.
+*
 * @see tts_utterance_completed_cb()
 * @see tts_unset_utterance_completed_cb()
 */
@@ -444,6 +486,8 @@ int tts_set_utterance_completed_cb(tts_h tts, tts_utterance_completed_cb callbac
 * @return 0 on success, otherwise a negative error value
 * @retval #TTS_ERROR_NONE Successful
 * @retval #TTS_ERROR_OUT_OF_MEMORY Out of memory
+*
+* @pre The state should be #TTS_STATE_CREATED.
 *
 * @see tts_set_utterance_completed_cb()
 */
@@ -460,6 +504,8 @@ int tts_unset_utterance_completed_cb(tts_h tts);
 * @retval #TTS_ERROR_NONE Successful
 * @retval #TTS_ERROR_INVALID_PARAMETER Invalid parameter
 *
+* @pre The state should be #TTS_STATE_CREATED.
+*
 * @see tts_error_cb()
 * @see tts_unset_error_cb()
 */
@@ -473,6 +519,8 @@ int tts_set_error_cb(tts_h tts, tts_error_cb callback, void* user_data);
 * @return 0 on success, otherwise a negative error value
 * @retval #TTS_ERROR_NONE Successful
 * @retval #TTS_ERROR_INVALID_PARAMETER Invalid parameter
+*
+* @pre The state should be #TTS_STATE_CREATED.
 *
 * @see tts_set_error_cb()
 */

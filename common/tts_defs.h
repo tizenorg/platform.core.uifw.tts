@@ -50,11 +50,12 @@ extern "C" {
 #define TTS_METHOD_STOP			"tts_method_stop"
 #define TTS_METHOD_PAUSE		"tts_method_pause"
 
-#define TTS_METHOD_INTERRUPT		"tts_method_interrupt"
-#define TTS_METHOD_UTTERANCE_STARTED	"tts_method_utterance_started"
-#define TTS_METHOD_UTTERANCE_COMPLETED	"tts_method_utterance_completed"
-#define TTS_METHOD_ERROR		"tts_method_error"
-
+#define TTSD_METHOD_HELLO		"ttsd_method_hello"
+#define TTSD_METHOD_UTTERANCE_STARTED	"ttsd_method_utterance_started"
+#define TTSD_METHOD_UTTERANCE_COMPLETED	"ttsd_method_utterance_completed"
+#define TTSD_METHOD_ERROR		"ttsd_method_error"
+#define TTSD_METHOD_SET_STATE		"ttsd_method_set_state"
+#define TTSD_METHOD_GET_STATE		"ttsd_method_get_state"
 
 /******************************************************************************************
 * Message Definition for Setting
@@ -73,14 +74,6 @@ extern "C" {
 #define TTS_SETTING_METHOD_SET_DEFAULT_SPEED	"tts_setting_method_set_speed"
 #define TTS_SETTING_METHOD_GET_ENGINE_SETTING	"tts_setting_method_get_engine_setting"
 #define TTS_SETTING_METHOD_SET_ENGINE_SETTING	"tts_setting_method_set_engine_setting"
-
-/******************************************************************************************
-* Message Definition for tts-daemon internal
-*******************************************************************************************/
-
-#define TTS_METHOD_NEXT_PLAY		"tts_method_start_play"
-#define TTS_METHOD_NEXT_SYNTHESIS	"tts_method_start_synthesis"
-
 
 #ifdef __cplusplus
 }

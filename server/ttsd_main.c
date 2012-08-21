@@ -19,6 +19,8 @@
 
 #include <Ecore.h>
 
+#define CLIENT_CLEAN_UP_TIME 500
+
 /* Main of TTS Daemon */
 int main()
 {
@@ -46,6 +48,8 @@ int main()
 		SLOG(LOG_ERROR, TAG_TTSD, "[Main ERROR] fail to initialize network \n");
 		return EXIT_FAILURE;
 	}
+
+	ecore_timer_add(CLIENT_CLEAN_UP_TIME, ttsd_cleanup_client, NULL);
 
 	SLOG(LOG_DEBUG, TAG_TTSD, "[Main] tts-daemon start...\n"); 
 	SLOG(LOG_DEBUG, TAG_TTSD, "=====");

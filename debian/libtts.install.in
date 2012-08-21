@@ -1,2 +1,3 @@
 @PREFIX@/lib/lib*.so*
 @PREFIX@/bin/tts-daemon
+@PREFIX@/lib/voice/tts/1.0/ttsd.conf
