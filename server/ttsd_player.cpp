@@ -651,6 +651,8 @@ static int msg_callback(int message, void *data, void *user_param)
 	int uid = user_data->uid;
 	int utt_id = user_data->utt_id;
 
+	MMMessageParamType *msg = (MMMessageParamType*)data;
+
 	switch (message) {
 	case MM_MESSAGE_ERROR:
 		{
@@ -788,6 +790,22 @@ static int msg_callback(int message, void *data, void *user_param)
 		break;	/*MM_MESSAGE_END_OF_STREAM*/
 
 	case MM_MESSAGE_STATE_CHANGED:
+		break;
+
+	case MM_MESSAGE_STATE_INTERRUPTED:
+		if (MM_PLAYER_STATE_PAUSED == msg->state.current) {
+
+			SLOG(LOG_DEBUG, TAG_TTSD, "===== INTERRUPTED CALLBACK");
+
+			ttsd_data_set_client_state(uid, APP_STATE_PAUSED);
+
+			int pid = ttsd_data_get_pid(uid);
+			/* send message to client about changing state */
+			ttsdc_send_set_state_message (pid, uid, APP_STATE_PAUSED);
+
+			SLOG(LOG_DEBUG, TAG_TTSD, "=====");
+			SLOG(LOG_DEBUG, TAG_TTSD, "  ");
+		}
 		break;
 
 	default:

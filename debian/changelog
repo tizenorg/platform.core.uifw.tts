@@ -1,3 +1,11 @@
+tts (0.1.1-38slp2+1) unstable; urgency=low
+
+  * Add manifest and license file
+  * Git: framework/uifw/voice/tts
+  * Tag: tts_0.1.1-38slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Wed, 10 Oct 2012 14:48:46 +0900
+
 tts (0.1.1-37slp2+1) unstable; urgency=low
 
   * Fix the bug of player BS

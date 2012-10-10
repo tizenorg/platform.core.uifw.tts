@@ -1,5 +1,0 @@
-@PREFIX@/lib/pkgconfig/tts.pc
-@PREFIX@/lib/pkgconfig/tts-setting.pc
-@PREFIX@/include/tts.h
-@PREFIX@/include/tts_setting.h
-@PREFIX@/include/ttsp.h

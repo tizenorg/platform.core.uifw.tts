@@ -266,7 +266,7 @@ int tts_foreach_supported_voices(tts_h tts, tts_supported_voice_cb callback, voi
 	}
 
 	if (TTS_STATE_READY != client->current_state) {
-		SLOG(LOG_ERROR, TAG_TTSC, "Current state is NOT 'READY'.\n");  
+		SLOG(LOG_ERROR, TAG_TTSC, "Current state is NOT 'READY'.");  
 		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_ERROR_INVALID_STATE;
@@ -591,7 +591,7 @@ static Eina_Bool __tts_notify_error(void *data)
 
 	/* check handle */
 	if (NULL == client) {
-		SLOG(LOG_WARN, TAG_TTSC, "Fail to notify error : A handle is not valid");
+		SLOG(LOG_WARN, TAG_TTSC, "Fail to notify error msg : A handle is not valid");
 		return EINA_FALSE;
 	}
 
@@ -601,7 +601,7 @@ static Eina_Bool __tts_notify_error(void *data)
 		client->error_cb(client->tts, client->utt_id, client->reason, client->error_user_data );
 		tts_client_not_use_callback(client);
 	} else {
-		SLOG(LOG_WARN, TAG_TTSC, "No registered callback function of error \n");
+		SLOG(LOG_WARN, TAG_TTSC, "No registered callback function of error ");
 	}
 
 	return EINA_FALSE;
@@ -612,7 +612,7 @@ int __tts_cb_error(int uid, tts_error_e reason, int utt_id)
 	tts_client_s* client = tts_client_get_by_uid(uid);
 
 	if (NULL == client) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] A handle is not valid");
+		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] A handle is not valid");
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
 
@@ -623,7 +623,7 @@ int __tts_cb_error(int uid, tts_error_e reason, int utt_id)
 	if (NULL != client->error_cb) {
 		ecore_timer_add(0, __tts_notify_error, client->tts);
 	} else {
-		SLOG(LOG_WARN, TAG_TTSC, "No registered callback function of error \n");
+		SLOG(LOG_WARN, TAG_TTSC, "No registered callback function of error ");
 	}
 	
 	return 0;
@@ -637,7 +637,7 @@ static Eina_Bool __tts_notify_state_changed(void *data)
 
 	/* check handle */
 	if (NULL == client) {
-		SLOG(LOG_WARN, TAG_TTSC, "Fail to notify error : A handle is not valid");
+		SLOG(LOG_WARN, TAG_TTSC, "Fail to notify state changed : A handle is not valid");
 		return EINA_FALSE;
 	}
 
@@ -657,7 +657,7 @@ int __tts_cb_set_state(int uid, int state)
 {
 	tts_client_s* client = tts_client_get_by_uid(uid);
 	if( NULL == client ) {
-		SLOG(LOG_ERROR, TAG_TTSC, "Handle not found");
+		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] The handle is not valid");
 		return -1;
 	}
 
@@ -693,12 +693,12 @@ static Eina_Bool __tts_notify_utt_started(void *data)
 	}
 	
 	if (NULL != client->utt_started_cb) {
-		SLOG(LOG_DEBUG, TAG_TTSC, "Call callback function of utterance started \n");
+		SLOG(LOG_DEBUG, TAG_TTSC, "Call callback function of utterance started ");
 		tts_client_use_callback(client);
 		client->utt_started_cb(client->tts, client->utt_id, client->utt_started_user_data);
 		tts_client_not_use_callback(client);
 	} else {
-		SLOG(LOG_WARN, TAG_TTSC, "No registered callback function of utterance started \n");
+		SLOG(LOG_WARN, TAG_TTSC, "No registered callback function of utterance started ");
 	}
 
 	return EINA_FALSE;
@@ -709,11 +709,11 @@ int __tts_cb_utt_started(int uid, int utt_id)
 	tts_client_s* client = tts_client_get_by_uid(uid);
 
 	if (NULL == client) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] A handle is not valid");
+		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] A handle is not valid");
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
 
-	SLOG(LOG_DEBUG, TAG_TTSC, "utterance started : uttid(%d) \n", utt_id);
+	SLOG(LOG_DEBUG, TAG_TTSC, "utterance started : utt id(%d) ", utt_id);
 
 	client->utt_id = utt_id;
 
@@ -721,7 +721,7 @@ int __tts_cb_utt_started(int uid, int utt_id)
 	if (NULL != client->utt_started_cb) {
 		ecore_timer_add(0, __tts_notify_utt_started, client->tts);
 	} else {
-		SLOG(LOG_WARN, TAG_TTSC, "No registered callback function of utterance started \n");
+		SLOG(LOG_WARN, TAG_TTSC, "No registered callback function of utterance started ");
 	}
 
 	return 0;
@@ -740,12 +740,12 @@ static Eina_Bool __tts_notify_utt_completed(void *data)
 	}
 
 	if (NULL != client->utt_completeted_cb) {
-		SLOG(LOG_DEBUG, TAG_TTSC, "Call callback function of utterance completed \n");
+		SLOG(LOG_DEBUG, TAG_TTSC, "Call callback function of utterance completed ");
 		tts_client_use_callback(client);
 		client->utt_completeted_cb(client->tts, client->utt_id, client->utt_completed_user_data);
 		tts_client_not_use_callback(client);
 	} else {
-		SLOG(LOG_WARN, TAG_TTSC, "No registered callback function of utterance completed \n");
+		SLOG(LOG_WARN, TAG_TTSC, "No registered callback function of utterance completed ");
 	}
 
 	return EINA_FALSE;
@@ -756,11 +756,11 @@ int __tts_cb_utt_completed(int uid, int utt_id)
 	tts_client_s* client = tts_client_get_by_uid(uid);
 
 	if (NULL == client) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] A handle is not valid");
+		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] A handle is not valid");
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
 
-	SLOG(LOG_DEBUG, TAG_TTSC, "utterance completed : uttid(%d) \n", utt_id);
+	SLOG(LOG_DEBUG, TAG_TTSC, "utterance completed : uttid(%d) ", utt_id);
 
 	client->utt_id = utt_id;
 
@@ -768,7 +768,7 @@ int __tts_cb_utt_completed(int uid, int utt_id)
 	if (NULL != client->utt_completeted_cb) {
 		ecore_timer_add(0, __tts_notify_utt_completed, client->tts);
 	} else {
-		SLOG(LOG_WARN, TAG_TTSC, "No registered callback function of utterance completed \n");
+		SLOG(LOG_WARN, TAG_TTSC, "No registered callback function of utterance completed ");
 	}
 
 	return 0;
@@ -1029,7 +1029,7 @@ static void __my_sig_child(int signo, siginfo_t *info, void *data)
 	pid_t child_pid, child_pgid;
 
 	child_pgid = getpgid(info->si_pid);
-	SLOG(LOG_DEBUG, TAG_TTSC, "Signal handler: dead pid = %d, pgid = %d\n", info->si_pid, child_pgid);
+	SLOG(LOG_DEBUG, TAG_TTSC, "Signal handler: dead pid = %d, pgid = %d", info->si_pid, child_pgid);
 
 	while (0 < (child_pid = waitpid(-1, &status, WNOHANG))) {
 		if(child_pid == child_pgid)

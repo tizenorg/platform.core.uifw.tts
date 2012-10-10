@@ -41,23 +41,20 @@ make %{?jobs:-j%jobs}
 
 %install
 rm -rf %{buildroot}
+mkdir -p %{buildroot}/usr/share/license
 %make_install
-
-
-
 
 %post -p /sbin/ldconfig
 
 %postun -p /sbin/ldconfig
 
-
-
 %files
+%manifest tts-server.manifest
 %defattr(-,root,root,-)
 %{_libdir}/lib*.so
 %{_libdir}/voice/tts/1.0/ttsd.conf
 %{_bindir}/tts-daemon
-
+/usr/share/license/*
 
 %files devel
 %defattr(-,root,root,-)

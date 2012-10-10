@@ -46,16 +46,16 @@ extern "C" {
 #define DATA_DEBUG
 
 typedef enum {
-	TTSD_ERROR_NONE			= 0,		/**< Success, No error */
-	TTSD_ERROR_OUT_OF_MEMORY	= -ENOMEM,	/**< Out of Memory */
-	TTSD_ERROR_IO_ERROR		= -EIO,		/**< I/O error */
-	TTSD_ERROR_INVALID_PARAMETER	= -EINVAL,	/**< Invalid parameter */
-	TTSD_ERROR_OUT_OF_NETWORK	= -ENETDOWN,	/**< Out of network */
-	TTSD_ERROR_INVALID_STATE	= -0x0100021,	/**< Invalid state */
-	TTSD_ERROR_INVALID_VOICE	= -0x0100022,	/**< Invalid voice */
-	TTSD_ERROR_ENGINE_NOT_FOUND	= -0x0100023,	/**< No available TTS-engine  */
-	TTSD_ERROR_TIMED_OUT		= -0x0100024,	/**< No answer from TTS daemon */
-	TTSD_ERROR_OPERATION_FAILED	= -0x0100025,	/**< TTS daemon failed  */
+	TTSD_ERROR_NONE			= 0,			/**< Successful */
+	TTSD_ERROR_OUT_OF_MEMORY	= -ENOMEM,		/**< Out of Memory */
+	TTSD_ERROR_IO_ERROR		= -EIO,			/**< I/O error */
+	TTSD_ERROR_INVALID_PARAMETER	= -EINVAL,		/**< Invalid parameter */
+	TTSD_ERROR_OUT_OF_NETWORK	= -ENETDOWN,		/**< Out of network */
+	TTSD_ERROR_INVALID_STATE	= -0x0100000 | 0x21,	/**< Invalid state */
+	TTSD_ERROR_INVALID_VOICE	= -0x0100000 | 0x22,	/**< Invalid voice */
+	TTSD_ERROR_ENGINE_NOT_FOUND	= -0x0100000 | 0x23,	/**< No available engine  */
+	TTSD_ERROR_TIMED_OUT		= -0x0100000 | 0x24,	/**< No answer from the daemon */
+	TTSD_ERROR_OPERATION_FAILED	= -0x0100000 | 0x25	/**< Operation failed  */
 }ttsd_error_e;
 
 

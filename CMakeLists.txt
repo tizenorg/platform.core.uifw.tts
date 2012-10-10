@@ -15,3 +15,6 @@ ADD_SUBDIRECTORY(client)
 
 ## Server daemon ##
 ADD_SUBDIRECTORY(server)
+
+INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE RENAME tts DESTINATION /usr/share/license)
+

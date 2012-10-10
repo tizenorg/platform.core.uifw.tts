@@ -31,11 +31,11 @@ static int	g_speed;
 int __ttsd_config_save()
 {
 	FILE* config_fp;
-	config_fp = fopen(CONFIG_FILE_PATH, "w+");
+	config_fp = fopen(CONFIG_FILE_PATH, "w");
 
 	if (NULL == config_fp) {
 		/* make file and file default */
-		SLOG(LOG_ERROR, TAG_TTSD, "[Config ERROR] Fail to load config (engine id)");
+		SLOG(LOG_WARN, TAG_TTSD, "[Config WARNING] Fail to open config (%s)", CONFIG_FILE_PATH);
 		return -1;
 	}
 

@@ -34,16 +34,16 @@ extern "C" {
 * @brief Enumerations of error codes.
 */
 typedef enum {
-	TTS_ERROR_NONE			= 0,		/**< Successful */
-	TTS_ERROR_OUT_OF_MEMORY		= -ENOMEM,	/**< Out of Memory */
-	TTS_ERROR_IO_ERROR		= -EIO,		/**< I/O error */
-	TTS_ERROR_INVALID_PARAMETER	= -EINVAL,	/**< Invalid parameter */
-	TTS_ERROR_OUT_OF_NETWORK	= -ENETDOWN,	/**< Out of network */
-	TTS_ERROR_INVALID_STATE		= -0x0100021,	/**< Invalid state */
-	TTS_ERROR_INVALID_VOICE		= -0x0100022,	/**< Invalid voice */
-	TTS_ERROR_ENGINE_NOT_FOUND	= -0x0100023,	/**< No available engine  */
-	TTS_ERROR_TIMED_OUT		= -0x0100024,	/**< No answer from the daemon */
-	TTS_ERROR_OPERATION_FAILED	= -0x0100025	/**< Operation failed  */
+	TTS_ERROR_NONE			= 0,			/**< Successful */
+	TTS_ERROR_OUT_OF_MEMORY		= -ENOMEM,		/**< Out of Memory */
+	TTS_ERROR_IO_ERROR		= -EIO,			/**< I/O error */
+	TTS_ERROR_INVALID_PARAMETER	= -EINVAL,		/**< Invalid parameter */
+	TTS_ERROR_OUT_OF_NETWORK	= -ENETDOWN,		/**< Out of network */
+	TTS_ERROR_INVALID_STATE		= -0x0100000 | 0x21,	/**< Invalid state */
+	TTS_ERROR_INVALID_VOICE		= -0x0100000 | 0x22,	/**< Invalid voice */
+	TTS_ERROR_ENGINE_NOT_FOUND	= -0x0100000 | 0x23,	/**< No available engine  */
+	TTS_ERROR_TIMED_OUT		= -0x0100000 | 0x24,	/**< No answer from the daemon */
+	TTS_ERROR_OPERATION_FAILED	= -0x0100000 | 0x25	/**< Operation failed  */
 } tts_error_e;
 
 /** 
