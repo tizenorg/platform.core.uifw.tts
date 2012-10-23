@@ -1,6 +1,7 @@
 tts (0.1.1-38slp2+1) unstable; urgency=low
 
   * Add manifest and license file
+  * Add tag for binary merge
   * Git: framework/uifw/voice/tts
   * Tag: tts_0.1.1-38slp2+1
 
