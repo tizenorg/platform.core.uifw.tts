@@ -1,3 +1,12 @@
+tts (0.1.1-39slp2+1) unstable; urgency=low
+
+  * Remove dependency of openssl
+  * Fix bug of config 
+  * Git: framework/uifw/voice/tts
+  * Tag: tts_0.1.1-39slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Thu, 22 Nov 2012 16:31:53 +0900
+
 tts (0.1.1-38slp2+1) unstable; urgency=low
 
   * Add manifest and license file

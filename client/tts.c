@@ -831,14 +831,14 @@ int tts_unset_state_changed_cb(tts_h tts)
 int tts_set_utterance_started_cb(tts_h tts, tts_utterance_started_cb callback, void* user_data)
 {
 	if (NULL == tts || NULL == callback) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input parameter is null");
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Set utt started cb : Input parameter is null");
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
 
 	tts_client_s* client = tts_client_get(tts);
 
 	if (NULL == client) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] A handle is not valid");
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Set utt started cb : A handle is not valid");
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
 

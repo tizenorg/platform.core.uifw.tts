@@ -34,13 +34,14 @@ extern "C" {
 /* TTS Daemon Define */ 
 #define TAG_TTSD "ttsd"
 
-#define BASE_DIRECTORY_DEFAULT			"/usr/lib/voice/tts/1.0/"
+#define BASE_DIRECTORY_DEFAULT			"/usr/lib/voice/tts/1.0"
 #define ENGINE_DIRECTORY_DEFAULT		"/usr/lib/voice/tts/1.0/engine"
 #define ENGINE_DIRECTORY_DEFAULT_SETTING	"/usr/lib/voice/tts/1.0/setting"
 
-#define BASE_DIRECTORY_DOWNLOAD			"/opt/apps/voice/tts/1.0/"
-#define ENGINE_DIRECTORY_DOWNLOAD		"/opt/apps/voice/tts/1.0/engine"
-#define ENGINE_DIRECTORY_DOWNLOAD_SETTING	"/opt/apps/voice/tts/1.0/setting"
+#define BASE_DIRECTORY_DOWNLOAD			"/opt/usr/voice/tts/1.0"
+#define ENGINE_DIRECTORY_DOWNLOAD		"/opt/usr/voice/tts/1.0/engine"
+#define ENGINE_DIRECTORY_DOWNLOAD_SETTING	"/opt/usr/voice/tts/1.0/setting"
+
 
 /* for debug message */
 #define DATA_DEBUG

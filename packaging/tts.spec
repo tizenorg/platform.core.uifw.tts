@@ -14,7 +14,7 @@ BuildRequires:  pkgconfig(mm-common)
 BuildRequires:  pkgconfig(dlog)
 BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(ecore)
-BuildRequires:  pkgconfig(openssl)
+BuildRequires:  pkgconfig(ecore-file)
 
 BuildRequires:  cmake
 

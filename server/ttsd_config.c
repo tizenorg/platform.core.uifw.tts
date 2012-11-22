@@ -11,12 +11,12 @@
 *  limitations under the License.
 */
 
+#include <Ecore_File.h>
 #include "ttsd_main.h"
 #include "ttsd_config.h"
 
-
-#define CONFIG_FILE_PATH	BASE_DIRECTORY_DOWNLOAD"ttsd.conf"
-#define CONFIG_DEFAULT		BASE_DIRECTORY_DEFAULT"ttsd.conf"
+#define CONFIG_FILE_PATH	BASE_DIRECTORY_DOWNLOAD"/ttsd.conf"
+#define CONFIG_DEFAULT		BASE_DIRECTORY_DEFAULT"/ttsd.conf"
 
 #define ENGINE_ID	"ENGINE_ID"
 #define VOICE		"VOICE"
@@ -30,14 +30,25 @@ static int	g_speed;
 
 int __ttsd_config_save()
 {
+	if (0 != access(CONFIG_FILE_PATH, R_OK|W_OK)) {
+		if (0 == ecore_file_mkpath(BASE_DIRECTORY_DOWNLOAD)) {
+			SLOG(LOG_ERROR, TAG_TTSD, "[Config ERROR ] Fail to create directory (%s)", BASE_DIRECTORY_DOWNLOAD);
+			return -1;
+		}
+
+		SLOG(LOG_WARN, TAG_TTSD, "[Config] Create directory (%s)", BASE_DIRECTORY_DOWNLOAD);
+	}
+
 	FILE* config_fp;
-	config_fp = fopen(CONFIG_FILE_PATH, "w");
+	config_fp = fopen(CONFIG_FILE_PATH, "w+");
 
 	if (NULL == config_fp) {
 		/* make file and file default */
 		SLOG(LOG_WARN, TAG_TTSD, "[Config WARNING] Fail to open config (%s)", CONFIG_FILE_PATH);
 		return -1;
 	}
+
+	SLOG(LOG_DEBUG, TAG_TTSD, "[Config] Rewrite config file");
 
 	/* Write engine id */
 	fprintf(config_fp, "%s %s\n", ENGINE_ID, g_engine_id);
@@ -60,6 +71,7 @@ int __ttsd_config_load()
 	char buf_id[256] = {0};
 	char buf_param[256] = {0};
 	int int_param = 0;
+	bool is_default_open = false;
 
 	config_fp = fopen(CONFIG_FILE_PATH, "r");
 
@@ -68,10 +80,10 @@ int __ttsd_config_load()
 		
 		config_fp = fopen(CONFIG_DEFAULT, "r");
 		if (NULL == config_fp) {
-			SLOG(LOG_WARN, TAG_TTSD, "[Config WARNING] Not open original config file(%s)", CONFIG_FILE_PATH);
-			__ttsd_config_save();
+			SLOG(LOG_ERROR, TAG_TTSD, "[Config WARNING] Not open original config file(%s)", CONFIG_FILE_PATH);
 			return -1;
 		}
+		is_default_open = true;
 	}
 
 	/* Read engine id */
@@ -108,8 +120,16 @@ int __ttsd_config_load()
 		return -1;
 	}
 
+	fclose(config_fp);
+
 	SLOG(LOG_DEBUG, TAG_TTSD, "[Config] Load config : engine(%s), voice(%s,%d), speed(%d)",
 		g_engine_id, g_language, g_vc_type, g_speed);
+
+	if (true == is_default_open) {
+		if(0 == __ttsd_config_save()) {
+			SLOG(LOG_DEBUG, TAG_TTSD, "[Config] Create config(%s)", CONFIG_FILE_PATH);
+		}
+	}
 
 	return 0;
 }
