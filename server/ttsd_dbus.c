@@ -186,7 +186,7 @@ static Eina_Bool listener_event_callback(void* data, Ecore_Fd_Handler *fd_handle
 	msg = dbus_connection_pop_message(conn);
 
 	/* loop again if we haven't read a message */
-	if (NULL == msg) { 
+	if (NULL == msg || NULL == conn) { 
 		return ECORE_CALLBACK_RENEW;
 	}
 	

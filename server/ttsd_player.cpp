@@ -229,15 +229,15 @@ int ttsd_player_destroy_instance(int uid)
 			/* Get handle data from list */
 			data = (player_s*)iter->data;
 
-			/* compare uid */
-			if (uid == data->uid) {
-				g_player_list = g_list_remove_link(g_player_list, iter);				
-				if (NULL != data) {
+			if (NULL != data) {
+				/* compare uid */
+				if (uid == data->uid) {
+					g_player_list = g_list_remove_link(g_player_list, iter);				
 					g_free(data);
+					break;
 				}
-				break;
-			}	
-
+			}
+				
 			/* Get next item */
 			iter = g_list_next(iter);
 		}
@@ -627,14 +627,20 @@ static Eina_Bool __player_next_play(void *data)
 
 	int* uid = (int*)data;
 
+	if (NULL == uid) {
+		SLOG(LOG_ERROR, TAG_TTSD, "[PLAYER ERROR] uid is NULL");
+		SLOG(LOG_DEBUG, TAG_TTSD, "=====");
+		SLOG(LOG_DEBUG, TAG_TTSD, "  ");
+		return EINA_FALSE;
+	}
+
 	SLOG(LOG_DEBUG, TAG_TTSD, "[PLAYER] uid = %d", *uid);
 	
 	if (0 != ttsd_player_next_play(*uid)) {
 		SLOG(LOG_WARN, TAG_TTSD, "[PLAYER WARNING] Fail to play next");
 	}
 
-	if (NULL != uid)
-		free(uid);
+	free(uid);
 
 	SLOG(LOG_DEBUG, TAG_TTSD, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSD, "  ");
@@ -718,7 +724,12 @@ static int msg_callback(int message, void *data, void *user_param)
 			g_playing_info = current;
 
 			app_state_e state;
-			ttsd_data_get_client_state(uid, &state);
+			if (0 != ttsd_data_get_client_state(uid, &state)) {
+				SLOG(LOG_ERROR, TAG_TTSD, "[PLAYER ERROR] uid is not valid : %d", uid);
+				SLOG(LOG_DEBUG, TAG_TTSD, "=====");
+				SLOG(LOG_DEBUG, TAG_TTSD, "  ");
+				break;
+			}
 
 			/* for sync problem */
 			if (APP_STATE_PAUSED == state) {
@@ -746,6 +757,10 @@ static int msg_callback(int message, void *data, void *user_param)
 	case MM_MESSAGE_END_OF_STREAM:
 		{
 			SLOG(LOG_DEBUG, TAG_TTSD, "===== END OF STREAM CALLBACK");
+
+			if (NULL == user_data) 
+				break;
+
 			remove(user_data->filename);
 
 			/* Check uid */
@@ -764,8 +779,7 @@ static int msg_callback(int message, void *data, void *user_param)
 				return -1;
 			}
 
-			if (NULL != user_data) 
-				g_free(user_data);
+			g_free(user_data);
 
 			int pid = ttsd_data_get_pid(uid);
 
@@ -843,18 +857,18 @@ player_s* __player_get_item(int uid)
 int __save_file(const int uid, const int index, const sound_data_s data, char** filename)
 {
 	char postfix[5];
-	memset(postfix, 0, 5);
+	memset(postfix, '\0', 5);
 
 	switch (data.audio_type) {
 	case TTSP_AUDIO_TYPE_RAW:
 	case TTSP_AUDIO_TYPE_WAV:
-		strncpy(postfix, "wav", strlen("wav"));
+		strcpy(postfix, "wav");
 		break;
 	case TTSP_AUDIO_TYPE_MP3:
-		strncpy(postfix, "mp3", strlen("mp3"));
+		strcpy(postfix, "mp3");
 		break;
 	case TTSP_AUDIO_TYPE_AMR:
-		strncpy(postfix, "amr", strlen("amr"));
+		strcpy(postfix, "amr");
 		break;
 	default:
 		SLOG(LOG_ERROR, TAG_TTSD, "[Player ERROR] Audio type(%d) is NOT valid", data.audio_type); 
@@ -866,7 +880,7 @@ int __save_file(const int uid, const int index, const sound_data_s data, char** 
 	temp = *filename;
 
 	snprintf(temp, FILE_PATH_SIZE, "%s/ttstemp%d_%d.%s", TEMP_FILE_PATH, uid, index, postfix );
-	
+
 	FILE* fp;
 	fp = fopen(temp, "wb");
 
@@ -941,7 +955,7 @@ int __set_and_start(player_s* player)
 	}
 
 	g_index++;
-	if (65534 <= g_index)	{
+	if (10000 <= g_index)	{
 		g_index = 1;
 	}
 

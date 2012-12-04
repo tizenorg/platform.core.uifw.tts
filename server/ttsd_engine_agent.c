@@ -350,8 +350,8 @@ int __internal_get_engine_info(const char* filepath, ttsengine_info_s** info)
 	int (*get_engine_info)(ttsp_engine_info_cb callback, void* user_data);
 
 	get_engine_info = (int (*)(ttsp_engine_info_cb, void*))dlsym(handle, "ttsp_get_engine_info");
-	if ((error = dlerror()) != NULL) {
-		SLOG(LOG_WARN, TAG_TTSD, "[Engine Agent] ttsp_get_engine_info() link error\n");
+	if (NULL != (error = dlerror()) || NULL == get_engine_info) {
+		SLOG(LOG_WARN, TAG_TTSD, "[Engine Agent] ttsp_get_engine_info() link error");
 		dlclose(handle);
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
@@ -361,7 +361,7 @@ int __internal_get_engine_info(const char* filepath, ttsengine_info_s** info)
 
 	/* get engine info */
 	if (0 != get_engine_info(&__engine_info_cb, (void*)temp)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Engine Agent ERROR] fail to get engine info\n");
+		SLOG(LOG_ERROR, TAG_TTSD, "[Engine Agent ERROR] fail to get engine info");
 		dlclose(handle);
 		g_free(temp);
 		return TTSD_ERROR_OPERATION_FAILED;
@@ -373,11 +373,11 @@ int __internal_get_engine_info(const char* filepath, ttsengine_info_s** info)
 	temp->engine_path = g_strdup(filepath);
 	
 	SLOG(LOG_DEBUG, TAG_TTSD, "----- Valid engine");
-	SLOG(LOG_DEBUG, TAG_TTSD, "Engine uuid : %s\n", temp->engine_uuid);
-	SLOG(LOG_DEBUG, TAG_TTSD, "Engine name : %s\n", temp->engine_name);
-	SLOG(LOG_DEBUG, TAG_TTSD, "Setting ug path : %s\n", temp->setting_ug_path);
-	SLOG(LOG_DEBUG, TAG_TTSD, "Engine path : %s\n", temp->engine_path);
-	SLOG(LOG_DEBUG, TAG_TTSD, "Use network : %s\n", temp->use_network ? "true":"false");
+	SLOG(LOG_DEBUG, TAG_TTSD, "Engine uuid : %s", temp->engine_uuid);
+	SLOG(LOG_DEBUG, TAG_TTSD, "Engine name : %s", temp->engine_name);
+	SLOG(LOG_DEBUG, TAG_TTSD, "Setting ug path : %s", temp->setting_ug_path);
+	SLOG(LOG_DEBUG, TAG_TTSD, "Engine path : %s", temp->engine_path);
+	SLOG(LOG_DEBUG, TAG_TTSD, "Use network : %s", temp->use_network ? "true":"false");
 	SLOG(LOG_DEBUG, TAG_TTSD, "-----");
 	SLOG(LOG_DEBUG, TAG_TTSD, "  ");
 
@@ -454,9 +454,9 @@ int __internal_update_engine_list()
 			filepath = (char*)g_malloc0( sizeof(char) * file_size);
 
 			if (NULL != filepath) { 
-				strncpy(filepath, ENGINE_DIRECTORY_DOWNLOAD, strlen(ENGINE_DIRECTORY_DOWNLOAD) );
-				strncat(filepath, "/", strlen("/") );
-				strncat(filepath, dirp->d_name, strlen(dirp->d_name) );
+				strcpy(filepath, ENGINE_DIRECTORY_DOWNLOAD);
+				strcat(filepath, "/");
+				strcat(filepath, dirp->d_name);
 			} else {
 				SLOG(LOG_ERROR, TAG_TTSD, "[Engine Agent ERROR] Not enough memory!! \n" );
 				continue;	
@@ -588,7 +588,7 @@ int ttsd_engine_agent_load_current_engine()
 	}
 
 	g_cur_engine.ttsp_load_engine = (int (*)(const ttspd_funcs_s* , ttspe_funcs_s*) )dlsym(g_cur_engine.handle, "ttsp_load_engine");
-	if ((error = dlerror()) != NULL) {
+	if (NULL != (error = dlerror()) || NULL == g_cur_engine.ttsp_load_engine) {
 		SLOG(LOG_ERROR, TAG_TTSD, "[Engine Agent ERROR] fail to link daemon to ttsp_load_engine() of current engine \n");
 		return -3;
 	}
@@ -1503,11 +1503,13 @@ void __free_voice_list(GList* voice_list)
 		while (NULL != iter) {
 			data = iter->data;
 			
-			if (NULL != data->language)
-				g_free(data->language);
-			if (NULL != data);
-				g_free(data);
+			if (NULL != data) {
+				if (NULL != data->language)
+					g_free(data->language);
 
+				g_free(data);
+			}
+			
 			voice_list = g_list_remove_link(voice_list, iter);
 			
 			iter = g_list_first(voice_list);

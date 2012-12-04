@@ -294,15 +294,15 @@ int __synthesis_result_callback(ttsp_result_event_e event, const void* data, uns
 	utterance_t* utt_get_param;
 	utt_get_param = (utterance_t*)user_data;
 
-	int uid = utt_get_param->uid;
-	int uttid = utt_get_param->uttid;
-
 	if (NULL == utt_get_param) {
 		SLOG(LOG_ERROR, TAG_TTSD, "[SERVER ERROR] User data is NULL " );
 		SLOG(LOG_DEBUG, TAG_TTSD, "=====");
 		SLOG(LOG_DEBUG, TAG_TTSD, "  ");
 		return -1;
 	}
+
+	int uid = utt_get_param->uid;
+	int uttid = utt_get_param->uttid;
 
 	/* Synthesis is success */
 	if (TTSP_RESULT_EVENT_START == event || TTSP_RESULT_EVENT_CONTINUE == event || TTSP_RESULT_EVENT_FINISH == event) {

@@ -199,14 +199,16 @@ int ttsd_dbus_server_get_support_voices(DBusConnection* conn, DBusMessage* msg)
 				while (NULL != iter) {
 					voice = iter->data;
 
-					dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &(voice->language) );
-					dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &(voice->type) );
+					if (NULL != voice) {
+						dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &(voice->language) );
+						dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &(voice->type) );
 
-					if (NULL != voice->language)
-						g_free(voice->language);
-					if (NULL != voice);
+						if (NULL != voice->language)
+							g_free(voice->language);
+						
 						g_free(voice);
-
+					}
+					
 					voice_list = g_list_remove_link(voice_list, iter);
 
 					iter = g_list_first(voice_list);
@@ -655,22 +657,25 @@ int ttsd_dbus_server_setting_get_engine_list(DBusConnection* conn, DBusMessage* 
 
 				while (NULL != iter) {
 					engine = iter->data;
-					SLOG(LOG_DEBUG, TAG_TTSD, "engine id : %s, engine name : %s, ug_name, : %s", 
-						engine->engine_id, engine->engine_name, engine->ug_name);
+					
+					if (NULL != engine) {
+						SLOG(LOG_DEBUG, TAG_TTSD, "engine id : %s, engine name : %s, ug_name, : %s", 
+							engine->engine_id, engine->engine_name, engine->ug_name);
 
-					dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &(engine->engine_id) );
-					dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &(engine->engine_name) );
-					dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &(engine->ug_name) );
+						dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &(engine->engine_id) );
+						dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &(engine->engine_name) );
+						dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &(engine->ug_name) );
 
-					if (NULL != engine->engine_id)
-						g_free(engine->engine_id);
-					if (NULL != engine->engine_name);
-						g_free(engine->engine_name);
-					if (NULL != engine->ug_name);
-						g_free(engine->ug_name);
-					if (NULL != engine);
+						if (NULL != engine->engine_id)
+							g_free(engine->engine_id);
+						if (NULL != engine->engine_name)
+							g_free(engine->engine_name);
+						if (NULL != engine->ug_name)
+							g_free(engine->ug_name);
+						
 						g_free(engine);
-
+					}
+					
 					engine_list = g_list_remove_link(engine_list, iter);
 
 					iter = g_list_first(engine_list);
@@ -858,13 +863,15 @@ int ttsd_dbus_server_setting_get_voice_list(DBusConnection* conn, DBusMessage* m
 					while (NULL != iter) {
 						voice = iter->data;
 
-						dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &(voice->language) );
-						dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &(voice->type) );
+						if (NULL != voice) {
+							dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &(voice->language) );
+							dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &(voice->type) );
 
-						if (NULL != voice->language)
-							g_free(voice->language);
-						if (NULL != voice);
+							if (NULL != voice->language)
+								g_free(voice->language);
+
 							g_free(voice);
+						}
 
 						voice_list = g_list_remove_link(voice_list, iter);
 
@@ -1168,16 +1175,18 @@ int ttsd_dbus_server_setting_get_engine_setting(DBusConnection* conn, DBusMessag
 					while (NULL != iter) {
 						setting = iter->data;
 
-						dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &(setting->key) );
-						dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &(setting->value) );
+						if (NULL != setting) {
+							dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &(setting->key) );
+							dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &(setting->value) );
 
-						if (NULL != setting->key)
-							g_free(setting->key);
-						if (NULL != setting->value)
-							g_free(setting->value);
-						if (NULL != setting);
+							if (NULL != setting->key)
+								g_free(setting->key);
+							if (NULL != setting->value)
+								g_free(setting->value);
+							
 							g_free(setting);
-
+						}
+						
 						engine_setting_list = g_list_remove_link(engine_setting_list, iter);
 
 						iter = g_list_first(engine_setting_list);

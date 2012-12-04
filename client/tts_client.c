@@ -39,7 +39,7 @@ int tts_client_new(tts_h* tts)
 	tts_client_s* client = NULL;
 	client = (tts_client_s*)g_malloc0 (sizeof(tts_client_s));
 
-	tts_h temp = (tts_h)g_malloc0(sizeof(tts_h));
+	tts_h temp = (tts_h)g_malloc0(sizeof(struct tts_s));
 	temp->handle = __client_generate_uid(getpid()); 
 
 	/* initialize client data */

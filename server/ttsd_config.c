@@ -87,39 +87,59 @@ int __ttsd_config_load()
 	}
 
 	/* Read engine id */
-	fscanf(config_fp, "%s %s", buf_id, buf_param);
-	if (0 == strncmp(ENGINE_ID, buf_id, strlen(ENGINE_ID))) {
-		g_engine_id = strdup(buf_param);
-	} else {
+	if (EOF == fscanf(config_fp, "%s %s", buf_id, buf_param)) {
 		fclose(config_fp);
-		SLOG(LOG_WARN, TAG_TTSD, "[Config WARNING] Fail to load config (engine id)");
+		SLOG(LOG_WARN, TAG_TTSD, "[Config WARNING] Fail to read config (engine id)");
 		__ttsd_config_save();
 		return -1;
+	} else {
+		if (0 == strncmp(ENGINE_ID, buf_id, strlen(ENGINE_ID))) {
+			g_engine_id = strdup(buf_param);
+		} else {
+			fclose(config_fp);
+			SLOG(LOG_WARN, TAG_TTSD, "[Config WARNING] Fail to load config (engine id)");
+			__ttsd_config_save();
+			return -1;
+		}
 	}
+
+	
 
 	/* Read voice */
-	fscanf(config_fp, "%s %s %d", buf_id, buf_param, &int_param);
-	if (0 == strncmp(VOICE, buf_id, strlen(VOICE))) {
-		g_language = strdup(buf_param);
-		g_vc_type = int_param;
-	} else {
+	if (EOF == fscanf(config_fp, "%s %s %d", buf_id, buf_param, &int_param)) {
 		fclose(config_fp);
-		SLOG(LOG_WARN, TAG_TTSD, "[Config WARNING] Fail to load config (voice)");
+		SLOG(LOG_WARN, TAG_TTSD, "[Config WARNING] Fail to read config (voice)");
 		__ttsd_config_save();
 		return -1;
+	} else {
+		if (0 == strncmp(VOICE, buf_id, strlen(VOICE))) {
+			g_language = strdup(buf_param);
+			g_vc_type = int_param;
+		} else {
+			fclose(config_fp);
+			SLOG(LOG_WARN, TAG_TTSD, "[Config WARNING] Fail to load config (voice)");
+			__ttsd_config_save();
+			return -1;
+		}
 	}
-
+	
 	/* Read speed */
-	fscanf(config_fp, "%s %d", buf_id, &int_param);
-	if (0 == strncmp(SPEED, buf_id, strlen(SPEED))) {
-		g_speed = int_param;
-	} else {
+	if (EOF == fscanf(config_fp, "%s %d", buf_id, &int_param)) {
 		fclose(config_fp);
-		SLOG(LOG_WARN, TAG_TTSD, "[Config WARNING] Fail to load config (speed)");
+		SLOG(LOG_WARN, TAG_TTSD, "[Config WARNING] Fail to read config (speed)");
 		__ttsd_config_save();
 		return -1;
+	} else {
+		if (0 == strncmp(SPEED, buf_id, strlen(SPEED))) {
+			g_speed = int_param;
+		} else {
+			fclose(config_fp);
+			SLOG(LOG_WARN, TAG_TTSD, "[Config WARNING] Fail to load config (speed)");
+			__ttsd_config_save();
+			return -1;
+		}
 	}
-
+	
 	fclose(config_fp);
 
 	SLOG(LOG_DEBUG, TAG_TTSD, "[Config] Load config : engine(%s), voice(%s,%d), speed(%d)",
