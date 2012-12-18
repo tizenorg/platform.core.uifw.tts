@@ -66,6 +66,7 @@ typedef struct {
 
 #define TEMP_FILE_PATH  "/tmp"
 #define FILE_PATH_SIZE  256
+#define DEFAULT_FILE_SIZE 10
 
 /** player init info */
 static bool g_player_init = false;
@@ -650,9 +651,14 @@ static Eina_Bool __player_next_play(void *data)
 
 static int msg_callback(int message, void *data, void *user_param) 
 {
-	user_data_s* user_data;
+	user_data_s* user_data = NULL;
 
 	user_data = (user_data_s*)user_param;
+
+	if (NULL == user_data) {
+		SLOG(LOG_ERROR, TAG_TTSD, "[PLAYER ERROR] user_param is NULL");
+		return -1;
+	}
 
 	int uid = user_data->uid;
 	int utt_id = user_data->utt_id;
@@ -758,10 +764,9 @@ static int msg_callback(int message, void *data, void *user_param)
 		{
 			SLOG(LOG_DEBUG, TAG_TTSD, "===== END OF STREAM CALLBACK");
 
-			if (NULL == user_data) 
-				break;
-
-			remove(user_data->filename);
+			if (-1 == remove(user_data->filename)) {
+				SLOG(LOG_WARN, TAG_TTSD, "[PLAYER WARNING] Fail to remove temp file", user_data->filename); 
+			}
 
 			/* Check uid */
 			player_s* current;
@@ -877,15 +882,23 @@ int __save_file(const int uid, const int index, const sound_data_s data, char** 
 
 	/* make filename to save */
 	char* temp;
-	temp = *filename;
+	temp = (char*)g_malloc0(sizeof(char) * FILE_PATH_SIZE);
 
-	snprintf(temp, FILE_PATH_SIZE, "%s/ttstemp%d_%d.%s", TEMP_FILE_PATH, uid, index, postfix );
+	int ret = snprintf(temp, FILE_PATH_SIZE, "%s/ttstemp%d_%d.%s", TEMP_FILE_PATH, uid, index, postfix);
+
+	if (0 >= ret) {
+		if (NULL != temp)
+			g_free(temp);
+		return -1;
+	}
 
 	FILE* fp;
 	fp = fopen(temp, "wb");
 
 	if (fp == NULL) {
 		SLOG(LOG_ERROR, TAG_TTSD, "[Player ERROR] temp file open error");
+		if (NULL != temp)
+			g_free(temp);
 		return -1;
 	}
 
@@ -893,27 +906,37 @@ int __save_file(const int uid, const int index, const sound_data_s data, char** 
 		WavHeader header;
 		if (0 != __init_wave_header(&header, data.data_size, data.rate, data.channels)) {
 			fclose(fp);
+			if (NULL != temp)
+				g_free(temp);
 			return -1;
 		}
 
 		if (0 >= fwrite(&header, sizeof(WavHeader), 1, fp)) {
 			SLOG(LOG_ERROR, TAG_TTSD, "[Player ERROR] fail to write wav header to file");
 			fclose(fp);
+			if (NULL != temp)
+				g_free(temp);
 			return -1;
 		}
 	}
 
 	int size = fwrite(data.data, data.data_size, 1,  fp);
 	if (size <= 0) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Player ERROR] Fail to write date");
-		fclose(fp);
-		return -1;
+		size = fwrite("0000000000", DEFAULT_FILE_SIZE, 1,  fp);
+		if (size <= 0) {
+			SLOG(LOG_ERROR, TAG_TTSD, "[Player ERROR] Fail to write date");
+			fclose(fp);
+			if (NULL != temp)
+				g_free(temp);
+			return -1;
+		}	
 	} 
 
 	fclose(fp);
+	*filename = temp;
 	
 	SLOG(LOG_DEBUG, TAG_TTSD, " ");
-	SLOG(LOG_DEBUG, TAG_TTSD, "Filepath : %s ", temp);
+	SLOG(LOG_DEBUG, TAG_TTSD, "Filepath : %s ", *filename);
 	SLOG(LOG_DEBUG, TAG_TTSD, "Header : Data size(%d), Sample rate(%d), Channel(%d) ", data.data_size, data.rate, data.channels);
 
 	return 0;
@@ -921,25 +944,34 @@ int __save_file(const int uid, const int index, const sound_data_s data, char** 
 
 int __init_wave_header (WavHeader* hdr, size_t nsamples, size_t sampling_rate, int channel)
 {
-	if (hdr == NULL || nsamples <= 0 || sampling_rate <= 0 || channel <= 0) {
+	if (hdr == NULL || sampling_rate <= 0 || channel <= 0) {
 		SLOG(LOG_ERROR, TAG_TTSD, "[Player ERROR] __init_wave_header : input parameter invalid");
+		SLOG(LOG_ERROR, TAG_TTSD, "[Player ERROR] hdr : %p", hdr);
+		SLOG(LOG_ERROR, TAG_TTSD, "[Player ERROR] nsample : %d", nsamples);
+		SLOG(LOG_ERROR, TAG_TTSD, "[Player ERROR] sampling_rate : %", sampling_rate);
+		SLOG(LOG_ERROR, TAG_TTSD, "[Player ERROR] channel : %", channel);
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
-	size_t bytesize = nsamples;
+	size_t bytesize = DEFAULT_FILE_SIZE;
 
-	strncpy(hdr->riff, "RIFF", 4);
+	if (0 < nsamples) {
+		bytesize = nsamples;	
+	} 
+
+	/* NOT include \0(NULL) */
+	strncpy(hdr->riff, "RIFF", 4);	
 	hdr->file_size = (int)(bytesize  + 36);
 	strncpy(hdr->wave, "WAVE", 4);
-	strncpy(hdr->fmt, "fmt ", 4);
+	strncpy(hdr->fmt, "fmt ", 4);	/* fmt + space */
 	hdr->header_size = 16;
-	hdr->sample_format = 1;	/* WAVE_FORMAT_PCM */
+	hdr->sample_format = 1;		/* WAVE_FORMAT_PCM */
 	hdr->n_channels = channel;
 	hdr->sample_rate = (int)(sampling_rate);
 	hdr->bytes_per_second = (int)sampling_rate * sizeof(short);
 	hdr->block_align =  sizeof(short);
 	hdr->bits_per_sample = sizeof(short)*8;
-	strncpy(hdr->data, "data", 4);
+	strncpy(hdr->data, "data", 4);	
 	hdr->data_size = (int)bytesize;
 
 	return 0;
@@ -961,8 +993,6 @@ int __set_and_start(player_s* player)
 
 	/* make sound file for mmplayer */
 	char* sound_file = NULL;
-	sound_file = (char*) g_malloc0( sizeof(char) * FILE_PATH_SIZE );
-
 	if (0 != __save_file(player->uid, g_index, wdata, &sound_file)) {
 		SLOG(LOG_ERROR, TAG_TTSD, "[Player ERROR] fail to make sound file");
 		return -1;
@@ -997,7 +1027,7 @@ int __set_and_start(player_s* player)
 	}
 	
 	ret = mm_player_set_attribute(player->player_handle, &err_attr_name,
-		"profile_uri", sound_file , strlen( sound_file ) + 1,
+		"profile_uri", sound_file , strlen(sound_file) + 1,
 		"sound_volume_type", MM_SOUND_VOLUME_TYPE_MEDIA,
 		"sound_route", MM_AUDIOROUTE_PLAYBACK_NORMAL,
 		NULL );
@@ -1024,8 +1054,10 @@ int __set_and_start(player_s* player)
 		return -3;
 	}
 
-	if( NULL != sound_file )	g_free(sound_file);
-	if( NULL != wdata.data )	g_free(wdata.data);
+	if (NULL != sound_file)	
+		g_free(sound_file);
+	if (NULL != wdata.data)	
+		g_free(wdata.data);
 
 	return 0;
 }

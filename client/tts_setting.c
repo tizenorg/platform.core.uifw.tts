@@ -14,6 +14,9 @@
 
 #include <sys/wait.h>
 #include <Ecore.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <dirent.h>
 
 #include "tts_main.h"
 #include "tts_setting.h"
@@ -21,7 +24,7 @@
 
 static bool g_is_daemon_started = false;
 
-static int __check_tts_daemon();
+static int __check_setting_tts_daemon();
 
 static tts_setting_state_e g_state = TTS_SETTING_STATE_NONE;
 
@@ -44,7 +47,7 @@ static Eina_Bool __tts_setting_connect_daemon(void *data)
 	if (0 != tts_setting_dbus_request_hello()) {
 		if (false == g_is_daemon_started) {
 			g_is_daemon_started = true;
-			__check_tts_daemon();
+			__check_setting_tts_daemon();
 		}
 		return EINA_TRUE;
 	}
@@ -95,7 +98,7 @@ int tts_setting_initialize()
 
 	/* Send hello */
 	if (0 != tts_setting_dbus_request_hello()) {
-		__check_tts_daemon();
+		__check_setting_tts_daemon();
 	}
 
 	/* do request */
@@ -521,45 +524,66 @@ int tts_setting_set_engine_setting(const char* key, const char* value)
 	return ret;
 }
 
-
-
-/* Functions for tts-daemon fork */
-static bool __tts_is_alive()
+int __setting_get_cmd_line(char *file, char *buf) 
 {
 	FILE *fp = NULL;
-	char buff[256];
-	char cmd[256];
+	int i;
 
-	memset(buff, '\0', sizeof(char) * 256);
-	memset(cmd, '\0', sizeof(char) * 256);
-
-	fp = popen("ps", "r");
-	if (NULL == fp) {
-		SLOG(LOG_DEBUG, TAG_TTSC, "[TTS SETTING ERROR] popen error");
-		return FALSE;
+	fp = fopen(file, "r");
+	if (fp == NULL) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Get command line");
+		return -1;
 	}
 
-	while (fgets(buff, 255, fp)) {
-		strcpy(cmd, buff + 26);
-
-		if( 0 == strncmp(cmd, "[tts-daemon]", strlen("[tts-daemon]")) ||
-			0 == strncmp(cmd, "tts-daemon", strlen("tts-daemon")) ||
-			0 == strncmp(cmd, "/usr/bin/tts-daemon", strlen("/usr/bin/tts-daemon"))
-			) {
-			SLOG(LOG_DEBUG, TAG_TTSC, "tts-daemon is ALIVE !!");
-			fclose(fp);
-			return TRUE;
-		}
-
-	}
+	memset(buf, 0, sizeof(buf));
+	fgets(buf, 256, fp);
 	fclose(fp);
 
-	SLOG(LOG_DEBUG, TAG_TTSC, "THERE IS NO tts-daemon !! \n");
-
-	return FALSE;
+	return 0;
 }
 
-static void __my_sig_child(int signo, siginfo_t *info, void *data)
+/* Functions for tts-daemon fork */
+static bool __tts_setting_is_alive()
+{
+	DIR *dir;
+	struct dirent *entry;
+	struct stat filestat;
+	
+	int pid;
+	char cmdLine[256];
+	char tempPath[256];
+
+	dir  = opendir("/proc");
+
+	while ((entry = readdir(dir)) != NULL) {
+		lstat(entry->d_name, &filestat);
+
+		if (!S_ISDIR(filestat.st_mode))
+			continue;
+
+		pid = atoi(entry->d_name);
+		if (pid <= 0) continue;
+
+		sprintf(tempPath, "/proc/%d/cmdline", pid);
+		if (0 != __setting_get_cmd_line(tempPath, cmdLine)) {
+			break;
+		}
+
+		if (0 == strncmp(cmdLine, "[tts-daemon]", strlen("[tts-daemon]")) ||
+			0 == strncmp(cmdLine, "tts-daemon", strlen("tts-daemon")) ||
+			0 == strncmp(cmdLine, "/usr/bin/tts-daemon", strlen("/usr/bin/tts-daemon"))) {
+				SLOG(LOG_DEBUG, TAG_TTSC, "tts-daemon is ALIVE !! \n");
+				return TRUE;
+		}
+	}
+	SLOG(LOG_DEBUG, TAG_TTSC, "THERE IS NO tts-daemon !! \n");
+
+	closedir(dir);
+	return FALSE;
+
+}
+
+static void __setting_my_sig_child(int signo, siginfo_t *info, void *data)
 {
 	int status;
 	pid_t child_pid, child_pgid;
@@ -575,9 +599,9 @@ static void __my_sig_child(int signo, siginfo_t *info, void *data)
 	return;
 }
 
-static int __check_tts_daemon()
+static int __check_setting_tts_daemon()
 {
-	if( TRUE == __tts_is_alive() )
+	if( TRUE == __tts_setting_is_alive() )
 		return 0;
 
 	/* fork-exec tts-daemom */
@@ -585,7 +609,7 @@ static int __check_tts_daemon()
 	struct sigaction act, dummy;
 
 	act.sa_handler = NULL;
-	act.sa_sigaction = __my_sig_child;
+	act.sa_sigaction = __setting_my_sig_child;
 	sigemptyset(&act.sa_mask);
 	act.sa_flags = SA_NOCLDSTOP | SA_SIGINFO;
 

@@ -36,8 +36,7 @@ static bool	g_is_engine;
 static bool	g_is_synthesizing;
 
 /* If the daemon get the result */
-Ecore_Timer*	g_timer;
-static bool	g_is_next_synthesis;
+static bool	g_is_next_synthesis = false;
 
 /* Function definitions */
 int __server_next_synthesis(int uid);
@@ -46,12 +45,25 @@ int __server_next_synthesis(int uid);
 int __server_set_is_synthesizing(bool flag)
 {
 	g_is_synthesizing = flag;
+
 	return 0;
 }
 
-bool __server_get_current_synthesis()
+bool __server_get_is_synthesizing()
 {
 	return g_is_synthesizing;
+}
+
+int __server_set_is_next_synthesis(bool flag)
+{
+	g_is_next_synthesis = flag;
+
+	return 0;
+}
+
+bool __server_get_is_next_synthesis()
+{
+	return g_is_next_synthesis;
 }
 
 int __server_send_error(int uid, int utt_id, int error_code)
@@ -71,7 +83,7 @@ int __server_start_synthesis(int uid, int mode)
 	int result = 0;
 
 	/* check if tts-engine is running */
-	if (true == __server_get_current_synthesis()) {
+	if (true == __server_get_is_synthesizing()) {
 		SLOG(LOG_DEBUG, TAG_TTSD, "[Server] TTS-engine is running ");
 	} else {
 		speak_data_s sdata;
@@ -160,7 +172,7 @@ int __server_play_internal(int uid, app_state_e state)
 
 int __server_next_synthesis(int uid)
 {
-	SLOG(LOG_DEBUG, TAG_TTSD, "===== START NEXT SYNTHESIS & PLAY");
+	SLOG(LOG_DEBUG, TAG_TTSD, "===== NEXT SYNTHESIS & PLAY START");
 
 	/* get current playing client */
 	int current_uid = ttsd_data_get_current_playing();
@@ -172,7 +184,7 @@ int __server_next_synthesis(int uid)
 		return 0;
 	}
 
-	if (true == __server_get_current_synthesis()) {
+	if (true == __server_get_is_synthesizing()) {
 		SLOG(LOG_WARN, TAG_TTSD, "[Server WARNING] Engine has already been running. ");
 		SLOG(LOG_DEBUG, TAG_TTSD, "=====");
 		SLOG(LOG_DEBUG, TAG_TTSD, "  ");
@@ -222,16 +234,20 @@ int __server_next_synthesis(int uid)
 
 		if(sdata.text != NULL)	
 			g_free(sdata.text);
+	} else {
+		SLOG(LOG_DEBUG, TAG_TTSD, "[Server] --------------------");
+		SLOG(LOG_DEBUG, TAG_TTSD, "[Server] Text queue is empty.");
+		SLOG(LOG_DEBUG, TAG_TTSD, "[Server] --------------------");
 	}
 
 	if (0 != ttsd_player_play(current_uid)) {
-		SLOG(LOG_WARN, TAG_TTSD, "[Server WARNING] __synthesis_result_callback : fail ttsd_player_play() ");
+		SLOG(LOG_WARN, TAG_TTSD, "[Server WARNING] __server_next_synthesis : fail ttsd_player_play() ");
 	} else {
 		/* success playing */
 		SLOG(LOG_DEBUG, TAG_TTSD, "[Server] Success to start player");
 	}
 
-	SLOG(LOG_DEBUG, TAG_TTSD, "=====");
+	SLOG(LOG_DEBUG, TAG_TTSD, "===== NEXT SYNTHESIS & PLAY END");
 	SLOG(LOG_DEBUG, TAG_TTSD, "  ");
 
 	return 0;
@@ -246,7 +262,7 @@ int __player_result_callback(player_event_e event, int uid, int utt_id)
 	switch(event) {
 	case PLAYER_EMPTY_SOUND_QUEUE:
 		/* check whether synthesis is running */
-		if (false == __server_get_current_synthesis()) {
+		if (false == __server_get_is_synthesizing()) {
 			/* check text queue is empty */
 			if (0 == ttsd_data_get_speak_data_size(uid) && 0 == ttsd_data_get_sound_data_size(uid)) {
 				SLOG(LOG_DEBUG, TAG_TTSD, "[SERVER Callback] all play completed ");
@@ -272,16 +288,13 @@ Eina_Bool __start_next_synthesis(void *data)
 	/* get current play */
 	int uid = ttsd_data_is_current_playing();
 
-	if (uid < 0)
+	if (uid < 0) {
 		return EINA_FALSE;
+	}
 
-	if (true == g_is_next_synthesis) {
-		SLOG(LOG_DEBUG, TAG_TTSD, "===== NEXT SYNTHESIS START");
+	if (true == __server_get_is_next_synthesis()) {
+		__server_set_is_next_synthesis(false);
 		__server_next_synthesis(uid);
-		SLOG(LOG_DEBUG, TAG_TTSD, "===== ");
-		SLOG(LOG_DEBUG, TAG_TTSD, " ");
-
-		g_is_next_synthesis = false;
 	}
 
 	return EINA_TRUE;	
@@ -312,13 +325,12 @@ int __synthesis_result_callback(ttsp_result_event_e event, const void* data, uns
 		if (TTSP_RESULT_EVENT_FINISH == event)		SLOG(LOG_DEBUG, TAG_TTSD, "[SERVER] Event : TTSP_RESULT_EVENT_FINISH");
 
 		if (false == ttsd_data_is_uttid_valid(uid, uttid)) {
-			SLOG(LOG_ERROR, TAG_TTSD, "[SERVER ERROR] uttid is NOT valid !!!! " );
+			SLOG(LOG_ERROR, TAG_TTSD, "[SERVER ERROR] uttid is NOT valid !!!! - uid(%d), uttid(%d)", uid, uttid);
 			SLOG(LOG_DEBUG, TAG_TTSD, "=====");
 			SLOG(LOG_DEBUG, TAG_TTSD, "  ");
 
 			return 0;
 		}
-
 
 		SLOG(LOG_DEBUG, TAG_TTSD, "[SERVER] Result Info : uid(%d), utt(%d), data(%p), data size(%d) ", 
 			uid, uttid, data, data_size);
@@ -353,24 +365,20 @@ int __synthesis_result_callback(ttsp_result_event_e event, const void* data, uns
 
 		if (event == TTSP_RESULT_EVENT_FINISH) {
 			__server_set_is_synthesizing(false);
-
-			g_is_next_synthesis = true;
+			__server_set_is_next_synthesis(true);
 		}
 	} 
 	
 	else if (event == TTSP_RESULT_EVENT_CANCEL) {
 		SLOG(LOG_DEBUG, TAG_TTSD, "[SERVER] Event : TTSP_RESULT_EVENT_CANCEL");
 		__server_set_is_synthesizing(false);
-
-		g_is_next_synthesis = true;
+		__server_set_is_next_synthesis(true);
 	} 
 	
 	else {
-		SLOG(LOG_DEBUG, TAG_TTSD, "[SERVER] Event : etc");
-		
+		SLOG(LOG_DEBUG, TAG_TTSD, "[SERVER] Event ERROR");
 		__server_set_is_synthesizing(false);
-		
-		g_is_next_synthesis = true;
+		__server_set_is_next_synthesis(true);
 	} 
 
 	if (TTSP_RESULT_EVENT_FINISH == event || TTSP_RESULT_EVENT_CANCEL == event || TTSP_RESULT_EVENT_FAIL == event) {
@@ -413,7 +421,6 @@ int ttsd_initialize()
 	} else 
 		g_is_engine = true;
 
-	g_timer = NULL;
 
 	return TTSD_ERROR_NONE;
 }
@@ -633,8 +640,7 @@ int ttsd_server_play(int uid)
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
-	if (NULL == g_timer)
-		ecore_timer_add(0, __start_next_synthesis, NULL);
+	ecore_timer_add(0, __start_next_synthesis, NULL);
 
 	return TTSD_ERROR_NONE;
 }
@@ -657,7 +663,7 @@ int ttsd_server_stop(int uid)
 		if (0 != ttsd_player_stop(uid)) 
 			SLOG(LOG_WARN, TAG_TTSD, "[Server] Fail to ttsd_player_stop()");
 
-		if (true == __server_get_current_synthesis()) {
+		if (true == __server_get_is_synthesizing()) {
 			SLOG(LOG_DEBUG, TAG_TTSD, "[Server] TTS-engine is running ");
 
 			int ret = 0;

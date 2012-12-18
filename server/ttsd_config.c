@@ -15,7 +15,7 @@
 #include "ttsd_main.h"
 #include "ttsd_config.h"
 
-#define CONFIG_FILE_PATH	BASE_DIRECTORY_DOWNLOAD"/ttsd.conf"
+#define CONFIG_FILE_PATH	CONFIG_DIRECTORY"/ttsd.conf"
 #define CONFIG_DEFAULT		BASE_DIRECTORY_DEFAULT"/ttsd.conf"
 
 #define ENGINE_ID	"ENGINE_ID"
@@ -31,12 +31,12 @@ static int	g_speed;
 int __ttsd_config_save()
 {
 	if (0 != access(CONFIG_FILE_PATH, R_OK|W_OK)) {
-		if (0 == ecore_file_mkpath(BASE_DIRECTORY_DOWNLOAD)) {
-			SLOG(LOG_ERROR, TAG_TTSD, "[Config ERROR ] Fail to create directory (%s)", BASE_DIRECTORY_DOWNLOAD);
+		if (0 == ecore_file_mkpath(CONFIG_DIRECTORY)) {
+			SLOG(LOG_ERROR, TAG_TTSD, "[Config ERROR ] Fail to create directory (%s)", CONFIG_DIRECTORY);
 			return -1;
 		}
 
-		SLOG(LOG_WARN, TAG_TTSD, "[Config] Create directory (%s)", BASE_DIRECTORY_DOWNLOAD);
+		SLOG(LOG_WARN, TAG_TTSD, "[Config] Create directory (%s)", CONFIG_DIRECTORY);
 	}
 
 	FILE* config_fp;

@@ -14,6 +14,9 @@
 
 #include <sys/wait.h>
 #include <Ecore.h>
+#include <sys/stat.h>
+#include <sys/types.h> 
+#include <dirent.h>
 
 #include "tts_main.h"
 #include "tts_client.h"
@@ -989,36 +992,61 @@ int tts_unset_error_cb(tts_h tts)
 	return 0;
 }
 
-static bool _tts_is_alive()
+int __get_cmd_line(char *file, char *buf) 
 {
 	FILE *fp = NULL;
-	char buff[256];
-	char cmd[256];
+	int i;
 
-	memset(buff, '\0', sizeof(char) * 256);
-	memset(cmd, '\0', sizeof(char) * 256);
-
-	if ((fp = popen("ps -eo \"cmd\"", "r")) == NULL) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] popen error");
-		return FALSE;
+	fp = fopen(file, "r");
+	if (fp == NULL) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Get command line");
+		return -1;
 	}
 
-	while(fgets(buff, 255, fp)) {
-		sscanf(buff, "%s", cmd);
+	memset(buf, 0, sizeof(buf));
+	fgets(buf, 256, fp);
+	fclose(fp);
 
-		if (0 == strncmp(cmd, "[tts-daemon]", strlen("[tts-daemon]")) ||
-			0 == strncmp(cmd, "tts-daemon", strlen("tts-daemon")) ||
-			0 == strncmp(cmd, "/usr/bin/tts-daemon", strlen("/usr/bin/tts-daemon"))) {
-			SLOG(LOG_DEBUG, TAG_TTSC, "tts-daemon is ALIVE !!");
-			fclose(fp);
-			return TRUE;
+	return 0;
+}
+
+static bool _tts_is_alive()
+{
+	DIR *dir;
+	struct dirent *entry;
+	struct stat filestat;
+	
+	int pid;
+	char cmdLine[256];
+	char tempPath[256];
+
+	dir  = opendir("/proc");
+
+	while ((entry = readdir(dir)) != NULL) {
+		lstat(entry->d_name, &filestat);
+
+		if (!S_ISDIR(filestat.st_mode))
+			continue;
+
+		pid = atoi(entry->d_name);
+		if (pid <= 0) continue;
+
+		sprintf(tempPath, "/proc/%d/cmdline", pid);
+		if (0 != __get_cmd_line(tempPath, cmdLine)) {
+			break;
+		}
+
+		if ( 0 == strncmp(cmdLine, "[tts-daemon]", strlen("[tts-daemon]")) ||
+			0 == strncmp(cmdLine, "tts-daemon", strlen("tts-daemon")) ||
+			0 == strncmp(cmdLine, "/usr/bin/tts-daemon", strlen("/usr/bin/tts-daemon"))) {
+				SLOG(LOG_DEBUG, TAG_TTSC, "tts-daemon is ALIVE !!");
+				return TRUE;
 		}
 	}
 
-	fclose(fp);
-
 	SLOG(LOG_DEBUG, TAG_TTSC, "THERE IS NO tts-daemon !!");
 
+	closedir(dir);
 	return FALSE;
 }
 

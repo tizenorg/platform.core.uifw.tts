@@ -729,7 +729,7 @@ int tts_setting_dbus_request_get_default_speed(int* speed)
 
 	if (0 == result) {
 		*speed = temp_int;
-		SLOG(LOG_DEBUG, TAG_TTSC, "<<<< setting get default speed : result(%d), speed(%d)", result, speed);
+		SLOG(LOG_DEBUG, TAG_TTSC, "<<<< setting get default speed : result(%d), speed(%d)", result, *speed);
 	} else {
 		SLOG(LOG_ERROR, TAG_TTSC, "<<<< setting get default speed : result(%d)", result);
 	}

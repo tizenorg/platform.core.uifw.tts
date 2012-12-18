@@ -576,20 +576,20 @@ int ttsd_engine_agent_load_current_engine()
 	char *error = NULL;
 	g_cur_engine.handle = dlopen(g_cur_engine.engine_path, RTLD_LAZY); /* RTLD_LAZY RTLD_NOW*/
 
-	if ((error = dlerror()) != NULL || !g_cur_engine.handle) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Engine Agent ERROR] fail to get current engine handle : dlopen error \n");
+	if (NULL != (error = dlerror()) || NULL == g_cur_engine.handle) {
+		SLOG(LOG_ERROR, TAG_TTSD, "[Engine Agent ERROR] fail to get current engine handle : dlopen error ($s)", error);
 		return -2;
 	}
 
 	g_cur_engine.ttsp_unload_engine = (int (*)())dlsym(g_cur_engine.handle, "ttsp_unload_engine");
-	if ((error = dlerror()) != NULL) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Engine Agent ERROR] fail to link daemon to ttsp_unload_engine() of current engine\n");
+	if (NULL != (error = dlerror()) || NULL == g_cur_engine.ttsp_unload_engine) {
+		SLOG(LOG_ERROR, TAG_TTSD, "[Engine Agent ERROR] fail to link daemon to ttsp_unload_engine() of current engine : (%s)", error);
 		return -3;
 	}
 
 	g_cur_engine.ttsp_load_engine = (int (*)(const ttspd_funcs_s* , ttspe_funcs_s*) )dlsym(g_cur_engine.handle, "ttsp_load_engine");
 	if (NULL != (error = dlerror()) || NULL == g_cur_engine.ttsp_load_engine) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Engine Agent ERROR] fail to link daemon to ttsp_load_engine() of current engine \n");
+		SLOG(LOG_ERROR, TAG_TTSD, "[Engine Agent ERROR] fail to link daemon to ttsp_load_engine() of current engine : %s", error);
 		return -3;
 	}
 

@@ -38,7 +38,8 @@ extern "C" {
 #define ENGINE_DIRECTORY_DEFAULT		"/usr/lib/voice/tts/1.0/engine"
 #define ENGINE_DIRECTORY_DEFAULT_SETTING	"/usr/lib/voice/tts/1.0/setting"
 
-#define BASE_DIRECTORY_DOWNLOAD			"/opt/usr/voice/tts/1.0"
+#define CONFIG_DIRECTORY			"/opt/home/app/.voice"
+	
 #define ENGINE_DIRECTORY_DOWNLOAD		"/opt/usr/voice/tts/1.0/engine"
 #define ENGINE_DIRECTORY_DOWNLOAD_SETTING	"/opt/usr/voice/tts/1.0/setting"
 
