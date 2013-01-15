@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2012 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2012, 2013 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -535,7 +535,7 @@ int __setting_get_cmd_line(char *file, char *buf)
 		return -1;
 	}
 
-	memset(buf, 0, sizeof(buf));
+	memset(buf, 0, 256);
 	fgets(buf, 256, fp);
 	fclose(fp);
 
@@ -554,9 +554,14 @@ static bool __tts_setting_is_alive()
 	char tempPath[256];
 
 	dir  = opendir("/proc");
+	if (NULL == dir) {
+		SLOG(LOG_ERROR, TAG_TTSC, "process checking is FAILED");
+		return FALSE;
+	}
 
 	while ((entry = readdir(dir)) != NULL) {
-		lstat(entry->d_name, &filestat);
+		if (0 != lstat(entry->d_name, &filestat))
+			continue;
 
 		if (!S_ISDIR(filestat.st_mode))
 			continue;
@@ -566,13 +571,14 @@ static bool __tts_setting_is_alive()
 
 		sprintf(tempPath, "/proc/%d/cmdline", pid);
 		if (0 != __setting_get_cmd_line(tempPath, cmdLine)) {
-			break;
+			continue;
 		}
 
 		if (0 == strncmp(cmdLine, "[tts-daemon]", strlen("[tts-daemon]")) ||
 			0 == strncmp(cmdLine, "tts-daemon", strlen("tts-daemon")) ||
 			0 == strncmp(cmdLine, "/usr/bin/tts-daemon", strlen("/usr/bin/tts-daemon"))) {
 				SLOG(LOG_DEBUG, TAG_TTSC, "tts-daemon is ALIVE !! \n");
+				closedir(dir);
 				return TRUE;
 		}
 	}

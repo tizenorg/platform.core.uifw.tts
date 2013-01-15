@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2012, 2013 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -883,6 +883,10 @@ int __save_file(const int uid, const int index, const sound_data_s data, char** 
 	/* make filename to save */
 	char* temp;
 	temp = (char*)g_malloc0(sizeof(char) * FILE_PATH_SIZE);
+	if (NULL == temp) {
+		SLOG(LOG_ERROR, TAG_TTSD, "[Player Error] make buf is failed");
+		return -1;
+	}
 
 	int ret = snprintf(temp, FILE_PATH_SIZE, "%s/ttstemp%d_%d.%s", TEMP_FILE_PATH, uid, index, postfix);
 
@@ -991,9 +995,12 @@ int __set_and_start(player_s* player)
 		g_index = 1;
 	}
 
+	int ret;
+
 	/* make sound file for mmplayer */
 	char* sound_file = NULL;
-	if (0 != __save_file(player->uid, g_index, wdata, &sound_file)) {
+	ret = __save_file(player->uid, g_index, wdata, &sound_file);
+	if (0 != ret || NULL == sound_file) {
 		SLOG(LOG_ERROR, TAG_TTSD, "[Player ERROR] fail to make sound file");
 		return -1;
 	}
@@ -1009,7 +1016,6 @@ int __set_and_start(player_s* player)
 		user_data->uid, user_data->utt_id, user_data->filename, user_data->event);
 	SLOG(LOG_DEBUG, TAG_TTSD, " ");
 
-	int ret;
 	
 	/* set callback func */
 	ret = mm_player_set_message_callback(player->player_handle, msg_callback, (void*)user_data);
