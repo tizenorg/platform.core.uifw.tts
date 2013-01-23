@@ -1,3 +1,9 @@
+tts (0.1.1-43slp2+1) unstable; urgency=low
+
+  * Change License and notice file
+
+ -- Kwangyoun Kim <ky85.kim@samsung.com>  Wed, 23 Jan 2013 15:15:44 +0900
+
 tts (0.1.1-42slp2+1) unstable; urgency=low
 
   * Fix prevent issue
