@@ -155,18 +155,13 @@ int ttsd_engine_agent_release()
 	if (g_list_length(g_engine_list) > 0) {
 		/* Get a first item */
 		iter = g_list_first(g_engine_list);
-
 		while (NULL != iter) {
 			/* Get data from item */
 			data = iter->data;
-			dlclose(data->handle); 
-
 			iter = g_list_remove(iter, data);
 		}
 	}
-
 	g_list_free(iter);
-
 	/* release current engine data */
 	if (g_cur_engine.pefuncs != NULL)
 		g_free(g_cur_engine.pefuncs);

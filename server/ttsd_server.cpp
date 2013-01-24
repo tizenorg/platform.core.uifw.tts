@@ -495,6 +495,12 @@ int ttsd_server_initialize(int pid, int uid)
 	return TTSD_ERROR_NONE;
 }
 
+static Eina_Bool __quit_ecore_loop(void *data)
+{
+	ecore_main_loop_quit();
+	SLOG(LOG_DEBUG, TAG_TTSD, "[Server] quit ecore main loop");
+	return EINA_FALSE;
+}
 
 int ttsd_server_finalize(int uid)
 {
@@ -512,11 +518,13 @@ int ttsd_server_finalize(int uid)
 
 	/* unload engine, if ref count of client is 0 */
 	if (0 == ttsd_data_get_client_count()) {
-		if (0 != ttsd_engine_agent_unload_current_engine()) {
-			SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] fail to unload current engine ");
+		if (0 != ttsd_engine_agent_release()) {
+			SLOG(LOG_ERROR, TAG_TTSD, "[Server ERROR] fail to release engine agent");
 		} else {
-			SLOG(LOG_DEBUG, TAG_TTSD, "[Server SUCCESS] unload current engine ");
+			SLOG(LOG_DEBUG, TAG_TTSD, "[Server SUCCESS] release engine agent");
 		}
+
+		ecore_timer_add(0, __quit_ecore_loop, NULL);
 	}
 
 	return TTSD_ERROR_NONE;
@@ -794,10 +802,12 @@ int ttsd_server_setting_finalize(int uid)
 	/* unload engine, if ref count of client is 0 */
 	if (0 == ttsd_data_get_client_count())
 	{
-		if (0 != ttsd_engine_agent_unload_current_engine()) 
-			SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] fail to unload current engine ");
-		else
-			SLOG(LOG_DEBUG, TAG_TTSD, "[Server Setting SUCCESS] unload current engine ");
+		if (0 != ttsd_engine_agent_release()) {
+			SLOG(LOG_ERROR, TAG_TTSD, "[Server Setting ERROR] Fail to release engine agent");
+		} else {
+			SLOG(LOG_DEBUG, TAG_TTSD, "[Server Setting SUCCESS] Release engine agent");
+		}
+		ecore_timer_add(0, __quit_ecore_loop, NULL);
 	}
 
 	return TTSD_ERROR_NONE;

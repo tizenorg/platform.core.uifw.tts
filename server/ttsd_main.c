@@ -59,12 +59,18 @@ int main()
 	printf("TTS-Daemon Start...\n");
 	
 	ecore_main_loop_begin();
-	
-	ecore_shutdown();
 
+	SLOG(LOG_DEBUG, TAG_TTSD, "===== TTS DAEMON FINALIZE");
+	
 	ttsd_dbus_close_connection();
 
 	ttsd_network_finalize();
+
+	ecore_shutdown();
+
+	SLOG(LOG_DEBUG, TAG_TTSD, "=====");
+	SLOG(LOG_DEBUG, TAG_TTSD, "  ");
+	SLOG(LOG_DEBUG, TAG_TTSD, "  ");
 
 	return 0;
 }

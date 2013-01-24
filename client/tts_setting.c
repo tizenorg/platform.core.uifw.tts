@@ -184,7 +184,8 @@ int tts_setting_finalize()
 
 		return TTS_SETTING_ERROR_OPERATION_FAILED;
 	}
-
+	g_is_daemon_started = false;
+	
 	if (0 != tts_setting_dbus_close_connection()) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to close connection\n ");
 	} else {
@@ -589,22 +590,6 @@ static bool __tts_setting_is_alive()
 
 }
 
-static void __setting_my_sig_child(int signo, siginfo_t *info, void *data)
-{
-	int status;
-	pid_t child_pid, child_pgid;
-
-	child_pgid = getpgid(info->si_pid);
-	SLOG(LOG_DEBUG, TAG_TTSC, "Signal handler: dead pid = %d, pgid = %d", info->si_pid, child_pgid);
-
-	while ((child_pid = waitpid(-1, &status, WNOHANG)) > 0)	{
-		if(child_pid == child_pgid)
-			killpg(child_pgid, SIGKILL);
-	}
-
-	return;
-}
-
 static int __check_setting_tts_daemon()
 {
 	if( TRUE == __tts_setting_is_alive() )
@@ -612,17 +597,6 @@ static int __check_setting_tts_daemon()
 
 	/* fork-exec tts-daemom */
 	int pid, i;
-	struct sigaction act, dummy;
-
-	act.sa_handler = NULL;
-	act.sa_sigaction = __setting_my_sig_child;
-	sigemptyset(&act.sa_mask);
-	act.sa_flags = SA_NOCLDSTOP | SA_SIGINFO;
-
-	if (sigaction(SIGCHLD, &act, &dummy) < 0) {
-		SLOG(LOG_ERROR, TAG_TTSC, "Cannot make a signal handler");
-		return -1;
-	}
 
 	pid = fork();
 

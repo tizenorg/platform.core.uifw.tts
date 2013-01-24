@@ -97,7 +97,8 @@ int tts_destroy(tts_h tts)
 		ret = tts_dbus_request_finalize(client->uid);
 		if (0 != ret) {
 			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to request finalize");
-		}   
+		}
+		g_is_daemon_started = false;
 	case TTS_STATE_CREATED:
 		/* Free resources */
 		tts_client_destroy(tts);
@@ -235,6 +236,7 @@ int tts_unprepare(tts_h tts)
 	if (0 != ret) {
 		SLOG(LOG_WARN, TAG_TTSC, "[ERROR] Fail to request finalize");
 	}
+	g_is_daemon_started = false;
 
 	client->before_state = client->current_state;
 	client->current_state = TTS_STATE_CREATED;
@@ -1056,41 +1058,14 @@ static bool _tts_is_alive()
 	return FALSE;
 }
 
-
-static void __my_sig_child(int signo, siginfo_t *info, void *data)
-{
-	int status;
-	pid_t child_pid, child_pgid;
-
-	child_pgid = getpgid(info->si_pid);
-	SLOG(LOG_DEBUG, TAG_TTSC, "Signal handler: dead pid = %d, pgid = %d", info->si_pid, child_pgid);
-
-	while (0 < (child_pid = waitpid(-1, &status, WNOHANG))) {
-		if(child_pid == child_pgid)
-			killpg(child_pgid, SIGKILL);
-	}
-
-	return;
-}
-
 static int __tts_check_tts_daemon()
 {
-	if (TRUE == _tts_is_alive())
+	if (TRUE == _tts_is_alive()) {
 		return 0;
+	}
 	
 	/* fork-exec tts-daemom */
 	int pid, i;
-	struct sigaction act, dummy;
-
-	act.sa_handler = NULL;
-	act.sa_sigaction = __my_sig_child;
-	sigemptyset(&act.sa_mask);
-	act.sa_flags = SA_NOCLDSTOP | SA_SIGINFO;
-	
-	if (sigaction(SIGCHLD, &act, &dummy) < 0) {
-		SLOG(LOG_ERROR, TAG_TTSC, "Cannot make a signal handler");
-		return -1;
-	}
 
 	pid = fork();
 
