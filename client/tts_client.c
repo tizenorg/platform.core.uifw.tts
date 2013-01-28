@@ -59,6 +59,7 @@ int tts_client_new(tts_h* tts)
 	client->error_cb = NULL;
 	client->error_user_data = NULL;
 
+	client->mode = TTS_MODE_DEFAULT;
 	client->before_state = TTS_STATE_CREATED; 
 	client->current_state = TTS_STATE_CREATED; 
 

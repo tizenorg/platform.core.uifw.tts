@@ -14,6 +14,7 @@
 
 #include <mm_types.h>
 #include <mm_player.h>
+#include <mm_player_internal.h>
 #include <mm_error.h>
 #include <Ecore.h>
 
@@ -1043,6 +1044,11 @@ int __set_and_start(player_s* player)
 			SLOG(LOG_ERROR, TAG_TTSD, "[Player ERROR] Fail mm_player_set_attribute() : msg(%s), result(%x) ", err_attr_name, ret);
 		}
 		return -1;
+	}
+
+	ret = mm_player_ignore_session(player->player_handle);
+	if (MM_ERROR_NONE != ret) {
+		SLOG(LOG_WARN, TAG_TTSD, "[Player WARNING] fail mm_player_ignore_session() : %x", ret);
 	}
 
 	/* realize and start mm player */ 

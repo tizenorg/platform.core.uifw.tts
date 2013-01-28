@@ -528,7 +528,6 @@ int tts_setting_set_engine_setting(const char* key, const char* value)
 int __setting_get_cmd_line(char *file, char *buf) 
 {
 	FILE *fp = NULL;
-	int i;
 
 	fp = fopen(file, "r");
 	if (fp == NULL) {
@@ -537,7 +536,11 @@ int __setting_get_cmd_line(char *file, char *buf)
 	}
 
 	memset(buf, 0, 256);
-	fgets(buf, 256, fp);
+	if (NULL == fgets(buf, 256, fp)) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail fgets command line");
+		fclose(fp);
+		return -1;
+	}
 	fclose(fp);
 
 	return 0;

@@ -40,7 +40,8 @@ typedef struct {
 	tts_error_cb			error_cb;
 	void*				error_user_data;
 
-	/* state */
+	/* mode & state */
+	tts_mode_e	mode;
 	tts_state_e	before_state;
 	tts_state_e	current_state;
 

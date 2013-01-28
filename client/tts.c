@@ -117,6 +117,80 @@ int tts_destroy(tts_h tts)
 	return TTS_ERROR_NONE;
 }
 
+int tts_set_mode(tts_h tts, tts_mode_e mode)
+{
+	SLOG(LOG_DEBUG, TAG_TTSC, "===== Set TTS mode");
+
+	tts_client_s* client = tts_client_get(tts);
+
+	/* check handle */
+	if (NULL == client) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] A handle is not available");
+		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+		SLOG(LOG_DEBUG, TAG_TTSC, " ");
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+
+	/* check state */
+	if (client->current_state != TTS_STATE_CREATED) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Invalid State: Current state is not 'CREATED'"); 
+		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+		SLOG(LOG_DEBUG, TAG_TTSC, " ");
+		return TTS_ERROR_INVALID_STATE;
+	}
+
+	if (TTS_MODE_DEFAULT <= mode && mode <= TTS_MODE_SCREEN_READER) {
+		client->mode = mode;
+	} else {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] mode is not valid : %d", mode);
+		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+		SLOG(LOG_DEBUG, TAG_TTSC, " ");
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+	SLOG(LOG_DEBUG, TAG_TTSC, " ");
+
+	return TTS_ERROR_NONE;
+}
+
+int tts_get_mode(tts_h tts, tts_mode_e* mode)
+{
+	SLOG(LOG_DEBUG, TAG_TTSC, "===== Get TTS mode");
+
+	tts_client_s* client = tts_client_get(tts);
+
+	/* check handle */
+	if (NULL == client) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] A handle is not available");
+		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+		SLOG(LOG_DEBUG, TAG_TTSC, " ");
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+
+	/* check state */
+	if (client->current_state != TTS_STATE_CREATED) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Invalid State: Current state is not 'CREATED'"); 
+		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+		SLOG(LOG_DEBUG, TAG_TTSC, " ");
+		return TTS_ERROR_INVALID_STATE;
+	}
+
+	if (NULL == mode) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input parameter(mode) is NULL");
+		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+		SLOG(LOG_DEBUG, TAG_TTSC, " ");
+		return TTS_ERROR_INVALID_PARAMETER;
+	} 
+
+	*mode = client->mode;
+	
+	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+	SLOG(LOG_DEBUG, TAG_TTSC, " ");
+
+	return TTS_ERROR_NONE;
+}
+
 static Eina_Bool __tts_connect_daemon(void *data)
 {
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Connect daemon");
@@ -180,7 +254,6 @@ static Eina_Bool __tts_connect_daemon(void *data)
 
 	return EINA_FALSE;
 }
-
 
 int tts_prepare(tts_h tts)
 {
@@ -997,7 +1070,6 @@ int tts_unset_error_cb(tts_h tts)
 int __get_cmd_line(char *file, char *buf) 
 {
 	FILE *fp = NULL;
-	int i;
 
 	fp = fopen(file, "r");
 	if (fp == NULL) {
@@ -1006,9 +1078,12 @@ int __get_cmd_line(char *file, char *buf)
 	}
 
 	memset(buf, 0, 256);
-	fgets(buf, 256, fp);
+	if (NULL == fgets(buf, 256, fp)) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to fget command line");
+		fclose(fp);
+		return -1;
+	}
 	fclose(fp);
-
 	return 0;
 }
 

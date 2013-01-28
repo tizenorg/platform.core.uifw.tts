@@ -1,3 +1,10 @@
+tts (0.1.1-45slp2+1) unstable; urgency=low
+
+  * Fix PLM issue(P121126-2493)
+  * API is added
+
+ -- Kwangyoun Kim <ky85.kim@samsung.com>  Mon, 28 Jan 2013 17:31:31 +0900
+
 tts (0.1.1-44slp2+1) unstable; urgency=low
 
   * Fix PLM issue(P130121-3243)
