@@ -84,11 +84,14 @@ static player_result_callback_func g_result_callback;
 /** numbering for temp file */
 static unsigned int g_index;              
 
+/** For resume when the 'Paused' state of player after end of play */
+static bool g_pause_info;
+static int g_paused_uid;
+
 
 /*
 * Internal Interfaces 
 */
-
 player_s* __player_get_item(int uid);
 
 int __save_file(const int uid, const int index, const sound_data_s data, char** filename);
@@ -98,7 +101,6 @@ int __set_and_start(player_s* player);
 int __init_wave_header(WavHeader* hdr, size_t nsamples, size_t sampling_rate, int channel);
 
 static int msg_callback(int message, void *data, void *user_param) ;
-
 
 /*
 * Player Interfaces 
@@ -118,6 +120,8 @@ int ttsd_player_init(player_result_callback_func result_cb)
 	g_index = 1;
 	g_player_init = true;
 
+	g_pause_info = false;
+	g_paused_uid = -1;
 	return 0;
 }
 
@@ -522,15 +526,29 @@ int ttsd_player_resume(const int uid)
 
 	int ret = -1;
 	if (MM_PLAYER_STATE_PAUSED == player_state) {
-		ret = mm_player_resume(current->player_handle);
-		if (MM_ERROR_NONE != ret) {
-			SLOG(LOG_ERROR, TAG_TTSD, "[Player ERROR] fail mm_player_resume() : %d", ret);
-			return -1;
-		} else {
-			SLOG(LOG_DEBUG, TAG_TTSD, "[Player] Resume player");
-		}
+		/* When the 'Paused' state of player after end of play */
+		if (g_pause_info == true && g_paused_uid == uid) {
+			g_playing_info = current;
 
-		g_playing_info = current;
+			g_pause_info = false;
+			g_paused_uid = -1;
+			
+			/* Current state need load and play */
+			ret = ttsd_player_next_play(uid);
+			if (0 != ret) {
+				SLOG(LOG_ERROR, TAG_TTSD, "[player] Fail to next play in resume function");
+			}
+		} else {
+			ret = mm_player_resume(current->player_handle);
+			if (MM_ERROR_NONE != ret) {
+				SLOG(LOG_ERROR, TAG_TTSD, "[Player ERROR] fail mm_player_resume() : %d", ret);
+				return -1;
+			} else {
+				SLOG(LOG_DEBUG, TAG_TTSD, "[Player] Resume player");
+			}
+
+			g_playing_info = current;
+		}
 	} else {
 		SLOG(LOG_WARN, TAG_TTSD, "[Player WARNING] Current uid is NOT paused state.");
 	}
@@ -700,65 +718,7 @@ static int msg_callback(int message, void *data, void *user_param)
 		break;	/*MM_MESSAGE_ERROR*/
 
 	case MM_MESSAGE_BEGIN_OF_STREAM:
-		{
-			SLOG(LOG_DEBUG, TAG_TTSD, "===== BEGIN OF STREAM CALLBACK");
 
-			/* Check uid */
-			player_s* current;
-			current = __player_get_item(uid);
-			if (NULL == current) {
-				SLOG(LOG_ERROR, TAG_TTSD, "[PLAYER] uid(%d) is NOT valid ", uid);
-				return -1;
-			}
-
-			if (TTSP_RESULT_EVENT_START == user_data->event ||
-			    (TTSP_RESULT_EVENT_FINISH == current->event && TTSP_RESULT_EVENT_FINISH == user_data->event)) {
-				int pid;
-				pid = ttsd_data_get_pid(uid);
-
-				/* send utterance start message */
-				if (0 == ttsdc_send_utt_start_message(pid, uid, utt_id)) {
-					SLOG(LOG_DEBUG, TAG_TTSD, "[Send SUCCESS] Send Utterance Start Signal : pid(%d), uid(%d), uttid(%d)", pid, uid, utt_id);
-				} else 
-					SLOG(LOG_ERROR, TAG_TTSD, "[Send ERROR] Fail to send Utterance Start Signal : pid(%d), uid(%d), uttid(%d)", pid, uid, utt_id);
-			} else {
-				SLOG(LOG_DEBUG, TAG_TTSD, "[PLAYER] Don't need to send Utterance Start Signal");
-			}
-
-			/* set current playing info */
-			current->utt_id = utt_id;
-			current->event = user_data->event;
-			g_playing_info = current;
-
-			app_state_e state;
-			if (0 != ttsd_data_get_client_state(uid, &state)) {
-				SLOG(LOG_ERROR, TAG_TTSD, "[PLAYER ERROR] uid is not valid : %d", uid);
-				SLOG(LOG_DEBUG, TAG_TTSD, "=====");
-				SLOG(LOG_DEBUG, TAG_TTSD, "  ");
-				break;
-			}
-
-			/* for sync problem */
-			if (APP_STATE_PAUSED == state) {
-				MMPlayerStateType player_state;
-				mm_player_get_state(current->player_handle, &player_state);
-
-				SLOG(LOG_DEBUG, TAG_TTSD, "[PLAYER] Current state(%d)", player_state);
-
-				int ret = 0;
-				if (MM_PLAYER_STATE_PLAYING == player_state) {
-					ret = mm_player_pause(current->player_handle);
-					if (MM_ERROR_NONE != ret) {
-						SLOG(LOG_ERROR, TAG_TTSD, "[PLAYER ERROR] fail mm_player_pause() : %x", ret);
-					} else {
-						SLOG(LOG_DEBUG, TAG_TTSD, "[PLAYER] uid(%d) changes 'Pause' state ", uid);
-					}
-				}
-			}
-
-			SLOG(LOG_DEBUG, TAG_TTSD, "=====");
-			SLOG(LOG_DEBUG, TAG_TTSD, "  ");
-		}
 		break;
 
 	case MM_MESSAGE_END_OF_STREAM:
@@ -797,12 +757,22 @@ static int msg_callback(int message, void *data, void *user_param)
 					SLOG(LOG_ERROR, TAG_TTSD, "[Send ERROR] Fail to send Utterance Completed Signal : pid(%d), uid(%d), uttid(%d)", pid, uid, utt_id);
 			}
 
-			int* uid_data = (int*) g_malloc0(sizeof(int));
-			*uid_data = uid;
+			/* for sync problem */
+			MMPlayerStateType player_state;
+			mm_player_get_state(current->player_handle, &player_state);
+			
+			if (MM_PLAYER_STATE_PAUSED == player_state) {
+				g_pause_info = true;	/* The current state of player is 'Paused' */
+				g_paused_uid = uid;	/* The current uid when the current state player is 'Paused' */
+			} else {
+				/* play state */
+				int* uid_data = (int*) g_malloc0(sizeof(int));
+				*uid_data = uid;
 
-			SLOG(LOG_DEBUG, TAG_TTSD, "[PLAYER] uid = %d", *uid_data);
+				SLOG(LOG_DEBUG, TAG_TTSD, "[PLAYER] uid = %d", *uid_data);
 
-			ecore_timer_add(0, __player_next_play, (void*)uid_data);
+				ecore_timer_add(0, __player_next_play, (void*)uid_data);
+			}
 
 			SLOG(LOG_DEBUG, TAG_TTSD, "=====");
 			SLOG(LOG_DEBUG, TAG_TTSD, "  ");
@@ -1065,6 +1035,26 @@ int __set_and_start(player_s* player)
 		mm_player_unrealize(player->player_handle);
 		return -3;
 	}
+
+	/* If wdata's event is 'start', current wdata is first data of engine for synthesis. 
+	 * If wdata's event is 'finish', player should check previous event to know whether this wdata is first or not.
+	 * When previous wdata's event is 'finish' and current wdata's event is 'finish', 
+	 * the player should send utt started event. 
+	 */
+	if (TTSP_RESULT_EVENT_START == wdata.event ||
+	    (TTSP_RESULT_EVENT_FINISH == player->event && TTSP_RESULT_EVENT_FINISH == wdata.event)) {
+		int pid;
+		pid = ttsd_data_get_pid(player->uid);
+
+		/* send utterance start message */
+		if (0 != ttsdc_send_utt_start_message(pid, player->uid, wdata.utt_id)) {
+			SLOG(LOG_ERROR, TAG_TTSD, "[Send ERROR] Fail to send Utterance Start Signal : pid(%d), uid(%d), uttid(%d)", pid, player->uid, wdata.utt_id);
+		}
+	} else {
+		SLOG(LOG_DEBUG, TAG_TTSD, "[PLAYER] Don't need to send Utterance Start Signal");
+	}
+
+	g_playing_info = player;
 
 	if (NULL != sound_file)	
 		g_free(sound_file);

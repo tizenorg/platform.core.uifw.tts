@@ -26,6 +26,8 @@
 
 static bool g_is_daemon_started = false;
 
+static Ecore_Timer* g_connect_timer = NULL;
+
 /* Function definition */
 static int __tts_check_tts_daemon();
 static Eina_Bool __tts_notify_state_changed(void *data);
@@ -86,6 +88,12 @@ int tts_destroy(tts_h tts)
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
 
+	/* check used callback */
+	if (0 != tts_client_get_use_callback(client)) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Cannot destroy in Callback function");
+		return TTS_ERROR_OPERATION_FAILED;
+	}
+
 	int ret = -1;
 
 	/* check state */
@@ -100,6 +108,10 @@ int tts_destroy(tts_h tts)
 		}
 		g_is_daemon_started = false;
 	case TTS_STATE_CREATED:
+		if (NULL != g_connect_timer) {
+			SLOG(LOG_DEBUG, TAG_TTSC, "Connect Timer is deleted");
+			ecore_timer_del(g_connect_timer);
+		}
 		/* Free resources */
 		tts_client_destroy(tts);
 		break;
@@ -109,7 +121,7 @@ int tts_destroy(tts_h tts)
 		if (0 != tts_dbus_close_connection()) {
 			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to close connection");
 		}
-	}
+	} 
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
@@ -247,6 +259,8 @@ static Eina_Bool __tts_connect_daemon(void *data)
 
 	ecore_timer_add(0, __tts_notify_state_changed, (void*)client->tts);
 
+	g_connect_timer = NULL;
+
 	SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] uid(%d)", client->uid);
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
@@ -277,7 +291,7 @@ int tts_prepare(tts_h tts)
 		return TTS_ERROR_INVALID_STATE;
 	}
 
-	ecore_timer_add(0, __tts_connect_daemon, (void*)tts);
+	g_connect_timer = ecore_timer_add(0, __tts_connect_daemon, (void*)tts);
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");

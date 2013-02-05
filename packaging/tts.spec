@@ -50,6 +50,7 @@ mkdir -p %{buildroot}/usr/share/license
 
 %files
 %manifest tts-server.manifest
+/etc/smack/accesses2.d/tts-server.rule
 %defattr(-,root,root,-)
 %{_libdir}/lib*.so
 %{_libdir}/voice/tts/1.0/ttsd.conf

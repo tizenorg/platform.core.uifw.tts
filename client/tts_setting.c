@@ -24,6 +24,8 @@
 
 static bool g_is_daemon_started = false;
 
+static Ecore_Timer* g_setting_connect_timer = NULL;
+
 static int __check_setting_tts_daemon();
 
 static tts_setting_state_e g_state = TTS_SETTING_STATE_NONE;
@@ -71,6 +73,8 @@ static Eina_Bool __tts_setting_connect_daemon(void *data)
 	g_reason = ret;
 
 	ecore_timer_add(0, __tts_setting_initialized, NULL);
+
+	g_setting_connect_timer = NULL;
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
@@ -156,7 +160,7 @@ int tts_setting_initialize_async(tts_setting_initialized_cb callback, void* user
 	g_initialized_cb = callback;
 	g_user_data = user_data;
 
-	ecore_timer_add(0, __tts_setting_connect_daemon, NULL);
+	g_setting_connect_timer = ecore_timer_add(0, __tts_setting_connect_daemon, NULL);
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
@@ -169,21 +173,20 @@ int tts_setting_finalize()
 {
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Finalize TTS Setting");
 
+	int ret = 0;
+
 	if (TTS_SETTING_STATE_NONE == g_state) {
-		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] Not initialized");
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
-		return TTS_SETTING_ERROR_INVALID_STATE;
+		ret = tts_setting_dbus_request_finalilze(); 
+		if (0 != ret) {
+			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] result : %d", ret);
+		}
 	}
 
-	int ret = tts_setting_dbus_request_finalilze(); 
-	if (0 != ret) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] result : %d", ret);
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
-
-		return TTS_SETTING_ERROR_OPERATION_FAILED;
+	if (NULL != g_setting_connect_timer) {
+		SLOG(LOG_DEBUG, TAG_TTSC, "Setting Connect Timer is remained");
+		ecore_timer_del(g_setting_connect_timer);
 	}
+
 	g_is_daemon_started = false;
 	
 	if (0 != tts_setting_dbus_close_connection()) {

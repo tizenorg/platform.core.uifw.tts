@@ -189,3 +189,8 @@ int tts_client_not_use_callback(tts_client_s* client)
 	client->cb_ref_count--;
 	return 0;
 }
+
+int tts_client_get_use_callback(tts_client_s* client)
+{
+	return client->cb_ref_count;
+}
