@@ -1,3 +1,9 @@
+tts (0.1.1-48)
+
+  * Update smack rule
+
+ -- Kwangyoun Kim <ky85.kim@samsung.com>  Wed, 06 Feb 2013
+
 tts (0.1.1-47)
 
   * Fix bug (Nabi S1-12186)

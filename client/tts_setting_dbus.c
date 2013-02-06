@@ -102,9 +102,7 @@ int tts_setting_dbus_request_hello()
 	if (NULL == msg) { 
 		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request setting hello : Fail to make message \n"); 
 		return TTS_SETTING_ERROR_OPERATION_FAILED;
-	} else {
-		SLOG(LOG_DEBUG, TAG_TTSC, ">>>> Request setting hello");
-	}
+	} 
 
 	DBusError err;
 	dbus_error_init(&err);
@@ -122,7 +120,6 @@ int tts_setting_dbus_request_hello()
 		SLOG(LOG_DEBUG, TAG_TTSC, "<<<< setting hello");
 		result = 0;
 	} else {
-		SLOG(LOG_ERROR, TAG_TTSC, "<<<< setting hello : no response");
 		result = -1;
 	}
 

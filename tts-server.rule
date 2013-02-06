@@ -5,3 +5,7 @@ tts-server sound_server rw
 tts-server system::share rwx
 tts-server pulseaudio rwx
 tts-server dbus rw
+tts-server mdm-server w
+tts-server system::use_internet rw
+system::use_internet tts-server w
+tts-server stt-server rwx

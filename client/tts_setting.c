@@ -175,7 +175,7 @@ int tts_setting_finalize()
 
 	int ret = 0;
 
-	if (TTS_SETTING_STATE_NONE == g_state) {
+	if (TTS_SETTING_STATE_READY == g_state) {
 		ret = tts_setting_dbus_request_finalilze(); 
 		if (0 != ret) {
 			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] result : %d", ret);

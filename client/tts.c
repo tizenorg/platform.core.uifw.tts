@@ -205,8 +205,6 @@ int tts_get_mode(tts_h tts, tts_mode_e* mode)
 
 static Eina_Bool __tts_connect_daemon(void *data)
 {
-	SLOG(LOG_DEBUG, TAG_TTSC, "===== Connect daemon");
-
 	tts_h tts = (tts_h)data;
 
 	tts_client_s* client = tts_client_get(tts);
@@ -214,8 +212,6 @@ static Eina_Bool __tts_connect_daemon(void *data)
 	/* check handle */
 	if (NULL == client) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] A handle is not valid");
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return EINA_FALSE;
 	}
 
@@ -228,6 +224,8 @@ static Eina_Bool __tts_connect_daemon(void *data)
 		return EINA_TRUE;
 	}
 
+	SLOG(LOG_DEBUG, TAG_TTSC, "===== Connect daemon");
+	
 	/* do request initialize */
 	int ret = -1;
 

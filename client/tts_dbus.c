@@ -325,9 +325,7 @@ int tts_dbus_request_hello()
 	if (NULL == msg) { 
 		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts hello : Fail to make message \n"); 
 		return TTS_ERROR_OPERATION_FAILED;
-	} else {
-		SLOG(LOG_DEBUG, TAG_TTSC, ">>>> Request tts hello");
-	}
+	} 
 
 	DBusError err;
 	dbus_error_init(&err);
@@ -345,7 +343,6 @@ int tts_dbus_request_hello()
 		SLOG(LOG_DEBUG, TAG_TTSC, "<<<< tts hello");
 		result = 0;
 	} else {
-		SLOG(LOG_ERROR, TAG_TTSC, "<<<< tts hello : no response");
 		result = TTS_ERROR_OPERATION_FAILED;
 	}
 
