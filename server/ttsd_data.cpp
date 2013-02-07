@@ -11,11 +11,26 @@
 *  limitations under the License.
 */
 
-
+#include <vector>
 #include "ttsd_main.h"
 #include "ttsd_data.h"
 
 using namespace std;
+
+typedef struct 
+{
+	int		pid;
+	int		uid;
+	int		utt_id_stopped;
+	app_state_e	state;
+	
+	std::vector<speak_data_s> m_speak_data;	
+	std::vector<sound_data_s> m_wav_data;
+}app_data_s;
+
+typedef struct {
+	int pid;
+} setting_app_data_s;
 
 static vector<app_data_s> g_app_list;
 
@@ -31,69 +46,69 @@ int __data_show_list()
 {
 	int vsize = g_app_list.size();
 
-	SLOG(LOG_DEBUG, TAG_TTSD, "----- client list -----");
+	SLOG(LOG_DEBUG, get_tag(), "----- client list -----");
 
 	for (int i=0; i<vsize; i++) {
-		SLOG(LOG_DEBUG, TAG_TTSD, "[%dth] pid(%d), uid(%d), state(%d) \n", i, g_app_list[i].pid, g_app_list[i].uid, g_app_list[i].state );
+		SLOG(LOG_DEBUG, get_tag(), "[%dth] pid(%d), uid(%d), state(%d) \n", i, g_app_list[i].pid, g_app_list[i].uid, g_app_list[i].state );
 	}
 
 	if (0 == vsize) {
-		SLOG(LOG_DEBUG, TAG_TTSD, "No Client \n");
+		SLOG(LOG_DEBUG, get_tag(), "No Client \n");
 	}
 
-	SLOG(LOG_DEBUG, TAG_TTSD, "-----------------------");
+	SLOG(LOG_DEBUG, get_tag(), "-----------------------");
 
-	SLOG(LOG_DEBUG, TAG_TTSD, "----- setting client list -----");
+	SLOG(LOG_DEBUG, get_tag(), "----- setting client list -----");
 
 	vsize = g_setting_list.size();
 
 	for (int i=0; i<vsize; i++) {
-		SLOG(LOG_DEBUG, TAG_TTSD, "[%dth] pid(%d)", i, g_setting_list[i].pid );
+		SLOG(LOG_DEBUG, get_tag(), "[%dth] pid(%d)", i, g_setting_list[i].pid );
 	}
 
 	if (0 == vsize) {
-		SLOG(LOG_DEBUG, TAG_TTSD, "No Setting Client");
+		SLOG(LOG_DEBUG, get_tag(), "No Setting Client");
 	}
 
-	SLOG(LOG_DEBUG, TAG_TTSD, "--------------------------------");
+	SLOG(LOG_DEBUG, get_tag(), "--------------------------------");
 
 	return TTSD_ERROR_NONE;
 }
 
 int __data_show_sound_list(int index)
 {
-	SLOG(LOG_DEBUG, TAG_TTSD, "----- Sound list -----");
+	SLOG(LOG_DEBUG, get_tag(), "----- Sound list -----");
 	
 	unsigned int i;
 	for (i=0 ; i < g_app_list[index].m_wav_data.size() ; i++) {
-		SLOG(LOG_DEBUG, TAG_TTSD, "[%dth] data size(%ld), uttid(%d), type(%d) \n", 
+		SLOG(LOG_DEBUG, get_tag(), "[%dth] data size(%ld), uttid(%d), type(%d) \n", 
 			i+1, g_app_list[index].m_wav_data[i].data_size, g_app_list[index].m_wav_data[i].utt_id, g_app_list[index].m_wav_data[i].audio_type );
 	}
 
 	if (i == 0) {
-		SLOG(LOG_DEBUG, TAG_TTSD, "No Sound Data \n");
+		SLOG(LOG_DEBUG, get_tag(), "No Sound Data \n");
 	}
 
-	SLOG(LOG_DEBUG, TAG_TTSD, "----------------------");
+	SLOG(LOG_DEBUG, get_tag(), "----------------------");
 	return TTSD_ERROR_NONE;
 }
 
 int __data_show_text_list(int index)
 {
-	SLOG(LOG_DEBUG, TAG_TTSD, "----- Text list -----");
+	SLOG(LOG_DEBUG, get_tag(), "----- Text list -----");
 
 	unsigned int i;
 	for (i=0 ; i< g_app_list[index].m_speak_data.size() ; i++) {
-		SLOG(LOG_DEBUG, TAG_TTSD, "[%dth] lang(%s), vctype(%d), speed(%d), uttid(%d), text(%s) \n", 
+		SLOG(LOG_DEBUG, get_tag(), "[%dth] lang(%s), vctype(%d), speed(%d), uttid(%d), text(%s) \n", 
 				i+1, g_app_list[index].m_speak_data[i].lang, g_app_list[index].m_speak_data[i].vctype, g_app_list[index].m_speak_data[i].speed,
 				g_app_list[index].m_speak_data[i].utt_id, g_app_list[index].m_speak_data[i].text );	
 	}
 
 	if (0 == i) {
-		SLOG(LOG_DEBUG, TAG_TTSD, "No Text Data \n");
+		SLOG(LOG_DEBUG, get_tag(), "No Text Data \n");
 	}
 
-	SLOG(LOG_DEBUG, TAG_TTSD, "---------------------");
+	SLOG(LOG_DEBUG, get_tag(), "---------------------");
 	return TTSD_ERROR_NONE;
 }
 
@@ -105,7 +120,7 @@ int __data_show_text_list(int index)
 int ttsd_data_new_client(int pid, int uid)
 {
 	if( -1 != ttsd_data_is_client(uid) ) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[DATA ERROR] ttsd_data_new_client() : uid is not valid (%d)\n", uid);	
+		SLOG(LOG_ERROR, get_tag(), "[DATA ERROR] ttsd_data_new_client() : uid is not valid (%d)\n", uid);	
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
@@ -130,12 +145,12 @@ int ttsd_data_delete_client(int uid)
 	index = ttsd_data_is_client(uid);
 	
 	if (index < 0) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[DATA ERROR] ttsd_data_delete_client() : uid is not valid (%d)\n", uid);	
+		SLOG(LOG_ERROR, get_tag(), "[DATA ERROR] ttsd_data_delete_client() : uid is not valid (%d)\n", uid);	
 		return -1;
 	}
 
 	if (0 != ttsd_data_clear_data(uid)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[DATA ERROR] fail ttsd_data_clear_data()\n");
+		SLOG(LOG_ERROR, get_tag(), "[DATA ERROR] fail ttsd_data_clear_data()\n");
 		return -1;
 	}
 
@@ -172,7 +187,7 @@ int ttsd_data_get_pid(int uid)
 	index = ttsd_data_is_client(uid);
 	
 	if (index < 0)	{
-		SLOG(LOG_ERROR, TAG_TTSD, "[DATA ERROR] ttsd_data_delete_client() : uid is not valid (%d)\n", uid);	
+		SLOG(LOG_ERROR, get_tag(), "[DATA ERROR] ttsd_data_delete_client() : uid is not valid (%d)\n", uid);	
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
@@ -185,7 +200,7 @@ int ttsd_data_get_speak_data_size(int uid)
 	index = ttsd_data_is_client(uid);
 	
 	if (index < 0) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[DATA ERROR] ttsd_data_get_speak_data_size() : uid is not valid (%d)\n", uid);	
+		SLOG(LOG_ERROR, get_tag(), "[DATA ERROR] ttsd_data_get_speak_data_size() : uid is not valid (%d)\n", uid);	
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
@@ -199,7 +214,7 @@ int ttsd_data_add_speak_data(int uid, speak_data_s data)
 	index = ttsd_data_is_client(uid);
 
 	if (index < 0) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[DATA ERROR] ttsd_data_add_speak_data() : uid is not valid (%d)\n", uid);	
+		SLOG(LOG_ERROR, get_tag(), "[DATA ERROR] ttsd_data_add_speak_data() : uid is not valid (%d)\n", uid);	
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 	
@@ -220,12 +235,12 @@ int ttsd_data_get_speak_data(int uid, speak_data_s* data)
 	index = ttsd_data_is_client(uid);
 
 	if (index < 0) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[DATA ERROR] ttsd_data_get_speak_data() : uid is not valid(%d)\n", uid);	
+		SLOG(LOG_ERROR, get_tag(), "[DATA ERROR] ttsd_data_get_speak_data() : uid is not valid(%d)\n", uid);	
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
 	if (0 == g_app_list[index].m_speak_data.size()) {
-		SLOG(LOG_WARN, TAG_TTSD, "[DATA WARNING] There is no speak data\n"); 
+		SLOG(LOG_WARN, get_tag(), "[DATA WARNING] There is no speak data\n"); 
 		return -1;
 	}
 
@@ -250,7 +265,7 @@ int ttsd_data_add_sound_data(int uid, sound_data_s data)
 	index = ttsd_data_is_client(uid);
 
 	if(index < 0) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[DATA ERROR] ttsd_data_add_sound_data() : uid is not valid (%d)\n", uid);	
+		SLOG(LOG_ERROR, get_tag(), "[DATA ERROR] ttsd_data_add_sound_data() : uid is not valid (%d)\n", uid);	
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
@@ -268,12 +283,12 @@ int ttsd_data_get_sound_data(int uid, sound_data_s* data)
 	index = ttsd_data_is_client(uid);
 
 	if (index < 0)	{
-		SLOG(LOG_ERROR, TAG_TTSD, "[DATA ERROR] ttsd_data_get_sound_data() : uid is not valid (%d)\n", uid);	
+		SLOG(LOG_ERROR, get_tag(), "[DATA ERROR] ttsd_data_get_sound_data() : uid is not valid (%d)\n", uid);	
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
 	if (0 == g_app_list[index].m_wav_data.size()) {
-		SLOG(LOG_WARN, TAG_TTSD, "[DATA WARNING] There is no wav data\n"); 
+		SLOG(LOG_WARN, get_tag(), "[DATA WARNING] There is no wav data\n"); 
 		return -1;
 	}
 
@@ -299,7 +314,7 @@ int ttsd_data_get_sound_data_size(int uid)
 	index = ttsd_data_is_client(uid);
 
 	if (index < 0)	{
-		SLOG(LOG_ERROR, TAG_TTSD, "[DATA ERROR] ttsd_data_get_sound_data_size() : uid is not valid (%d)\n", uid);	
+		SLOG(LOG_ERROR, get_tag(), "[DATA ERROR] ttsd_data_get_sound_data_size() : uid is not valid (%d)\n", uid);	
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
@@ -312,7 +327,7 @@ int ttsd_data_clear_data(int uid)
 
 	index = ttsd_data_is_client(uid);
 	if (index < 0) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[DATA ERROR] ttsd_data_clear_data() : uid is not valid (%d)\n", uid);	
+		SLOG(LOG_ERROR, get_tag(), "[DATA ERROR] ttsd_data_clear_data() : uid is not valid (%d)\n", uid);	
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
@@ -355,7 +370,7 @@ int ttsd_data_get_client_state(int uid, app_state_e* state)
 
 	index = ttsd_data_is_client(uid);
 	if (index < 0)	{
-		SLOG(LOG_ERROR, TAG_TTSD, "[DATA ERROR] ttsd_data_get_client_state() : uid is not valid (%d)\n", uid);	
+		SLOG(LOG_ERROR, get_tag(), "[DATA ERROR] ttsd_data_get_client_state() : uid is not valid (%d)\n", uid);	
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
@@ -370,7 +385,7 @@ int ttsd_data_set_client_state(int uid, app_state_e state)
 
 	index = ttsd_data_is_client(uid);
 	if (index < 0)	{
-		SLOG(LOG_ERROR, TAG_TTSD, "[DATA ERROR] ttsd_data_set_client_state() : uid is not valid (%d)\n", uid);	
+		SLOG(LOG_ERROR, get_tag(), "[DATA ERROR] ttsd_data_set_client_state() : uid is not valid (%d)\n", uid);	
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
@@ -386,7 +401,7 @@ int ttsd_data_set_client_state(int uid, app_state_e state)
 		int vsize = g_app_list.size();
 		for (int i=0 ; i<vsize ; i++) {
 			if(g_app_list[i].state == APP_STATE_PLAYING) {
-				SLOG(LOG_ERROR, TAG_TTSD, "[DATA ERROR] ttsd_data_set_client_state() : a playing client has already existed. \n");	
+				SLOG(LOG_ERROR, get_tag(), "[DATA ERROR] ttsd_data_set_client_state() : a playing client has already existed. \n");	
 				g_mutex_state = false;
 				return -1;
 			}
@@ -410,7 +425,7 @@ int ttsd_data_get_current_playing()
 		}
 	}
 
-	SLOG(LOG_DEBUG, TAG_TTSD, "[DATA] NO CURRENT PLAYING !!");	
+	SLOG(LOG_DEBUG, get_tag(), "[DATA] NO CURRENT PLAYING !!");	
 
 	return -1;
 }
@@ -418,7 +433,7 @@ int ttsd_data_get_current_playing()
 int ttsd_data_foreach_clients(ttsd_data_get_client_cb callback, void* user_data)
 {
 	if (NULL == callback) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[DATA ERROR] input data is NULL!!");
+		SLOG(LOG_ERROR, get_tag(), "[DATA ERROR] input data is NULL!!");
 		return -1;
 	}
 
@@ -439,7 +454,7 @@ bool ttsd_data_is_uttid_valid(int uid, int uttid)
 
 	index = ttsd_data_is_client(uid);
 	if (index < 0)	{
-		SLOG(LOG_ERROR, TAG_TTSD, "[DATA ERROR] ttsd_data_set_client_state() : uid is not valid (%d)\n", uid);	
+		SLOG(LOG_ERROR, get_tag(), "[DATA ERROR] ttsd_data_set_client_state() : uid is not valid (%d)\n", uid);	
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
@@ -469,7 +484,7 @@ int ttsd_data_is_current_playing()
 int ttsd_setting_data_add(int pid)
 {
 	if (-1 != ttsd_setting_data_is_setting(pid)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[DATA ERROR] pid(%d) is not valid", pid);	
+		SLOG(LOG_ERROR, get_tag(), "[DATA ERROR] pid(%d) is not valid", pid);	
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
@@ -492,7 +507,7 @@ int ttsd_setting_data_delete(int pid)
 	index = ttsd_setting_data_is_setting(pid);
 
 	if (index < 0) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[DATA ERROR] uid is not valid (%d)", pid);	
+		SLOG(LOG_ERROR, get_tag(), "[DATA ERROR] uid is not valid (%d)", pid);	
 		return -1;
 	}
 
@@ -507,12 +522,58 @@ int ttsd_setting_data_delete(int pid)
 int ttsd_setting_data_is_setting(int pid)
 {
 	int vsize = g_setting_list.size();
-
 	for (int i=0; i<vsize; i++) {
 		if(g_setting_list[i].pid == pid) {
 			return i;		
 		}
 	}
-
+	
 	return -1;
+}
+
+int ttsd_data_save_error_log(int uid, FILE* fp)
+{
+	int ret;
+	int pid;
+	/* pid */
+	pid = ttsd_data_get_pid(uid);
+	if (0 > pid) {
+		SLOG(LOG_ERROR, get_tag(), "[ERROR] Fail to get pid");
+	} else {
+		fprintf(fp, "pid - %d\n", pid);
+	}
+	/* app state */
+	app_state_e state;
+	ret = ttsd_data_get_client_state(uid, &state);
+	if (0 != ret) {
+		SLOG(LOG_ERROR, get_tag(), "[ERROR] Fail to get app state");
+	} else {
+		fprintf(fp, "app state - %d\n", state);
+	}
+
+	int index = 0;
+	unsigned int i;
+
+	index = ttsd_data_is_client(uid);
+
+	/* get sound data */
+	fprintf(fp, "----- Sound list -----\n");
+	
+	for (i=0 ; i < g_app_list[index].m_wav_data.size() ; i++) {
+		fprintf(fp, "[%dth] data size(%ld), uttid(%d), type(%d) \n", 
+			i+1, g_app_list[index].m_wav_data[i].data_size, g_app_list[index].m_wav_data[i].utt_id, g_app_list[index].m_wav_data[i].audio_type );
+	}
+	fprintf(fp, "----------------------\n");
+	
+	/* get speck data */
+	fprintf(fp, "----- Text list -----\n");
+
+	for (i=0 ; i< g_app_list[index].m_speak_data.size() ; i++) {
+		fprintf(fp, "[%dth] lang(%s), vctype(%d), speed(%d), uttid(%d), text(%s) \n", 
+				i+1, g_app_list[index].m_speak_data[i].lang, g_app_list[index].m_speak_data[i].vctype, g_app_list[index].m_speak_data[i].speed,
+				g_app_list[index].m_speak_data[i].utt_id, g_app_list[index].m_speak_data[i].text );	
+	}
+	fprintf(fp, "---------------------");
+	
+	return 0;
 }

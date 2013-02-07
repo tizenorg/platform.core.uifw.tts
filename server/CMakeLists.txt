@@ -15,26 +15,43 @@ SET(VERSION 0.0.1)
 
 SET(SRCS 
 	ttsd_data.cpp
-	ttsd_player.cpp
+	ttsd_player.c
 	ttsd_engine_agent.c
 	ttsd_config.c
-	ttsd_server.cpp
+	ttsd_server.c
 	ttsd_network.c
 	ttsd_dbus.c
 	ttsd_dbus_server.c
 	ttsd_main.c
 )
 	
+SET(NOTI_SRCS
+    ttsd_data.cpp
+	ttsd_player.c
+	ttsd_engine_agent.c
+	ttsd_config.c
+	ttsd_server.c
+	ttsd_network.c
+	ttsd_dbus.c
+	ttsd_dbus_server.c
+	ttsd_main_noti.c
+)	
+
+SET(SR_SRCS
+    ttsd_data.cpp
+	ttsd_player.c
+	ttsd_engine_agent.c
+	ttsd_config.c
+	ttsd_server.c
+	ttsd_network.c
+	ttsd_dbus.c
+	ttsd_dbus_server.c
+	ttsd_main_sr.c
+)
+
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR})
 INCLUDE_DIRECTORIES(${INCLUDEDIR})	
 INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/../common")
-
-
-## Dependent packages ##
-#INCLUDE(FindPkgConfig)
-#pkg_check_modules(pkgs REQUIRED 
-#	mm-player vconf mm-common dbus-1 dlog
-#)
 
 FOREACH(flag ${pkgs_CFLAGS})
 	SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} ${flag}")
@@ -61,8 +78,18 @@ ADD_DEFINITIONS("-DIMAGEDIR=\"${IMAGEDIR}\"")
 ADD_EXECUTABLE(${PROJECT_NAME} ${SRCS})
 TARGET_LINK_LIBRARIES(${PROJECT_NAME} -ldl ${pkgs_LDFLAGS})
 
+ADD_EXECUTABLE("${PROJECT_NAME}-noti" ${NOTI_SRCS})
+TARGET_LINK_LIBRARIES("${PROJECT_NAME}-noti" -ldl ${pkgs_LDFLAGS})
+
+ADD_EXECUTABLE("${PROJECT_NAME}-sr" ${SR_SRCS})
+TARGET_LINK_LIBRARIES("${PROJECT_NAME}-sr" -ldl ${pkgs_LDFLAGS})
+
+
 ## Install ##
 INSTALL(TARGETS ${PROJECT_NAME} DESTINATION bin)
+INSTALL(TARGETS "${PROJECT_NAME}-noti" DESTINATION bin)
+INSTALL(TARGETS "${PROJECT_NAME}-sr" DESTINATION bin)
+
 INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/ttsp.h DESTINATION include)
 INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/ttsd.conf DESTINATION lib/voice/tts/1.0)
 

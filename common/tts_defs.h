@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2012, 2013 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -35,6 +35,13 @@ extern "C" {
 #define TTS_SERVER_SERVICE_OBJECT_PATH	"/com/samsung/voice/ttsserver"
 #define TTS_SERVER_SERVICE_INTERFACE	"com.samsung.voice.ttsserver"
 
+#define TTS_NOTI_SERVER_SERVICE_NAME		"service.connect.ttsnotiserver"
+#define TTS_NOTI_SERVER_SERVICE_OBJECT_PATH	"/com/samsung/voice/ttsnotiserver"
+#define TTS_NOTI_SERVER_SERVICE_INTERFACE	"com.samsung.voice.ttsnotiserver"
+
+#define TTS_SR_SERVER_SERVICE_NAME		"service.connect.ttssrserver"
+#define TTS_SR_SERVER_SERVICE_OBJECT_PATH	"/com/samsung/voice/ttssrserver"
+#define TTS_SR_SERVER_SERVICE_INTERFACE		"com.samsung.voice.ttssrserver"
 
 /******************************************************************************************
 * Message Definition for APIs

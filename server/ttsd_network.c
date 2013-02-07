@@ -28,13 +28,13 @@ void __net_config_change_cb(keynode_t* node, void *data)
 {
 	int network_configuration = 0;
 	vconf_get_int(VCONFKEY_NETWORK_CONFIGURATION_CHANGE_IND , &network_configuration);
-	SLOG(LOG_DEBUG, TAG_TTSD, "[Network DEBUG] Network configuration : %d", network_configuration);
+	SLOG(LOG_DEBUG, get_tag(), "[Network DEBUG] Network configuration : %d", network_configuration);
 
 	if (network_configuration == 0) {
-		SLOG(LOG_DEBUG, TAG_TTSD, "[Network] Notification : Network connection is OFF ");
+		SLOG(LOG_DEBUG, get_tag(), "[Network] Notification : Network connection is OFF ");
 		g_is_connected = false;
 	} else {
-		SLOG(LOG_DEBUG, TAG_TTSD, "[Network] Notification : Network connection is ON ");
+		SLOG(LOG_DEBUG, get_tag(), "[Network] Notification : Network connection is ON ");
 		g_is_connected = true;
 
 		/* need to notify changing net to engine. */
@@ -47,7 +47,7 @@ int ttsd_network_initialize()
 {
 	int network_configuration = 0;
 	vconf_get_int(VCONFKEY_NETWORK_CONFIGURATION_CHANGE_IND , &network_configuration);
-	SLOG(LOG_DEBUG, TAG_TTSD, "[Network DEBUG] Network configuration : %d", network_configuration);
+	SLOG(LOG_DEBUG, get_tag(), "[Network DEBUG] Network configuration : %d", network_configuration);
 
 	if (network_configuration == 0) {
 		/*	"0" means the network configuration is not set. 
@@ -58,28 +58,28 @@ int ttsd_network_initialize()
 		vconf_get_int(VCONFKEY_NETWORK_STATUS, &network_status);
 
 		if(network_status == VCONFKEY_NETWORK_OFF){
-			SLOG(LOG_DEBUG, TAG_TTSD, "[Network] Current network connection is OFF.");
+			SLOG(LOG_DEBUG, get_tag(), "[Network] Current network connection is OFF.");
 		}
 		else{
 			/*
 			*	This is the problem of network connection
 			*	Just terminate the application, network f/w will fix the problem automatically.
 			*/
-			SLOG(LOG_WARN, TAG_TTSD, "network status is wrong or IP is not set\n");
-			SLOG(LOG_WARN, TAG_TTSD, "network has problem, try again\n");
+			SLOG(LOG_WARN, get_tag(), "network status is wrong or IP is not set\n");
+			SLOG(LOG_WARN, get_tag(), "network has problem, try again\n");
 			return -1;
 		}
 
 		g_is_connected = false;
 	} else {
-		SLOG(LOG_DEBUG, TAG_TTSD, "[Network] Current network connection is ON.");
+		SLOG(LOG_DEBUG, get_tag(), "[Network] Current network connection is ON.");
 
 		g_is_connected = true;
 	}
 
 	vconf_notify_key_changed(VCONFKEY_NETWORK_CONFIGURATION_CHANGE_IND, __net_config_change_cb, NULL);
 
-	SLOG(LOG_DEBUG, TAG_TTSD, "[Network SUCCESS] Initialize network ...\n");
+	SLOG(LOG_DEBUG, get_tag(), "[Network SUCCESS] Initialize network ...\n");
 
 	return 0;
 }

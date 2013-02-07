@@ -11,10 +11,12 @@ BuildRequires:  pkgconfig(glib-2.0)
 BuildRequires:  pkgconfig(dbus-1)
 BuildRequires:  pkgconfig(mm-player)
 BuildRequires:  pkgconfig(mm-common)
+BuildRequires:  pkgconfig(mm-session)
 BuildRequires:  pkgconfig(dlog)
 BuildRequires:  pkgconfig(vconf)
 BuildRequires:  pkgconfig(ecore)
 BuildRequires:  pkgconfig(ecore-file)
+BuildRequires:  pkgconfig(capi-system-runtime-info)
 
 BuildRequires:  cmake
 
@@ -54,7 +56,7 @@ mkdir -p %{buildroot}/usr/share/license
 %defattr(-,root,root,-)
 %{_libdir}/lib*.so
 %{_libdir}/voice/tts/1.0/ttsd.conf
-%{_bindir}/tts-daemon
+%{_bindir}/tts-daemon*
 /usr/share/license/*
 
 %files devel

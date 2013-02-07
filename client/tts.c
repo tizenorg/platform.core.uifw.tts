@@ -26,10 +26,14 @@
 
 static bool g_is_daemon_started = false;
 
+static bool g_is_noti_daemon_started = false;
+
+static bool g_is_sr_daemon_started = false;
+
 static Ecore_Timer* g_connect_timer = NULL;
 
 /* Function definition */
-static int __tts_check_tts_daemon();
+static int __tts_check_tts_daemon(tts_mode_e mode);
 static Eina_Bool __tts_notify_state_changed(void *data);
 static Eina_Bool __tts_notify_error(void *data);
 
@@ -60,6 +64,10 @@ int tts_create(tts_h* tts)
 		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_ERROR_OUT_OF_MEMORY;
 	}
+
+	g_is_daemon_started = false;
+	g_is_noti_daemon_started = false;
+	g_is_sr_daemon_started = false;
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
@@ -103,10 +111,16 @@ int tts_destroy(tts_h tts)
 	case TTS_STATE_READY:
 		/* Request Finalize */
 		ret = tts_dbus_request_finalize(client->uid);
-		if (0 != ret) {
+		if (0 != ret) 
 			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to request finalize");
-		}
-		g_is_daemon_started = false;
+
+		if (TTS_MODE_SCREEN_READER == client->mode) 
+			g_is_sr_daemon_started = false;
+		else if (TTS_MODE_NOTIFICATION == client->mode) 
+			g_is_noti_daemon_started = false;
+		else 
+			g_is_daemon_started = false;
+
 	case TTS_STATE_CREATED:
 		if (NULL != g_connect_timer) {
 			SLOG(LOG_DEBUG, TAG_TTSC, "Connect Timer is deleted");
@@ -121,7 +135,7 @@ int tts_destroy(tts_h tts)
 		if (0 != tts_dbus_close_connection()) {
 			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to close connection");
 		}
-	} 
+	}
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
@@ -216,16 +230,29 @@ static Eina_Bool __tts_connect_daemon(void *data)
 	}
 
 	/* Send hello */
-	if (0 != tts_dbus_request_hello()) {
-		if (false == g_is_daemon_started) {
-			g_is_daemon_started = true;
-			__tts_check_tts_daemon();
+	if (0 != tts_dbus_request_hello(client->uid)) {
+		if (TTS_MODE_SCREEN_READER == client->mode) {
+			if (false == g_is_sr_daemon_started) {
+				g_is_sr_daemon_started = true;
+				__tts_check_tts_daemon(client->mode);
+			}
+		} else if (TTS_MODE_NOTIFICATION == client->mode) {
+			if (false == g_is_noti_daemon_started) {
+				g_is_noti_daemon_started = true;
+				__tts_check_tts_daemon(client->mode);
+			}
+		} else {
+			if (false == g_is_daemon_started) {
+				g_is_daemon_started = true;
+				__tts_check_tts_daemon(client->mode);
+			}
 		}
+		
 		return EINA_TRUE;
 	}
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Connect daemon");
-	
+
 	/* do request initialize */
 	int ret = -1;
 
@@ -321,7 +348,14 @@ int tts_unprepare(tts_h tts)
 	if (0 != ret) {
 		SLOG(LOG_WARN, TAG_TTSC, "[ERROR] Fail to request finalize");
 	}
-	g_is_daemon_started = false;
+
+	if (TTS_MODE_SCREEN_READER == client->mode) 
+		g_is_sr_daemon_started = false;
+	else if (TTS_MODE_NOTIFICATION == client->mode) 
+		g_is_noti_daemon_started = false;
+	else 
+		g_is_daemon_started = false;
+
 
 	client->before_state = client->current_state;
 	client->current_state = TTS_STATE_CREATED;
@@ -491,6 +525,13 @@ int tts_add_text(tts_h tts, const char* text, const char* language, tts_voice_ty
 		return TTS_ERROR_INVALID_STATE;
 	}
 
+	if (MAX_TEXT_COUNT < strlen(text)) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input text size is too big.");
+		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+		SLOG(LOG_DEBUG, TAG_TTSC, " ");
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+
 	/* change default language value */
 	char* temp = NULL;
 
@@ -509,9 +550,9 @@ int tts_add_text(tts_h tts, const char* text, const char* language, tts_voice_ty
 	ret = tts_dbus_request_add_text(client->uid, text, temp, voice_type, speed, client->current_utt_id);
 	if (0 != ret) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] result : %d", ret);
+	} else {
+		*utt_id = client->current_utt_id;
 	}
-
-	*utt_id = client->current_utt_id;
 
 	if (NULL != temp)
 		free(temp);
@@ -1079,7 +1120,7 @@ int tts_unset_error_cb(tts_h tts)
 	return 0;
 }
 
-int __get_cmd_line(char *file, char *buf) 
+static int __get_cmd_line(char *file, char *buf) 
 {
 	FILE *fp = NULL;
 
@@ -1096,18 +1137,19 @@ int __get_cmd_line(char *file, char *buf)
 		return -1;
 	}
 	fclose(fp);
+
 	return 0;
 }
 
-static bool _tts_is_alive()
+static bool __tts_is_alive(char* daemon_path)
 {
 	DIR *dir;
 	struct dirent *entry;
 	struct stat filestat;
 	
 	int pid;
-	char cmdLine[256];
-	char tempPath[256];
+	char cmdLine[256] = {'\0',};
+	char tempPath[256] = {'\0',};
 
 	dir  = opendir("/proc");
 	if (NULL == dir) {
@@ -1116,11 +1158,13 @@ static bool _tts_is_alive()
 	}
 
 	while ((entry = readdir(dir)) != NULL) {
-		if (0 != lstat(entry->d_name, &filestat))
+		if (0 != lstat(entry->d_name, &filestat)) {
 			continue;
+		}
 
-		if (!S_ISDIR(filestat.st_mode))
+		if (!S_ISDIR(filestat.st_mode)) {
 			continue;
+		}
 
 		pid = atoi(entry->d_name);
 		if (pid <= 0) continue;
@@ -1130,35 +1174,45 @@ static bool _tts_is_alive()
 			continue;
 		}
 
-		if ( 0 == strncmp(cmdLine, "[tts-daemon]", strlen("[tts-daemon]")) ||
-			0 == strncmp(cmdLine, "tts-daemon", strlen("tts-daemon")) ||
-			0 == strncmp(cmdLine, "/usr/bin/tts-daemon", strlen("/usr/bin/tts-daemon"))) {
-				SLOG(LOG_DEBUG, TAG_TTSC, "tts-daemon is ALIVE !!");
-				closedir(dir);
-				return TRUE;
+		if (0 == strncmp(cmdLine, daemon_path, strlen(daemon_path))) {
+			SLOG(LOG_DEBUG, TAG_TTSC, "%s is ALIVE !!", daemon_path);
+			closedir(dir);
+			return TRUE;
 		}
 	}
 
-	SLOG(LOG_DEBUG, TAG_TTSC, "THERE IS NO tts-daemon !!");
+	SLOG(LOG_DEBUG, TAG_TTSC, "THERE IS NO %s !!", daemon_path);
 
 	closedir(dir);
 	return FALSE;
 }
 
-static int __tts_check_tts_daemon()
+static int __tts_check_tts_daemon(tts_mode_e mode)
 {
-	if (TRUE == _tts_is_alive()) {
+	char daemon_path[64] = {'\0',};
+	int pid, i;
+
+	if (TTS_MODE_DEFAULT == mode) {
+		strcpy(daemon_path, "/usr/bin/tts-daemon");
+	} else if (TTS_MODE_NOTIFICATION == mode) {
+		strcpy(daemon_path, "/usr/bin/tts-daemon-noti");
+	} else if (TTS_MODE_SCREEN_READER == mode) {
+		strcpy(daemon_path, "/usr/bin/tts-daemon-sr");
+	} else {
+		SLOG(LOG_ERROR, TAG_TTSC, "mode is not valid");
+		return -1;
+	}
+
+	if (TRUE == __tts_is_alive(daemon_path)) {
 		return 0;
 	}
 	
-	/* fork-exec tts-daemom */
-	int pid, i;
-
+	/* fork-exec daemom */
 	pid = fork();
 
 	switch(pid) {
 	case -1:
-		SLOG(LOG_ERROR, TAG_TTSC, "Fail to create tts-daemon");
+		SLOG(LOG_ERROR, TAG_TTSC, "Fail to create daemon");
 		break;
 
 	case 0:
@@ -1166,7 +1220,7 @@ static int __tts_check_tts_daemon()
 		for (i = 0;i < _NSIG;i++)
 			signal(i, SIG_DFL);
 
-		execl("/usr/bin/tts-daemon", "/usr/bin/tts-daemon", NULL);
+		execl(daemon_path, daemon_path, NULL);
 		break;
 
 	default:

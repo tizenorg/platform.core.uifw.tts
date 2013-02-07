@@ -87,14 +87,14 @@ int tts_setting_initialize()
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Initialize TTS Setting");
 
 	if (TTS_SETTING_STATE_READY == g_state) {
-		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] TTS Setting has already been initialized. \n");
+		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] TTS Setting has already been initialized.");
 		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_SETTING_ERROR_NONE;
 	}
 
 	if( 0 != tts_setting_dbus_open_connection() ) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to open connection\n ");
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to open connection");
 		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_SETTING_ERROR_OPERATION_FAILED;
@@ -144,14 +144,14 @@ int tts_setting_initialize_async(tts_setting_initialized_cb callback, void* user
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Initialize TTS Setting");
 
 	if (TTS_SETTING_STATE_READY == g_state) {
-		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] TTS Setting has already been initialized. \n");
+		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] TTS Setting has already been initialized.");
 		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_SETTING_ERROR_NONE;
 	}
 
 	if( 0 != tts_setting_dbus_open_connection() ) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to open connection\n ");
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to open connection");
 		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_SETTING_ERROR_OPERATION_FAILED;
@@ -190,7 +190,7 @@ int tts_setting_finalize()
 	g_is_daemon_started = false;
 	
 	if (0 != tts_setting_dbus_close_connection()) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to close connection\n ");
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to close connection");
 	} else {
 		SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Finalize");
 	}
@@ -584,12 +584,12 @@ static bool __tts_setting_is_alive()
 		if (0 == strncmp(cmdLine, "[tts-daemon]", strlen("[tts-daemon]")) ||
 			0 == strncmp(cmdLine, "tts-daemon", strlen("tts-daemon")) ||
 			0 == strncmp(cmdLine, "/usr/bin/tts-daemon", strlen("/usr/bin/tts-daemon"))) {
-				SLOG(LOG_DEBUG, TAG_TTSC, "tts-daemon is ALIVE !! \n");
+				SLOG(LOG_DEBUG, TAG_TTSC, "tts-daemon is ALIVE !!");
 				closedir(dir);
 				return TRUE;
 		}
 	}
-	SLOG(LOG_DEBUG, TAG_TTSC, "THERE IS NO tts-daemon !! \n");
+	SLOG(LOG_DEBUG, TAG_TTSC, "THERE IS NO tts-daemon !!");
 
 	closedir(dir);
 	return FALSE;

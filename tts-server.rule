@@ -9,3 +9,4 @@ tts-server mdm-server w
 tts-server system::use_internet rw
 system::use_internet tts-server w
 tts-server stt-server rwx
+tts-server sys-assert::core rwx

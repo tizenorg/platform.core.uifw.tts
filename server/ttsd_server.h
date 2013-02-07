@@ -29,6 +29,8 @@ extern "C" {
 /** Daemon initialize */
 int ttsd_initialize();
 
+int ttsd_finalize();
+
 Eina_Bool ttsd_cleanup_client(void *data);
 
 /*

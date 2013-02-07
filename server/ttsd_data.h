@@ -15,10 +15,10 @@
 #ifndef __TTSD_DATA_H_
 #define __TTSD_DATA_H_
 
-#include <vector>
+//#include <vector>
 #include "ttsp.h"
 
-using namespace std;
+//using namespace std;
 
 #ifdef __cplusplus
 extern "C" {
@@ -51,21 +51,6 @@ typedef struct
 	int			rate;
 	int			channels;
 }sound_data_s;
-
-typedef struct 
-{
-	int		pid;
-	int		uid;
-	int		utt_id_stopped;
-	app_state_e	state;
-	
-	std::vector<speak_data_s> m_speak_data;	
-	std::vector<sound_data_s> m_wav_data;
-}app_data_s;
-
-typedef struct {
-	int pid;
-} setting_app_data_s;
 
 int ttsd_data_new_client(int pid, int uid);
 
@@ -111,6 +96,9 @@ int ttsd_setting_data_add(int pid);
 int ttsd_setting_data_delete(int pid);
 
 int ttsd_setting_data_is_setting(int pid);
+
+/* for error log */
+int ttsd_data_save_error_log(int uid, FILE* fp);
 
 #ifdef __cplusplus
 }

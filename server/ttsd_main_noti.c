@@ -23,12 +23,12 @@
 
 char* get_tag()
 {
-	return "ttsd";
+	return "ttsdnoti";
 }
 
 ttsd_mode_e ttsd_get_mode()
 {
-	return TTSD_MODE_DEFAULT;
+	return TTSD_MODE_NOTIFICATION;
 }
 
 /* Main of TTS Daemon */
@@ -36,15 +36,15 @@ int main()
 {
 	SLOG(LOG_DEBUG, get_tag(), "  ");
 	SLOG(LOG_DEBUG, get_tag(), "  ");
-	SLOG(LOG_DEBUG, get_tag(), "===== TTS DAEMON DEFAULT INITIALIZE");
+	SLOG(LOG_DEBUG, get_tag(), "===== TTS DAEMON NOTI INITIALIZE");
 	if (!ecore_init()) {
-		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] fail ecore_init() \n");
+		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] fail ecore_init()");
 		return -1;
 	}
 
 	if (0 != ttsd_initialize()) {
-		printf("Fail to initialize tts-daemon \n");
-		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] fail to initialize tts-daemon"); 
+		printf("Fail to initialize tts-daemon-noti \n");
+		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] fail to initialize tts-daemon-noti"); 
 		return EXIT_FAILURE;
 	}
 	
@@ -61,17 +61,17 @@ int main()
 
 	ecore_timer_add(CLIENT_CLEAN_UP_TIME, ttsd_cleanup_client, NULL);
 
-	SLOG(LOG_DEBUG, get_tag(), "[Main] tts-daemon start...\n"); 
+	SLOG(LOG_DEBUG, get_tag(), "[Main] start tts-daemon-noti start..."); 
 	SLOG(LOG_DEBUG, get_tag(), "=====");
 	SLOG(LOG_DEBUG, get_tag(), "  ");
 	SLOG(LOG_DEBUG, get_tag(), "  ");
 
-	printf("Start tts-daemon ...\n");
+	printf("Start tts-daemon-noti ...\n");
 	
 	ecore_main_loop_begin();
 
-	SLOG(LOG_DEBUG, get_tag(), "===== TTS DAEMON DEFAULT FINALIZE");
-	
+	SLOG(LOG_DEBUG, get_tag(), "===== TTS DAEMON NOTI FINALIZE");
+
 	ttsd_network_finalize();
 
 	ttsd_dbus_close_connection();
