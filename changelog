@@ -1,3 +1,9 @@
+tts (0.1.1-50)
+
+  * Update smack rule
+
+ -- Kwangyoun Kim <ky85.kim@samsung.com>  Fri, 08 Feb 2013
+
 tts (0.1.1-49)
 
   * Add TTS mode(notification and screen reader)
