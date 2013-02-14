@@ -11,7 +11,6 @@
 *  limitations under the License.
 */
 
-
 #include "ttsd_main.h"
 #include "ttsd_server.h"
 #include "ttsd_dbus.h"
@@ -23,12 +22,12 @@
 
 char* get_tag()
 {
-	return "ttsd";
+	return "ttsdsr";
 }
 
 ttsd_mode_e ttsd_get_mode()
 {
-	return TTSD_MODE_DEFAULT;
+	return TTSD_MODE_SCREEN_READER;
 }
 
 /* Main of TTS Daemon */
@@ -36,15 +35,15 @@ int main()
 {
 	SLOG(LOG_DEBUG, get_tag(), "  ");
 	SLOG(LOG_DEBUG, get_tag(), "  ");
-	SLOG(LOG_DEBUG, get_tag(), "===== TTS DAEMON DEFAULT INITIALIZE");
+	SLOG(LOG_DEBUG, get_tag(), "===== TTS DAEMON SR INITIALIZE");
 	if (!ecore_init()) {
-		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] fail ecore_init() \n");
+		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] fail ecore_init()");
 		return -1;
 	}
 
 	if (0 != ttsd_initialize()) {
-		printf("Fail to initialize tts-daemon \n");
-		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] fail to initialize tts-daemon"); 
+		printf("Fail to initialize tts-daemon-sr \n");
+		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] fail to initialize tts-daemon-sr"); 
 		return EXIT_FAILURE;
 	}
 	
@@ -55,23 +54,23 @@ int main()
 	}
 
 	if (0 != ttsd_network_initialize()) {
-		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] fail to initialize network");
+		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] fail to initialize network \n");
 		return EXIT_FAILURE;
 	}
 
 	ecore_timer_add(CLIENT_CLEAN_UP_TIME, ttsd_cleanup_client, NULL);
 
-	SLOG(LOG_DEBUG, get_tag(), "[Main] tts-daemon start...\n"); 
+	SLOG(LOG_DEBUG, get_tag(), "[Main] tts-daemon-sr start...\n"); 
 	SLOG(LOG_DEBUG, get_tag(), "=====");
 	SLOG(LOG_DEBUG, get_tag(), "  ");
 	SLOG(LOG_DEBUG, get_tag(), "  ");
 
-	printf("Start tts-daemon ...\n");
+	printf("Start tts-daemon-sr...\n");
 	
 	ecore_main_loop_begin();
 
-	SLOG(LOG_DEBUG, get_tag(), "===== TTS DAEMON DEFAULT FINALIZE");
-	
+	SLOG(LOG_DEBUG, get_tag(), "===== TTS DAEMON SR FINALIZE");
+
 	ttsd_network_finalize();
 
 	ttsd_dbus_close_connection();
