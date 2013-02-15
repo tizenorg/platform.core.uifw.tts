@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2012, 2013 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -22,6 +22,30 @@ extern int ttsd_data_get_pid(const int uid);
 /*
 * Dbus Client-Daemon Server
 */ 
+
+int ttsd_dbus_server_hello(DBusConnection* conn, DBusMessage* msg)
+{
+	SLOG(LOG_DEBUG, TAG_TTSD, ">>>>> TTS Hello");
+
+	DBusMessage* reply;
+	reply = dbus_message_new_method_return(msg);
+
+	if (NULL != reply) {
+		if (!dbus_connection_send(conn, reply, NULL)) {
+			SLOG(LOG_ERROR, TAG_TTSD, "[OUT ERROR] Out Of Memory!");
+		}
+
+		dbus_connection_flush(conn);
+		dbus_message_unref(reply);
+	} else {
+		SLOG(LOG_ERROR, TAG_TTSD, "[OUT ERROR] Fail to create reply message!!"); 
+	}
+
+	SLOG(LOG_DEBUG, TAG_TTSD, "<<<<<");
+	SLOG(LOG_DEBUG, TAG_TTSD, "  ");
+
+	return 0;
+}
 
 int ttsd_dbus_server_initialize(DBusConnection* conn, DBusMessage* msg)
 {
@@ -175,14 +199,16 @@ int ttsd_dbus_server_get_support_voices(DBusConnection* conn, DBusMessage* msg)
 				while (NULL != iter) {
 					voice = iter->data;
 
-					dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &(voice->language) );
-					dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &(voice->type) );
+					if (NULL != voice) {
+						dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &(voice->language) );
+						dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &(voice->type) );
 
-					if (NULL != voice->language)
-						g_free(voice->language);
-					if (NULL != voice);
+						if (NULL != voice->language)
+							g_free(voice->language);
+						
 						g_free(voice);
-
+					}
+					
 					voice_list = g_list_remove_link(voice_list, iter);
 
 					iter = g_list_first(voice_list);
@@ -631,22 +657,25 @@ int ttsd_dbus_server_setting_get_engine_list(DBusConnection* conn, DBusMessage* 
 
 				while (NULL != iter) {
 					engine = iter->data;
-					SLOG(LOG_DEBUG, TAG_TTSD, "engine id : %s, engine name : %s, ug_name, : %s", 
-						engine->engine_id, engine->engine_name, engine->ug_name);
+					
+					if (NULL != engine) {
+						SLOG(LOG_DEBUG, TAG_TTSD, "engine id : %s, engine name : %s, ug_name, : %s", 
+							engine->engine_id, engine->engine_name, engine->ug_name);
 
-					dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &(engine->engine_id) );
-					dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &(engine->engine_name) );
-					dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &(engine->ug_name) );
+						dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &(engine->engine_id) );
+						dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &(engine->engine_name) );
+						dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &(engine->ug_name) );
 
-					if (NULL != engine->engine_id)
-						g_free(engine->engine_id);
-					if (NULL != engine->engine_name);
-						g_free(engine->engine_name);
-					if (NULL != engine->ug_name);
-						g_free(engine->ug_name);
-					if (NULL != engine);
+						if (NULL != engine->engine_id)
+							g_free(engine->engine_id);
+						if (NULL != engine->engine_name)
+							g_free(engine->engine_name);
+						if (NULL != engine->ug_name)
+							g_free(engine->ug_name);
+						
 						g_free(engine);
-
+					}
+					
 					engine_list = g_list_remove_link(engine_list, iter);
 
 					iter = g_list_first(engine_list);
@@ -834,13 +863,15 @@ int ttsd_dbus_server_setting_get_voice_list(DBusConnection* conn, DBusMessage* m
 					while (NULL != iter) {
 						voice = iter->data;
 
-						dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &(voice->language) );
-						dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &(voice->type) );
+						if (NULL != voice) {
+							dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &(voice->language) );
+							dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &(voice->type) );
 
-						if (NULL != voice->language)
-							g_free(voice->language);
-						if (NULL != voice);
+							if (NULL != voice->language)
+								g_free(voice->language);
+
 							g_free(voice);
+						}
 
 						voice_list = g_list_remove_link(voice_list, iter);
 
@@ -1144,16 +1175,18 @@ int ttsd_dbus_server_setting_get_engine_setting(DBusConnection* conn, DBusMessag
 					while (NULL != iter) {
 						setting = iter->data;
 
-						dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &(setting->key) );
-						dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &(setting->value) );
+						if (NULL != setting) {
+							dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &(setting->key) );
+							dbus_message_iter_append_basic(&args, DBUS_TYPE_STRING, &(setting->value) );
 
-						if (NULL != setting->key)
-							g_free(setting->key);
-						if (NULL != setting->value)
-							g_free(setting->value);
-						if (NULL != setting);
+							if (NULL != setting->key)
+								g_free(setting->key);
+							if (NULL != setting->value)
+								g_free(setting->value);
+							
 							g_free(setting);
-
+						}
+						
 						engine_setting_list = g_list_remove_link(engine_setting_list, iter);
 
 						iter = g_list_first(engine_setting_list);
@@ -1240,63 +1273,3 @@ int ttsd_dbus_server_setting_set_engine_setting(DBusConnection* conn, DBusMessag
 	return 0;
 }
 
-
-/*
-* Dbus Server functions for tts daemon intenal
-*/ 
-
-int ttsd_dbus_server_start_next_play(DBusMessage* msg)
-{
-	DBusError err;
-	dbus_error_init(&err);
-
-	int uid;
-
-	dbus_message_get_args(msg, &err,
-		DBUS_TYPE_INT32, &uid,
-		DBUS_TYPE_INVALID);
-
-	SLOG(LOG_DEBUG, TAG_TTSD, ">>>>> TTSD NEXT PLAY");
-
-	if (dbus_error_is_set(&err)) { 
-		SLOG(LOG_ERROR, TAG_TTSD, "[IN ERROR] ttsd 'start next play' : Get arguments error (%s)\n", err.message);
-		dbus_error_free(&err); 
-	} else {
-		SLOG(LOG_DEBUG, TAG_TTSD, "[IN] ttsd 'start next play' : uid(%d) \n", uid);
-		int ret = ttsd_server_start_next_play(uid);
-		SLOG(LOG_DEBUG, TAG_TTSD, "[OUT] ttsd 'start next play' : result(%d) \n", ret);
-	}
-
-	SLOG(LOG_DEBUG, TAG_TTSD, "<<<<<");
-	SLOG(LOG_DEBUG, TAG_TTSD, "  ");
-
-	return 0;
-}
-
-int ttsd_dbus_server_start_next_synthesis(DBusMessage* msg)
-{
-	DBusError err;
-	dbus_error_init(&err);
-
-	int uid;
-
-	dbus_message_get_args(msg, &err,
-		DBUS_TYPE_INT32, &uid,
-		DBUS_TYPE_INVALID);
-	
-	SLOG(LOG_DEBUG, TAG_TTSD, ">>>>> TTSD NEXT SYNTHESIS");
-
-	if (dbus_error_is_set(&err)) { 
-		SLOG(LOG_ERROR, TAG_TTSD, "[IN ERROR] ttsd 'start next synthesis' : Get arguments error (%s)\n", err.message);
-		dbus_error_free(&err); 
-	} else {
-		SLOG(LOG_DEBUG, TAG_TTSD, "[IN] ttsd 'start next synthesis' : uid(%d) \n", uid);
-		int ret = ttsd_server_start_next_synthesis(uid);
-		SLOG(LOG_DEBUG, TAG_TTSD, "[OUT] ttsd 'start next synthesis' : result(%d) \n", ret);
-	}
-
-	SLOG(LOG_DEBUG, TAG_TTSD, "<<<<<");
-	SLOG(LOG_DEBUG, TAG_TTSD, "  ");
-
-	return 0;
-}

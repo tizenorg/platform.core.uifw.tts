@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2012, 2013 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -58,7 +58,6 @@ int ttsd_network_initialize()
 		vconf_get_int(VCONFKEY_NETWORK_STATUS, &network_status);
 
 		if(network_status == VCONFKEY_NETWORK_OFF){
-			printf("Current network connection is OFF!! \n");
 			SLOG(LOG_DEBUG, TAG_TTSD, "[Network] Current network connection is OFF.");
 		}
 		else{
@@ -66,14 +65,13 @@ int ttsd_network_initialize()
 			*	This is the problem of network connection
 			*	Just terminate the application, network f/w will fix the problem automatically.
 			*/
-			printf("network status is wrong or IP is not set\n");
-			printf("network has problem, try again\n");
+			SLOG(LOG_WARN, TAG_TTSD, "network status is wrong or IP is not set\n");
+			SLOG(LOG_WARN, TAG_TTSD, "network has problem, try again\n");
 			return -1;
 		}
 
 		g_is_connected = false;
 	} else {
-		printf("Current network connection is ON. \n");
 		SLOG(LOG_DEBUG, TAG_TTSD, "[Network] Current network connection is ON.");
 
 		g_is_connected = true;

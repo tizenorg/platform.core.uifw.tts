@@ -4,18 +4,17 @@ Version:    0.1.1
 Release:    1
 Group:      libs
 License:    Samsung
-Source0:    tts-0.1.1.tar.gz
+Source0:    %{name}-%{version}.tar.gz
 Requires(post): /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
 BuildRequires:  pkgconfig(glib-2.0)
 BuildRequires:  pkgconfig(dbus-1)
 BuildRequires:  pkgconfig(mm-player)
 BuildRequires:  pkgconfig(mm-common)
-BuildRequires:  pkgconfig(dnet)
 BuildRequires:  pkgconfig(dlog)
 BuildRequires:  pkgconfig(vconf)
-BuildRequires:  pkgconfig(ecore-input)
-BuildRequires:  pkgconfig(openssl)
+BuildRequires:  pkgconfig(ecore)
+BuildRequires:  pkgconfig(ecore-file)
 
 BuildRequires:  cmake
 
@@ -42,22 +41,20 @@ make %{?jobs:-j%jobs}
 
 %install
 rm -rf %{buildroot}
+mkdir -p %{buildroot}/usr/share/license
 %make_install
-
-
-
 
 %post -p /sbin/ldconfig
 
 %postun -p /sbin/ldconfig
 
-
-
 %files
+%manifest tts-server.manifest
 %defattr(-,root,root,-)
 %{_libdir}/lib*.so
+%{_libdir}/voice/tts/1.0/ttsd.conf
 %{_bindir}/tts-daemon
-
+/usr/share/license/*
 
 %files devel
 %defattr(-,root,root,-)

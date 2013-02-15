@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2012, 2013 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -33,21 +33,31 @@ extern "C" {
 
 /* TTS Daemon Define */ 
 #define TAG_TTSD "ttsd"
-#define ENGINE_DIRECTORY "/usr/lib/voice/tts/1.0/engine"
+
+#define BASE_DIRECTORY_DEFAULT			"/usr/lib/voice/tts/1.0"
+#define ENGINE_DIRECTORY_DEFAULT		"/usr/lib/voice/tts/1.0/engine"
+#define ENGINE_DIRECTORY_DEFAULT_SETTING	"/usr/lib/voice/tts/1.0/setting"
+
+#define CONFIG_DIRECTORY			"/opt/home/app/.voice"
+	
+#define ENGINE_DIRECTORY_DOWNLOAD		"/opt/usr/voice/tts/1.0/engine"
+#define ENGINE_DIRECTORY_DOWNLOAD_SETTING	"/opt/usr/voice/tts/1.0/setting"
+
 
 /* for debug message */
 #define DATA_DEBUG
 
 typedef enum {
-	TTSD_ERROR_NONE			= 0,		/**< Success, No error */
-	TTSD_ERROR_OUT_OF_MEMORY	= -ENOMEM,	/**< Out of Memory */
-	TTSD_ERROR_IO_ERROR		= -EIO,		/**< I/O error */
-	TTSD_ERROR_INVALID_PARAMETER	= -EINVAL,	/**< Invalid parameter */
-	TTSD_ERROR_INVALID_STATE	= -0x0100021,	/**< Invalid state */
-	TTSD_ERROR_INVALID_VOICE	= -0x0100022,	/**< Invalid voice */
-	TTSD_ERROR_ENGINE_NOT_FOUND	= -0x0100023,	/**< No available TTS-engine  */
-	TTSD_ERROR_TIMED_OUT		= -0x0100024,	/**< No answer from TTS daemon */
-	TTSD_ERROR_OPERATION_FAILED	= -0x0100025,	/**< TTS daemon failed  */
+	TTSD_ERROR_NONE			= 0,			/**< Successful */
+	TTSD_ERROR_OUT_OF_MEMORY	= -ENOMEM,		/**< Out of Memory */
+	TTSD_ERROR_IO_ERROR		= -EIO,			/**< I/O error */
+	TTSD_ERROR_INVALID_PARAMETER	= -EINVAL,		/**< Invalid parameter */
+	TTSD_ERROR_OUT_OF_NETWORK	= -ENETDOWN,		/**< Out of network */
+	TTSD_ERROR_INVALID_STATE	= -0x0100000 | 0x21,	/**< Invalid state */
+	TTSD_ERROR_INVALID_VOICE	= -0x0100000 | 0x22,	/**< Invalid voice */
+	TTSD_ERROR_ENGINE_NOT_FOUND	= -0x0100000 | 0x23,	/**< No available engine  */
+	TTSD_ERROR_TIMED_OUT		= -0x0100000 | 0x24,	/**< No answer from the daemon */
+	TTSD_ERROR_OPERATION_FAILED	= -0x0100000 | 0x25	/**< Operation failed  */
 }ttsd_error_e;
 
 

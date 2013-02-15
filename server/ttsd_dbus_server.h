@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2012, 2013 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -20,6 +20,8 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+int ttsd_dbus_server_hello(DBusConnection* conn, DBusMessage* msg);
 
 /*
 * Dbus Server functions for APIs
@@ -70,14 +72,6 @@ int ttsd_dbus_server_setting_get_engine_setting(DBusConnection* conn, DBusMessag
 
 int ttsd_dbus_server_setting_set_engine_setting(DBusConnection* conn, DBusMessage* msg);
 
-
-/*
-* Dbus Server functions for tts daemon internal
-*/ 
-
-int ttsd_dbus_server_start_next_play(DBusMessage* msg);
-
-int ttsd_dbus_server_start_next_synthesis(DBusMessage* msg);
 
 #ifdef __cplusplus
 }

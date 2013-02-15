@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2012, 2013 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -18,6 +18,8 @@
 #include "ttsd_network.h"
 
 #include <Ecore.h>
+
+#define CLIENT_CLEAN_UP_TIME 500
 
 /* Main of TTS Daemon */
 int main()
@@ -47,6 +49,8 @@ int main()
 		return EXIT_FAILURE;
 	}
 
+	ecore_timer_add(CLIENT_CLEAN_UP_TIME, ttsd_cleanup_client, NULL);
+
 	SLOG(LOG_DEBUG, TAG_TTSD, "[Main] tts-daemon start...\n"); 
 	SLOG(LOG_DEBUG, TAG_TTSD, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSD, "  ");
@@ -55,12 +59,18 @@ int main()
 	printf("TTS-Daemon Start...\n");
 	
 	ecore_main_loop_begin();
-	
-	ecore_shutdown();
 
+	SLOG(LOG_DEBUG, TAG_TTSD, "===== TTS DAEMON FINALIZE");
+	
 	ttsd_dbus_close_connection();
 
 	ttsd_network_finalize();
+
+	ecore_shutdown();
+
+	SLOG(LOG_DEBUG, TAG_TTSD, "=====");
+	SLOG(LOG_DEBUG, TAG_TTSD, "  ");
+	SLOG(LOG_DEBUG, TAG_TTSD, "  ");
 
 	return 0;
 }

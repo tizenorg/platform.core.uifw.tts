@@ -1,0 +1,346 @@
+tts (0.1.1-43-1)
+
+  * Fix bug(about daemon connection)
+
+ -- Kwangyoun Kim <ky85.kim@samsung.com>  Tue, 12 Feb 2013
+
+tts (0.1.1-43slp2+1) unstable; urgency=low
+
+  * Change License and notice file
+
+ -- Kwangyoun Kim <ky85.kim@samsung.com>  Wed, 23 Jan 2013 15:15:44 +0900
+
+tts (0.1.1-42slp2+1) unstable; urgency=low
+
+  * Fix prevent issue
+  * Change license file
+
+ -- Kwangyoun Kim <ky85.kim@samsung.com>  Tue, 15 Jan 2013 13:09:08 +0900
+
+tts (0.1.1-41slp2+1) unstable; urgency=low
+
+  * Fix prevent issue
+  * Fix bug when engine result is NULL
+  * Change config path
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Tue, 18 Dec 2012 12:16:38 +0900
+
+tts (0.1.1-40slp2+1) unstable; urgency=low
+
+  * Fix prevent
+  * Git: framework/uifw/voice/tts
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Tue, 04 Dec 2012 16:40:08 +0900
+
+tts (0.1.1-39slp2+1) unstable; urgency=low
+
+  * Remove dependency of openssl
+  * Fix bug of config 
+  * Git: framework/uifw/voice/tts
+  * Tag: tts_0.1.1-39slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Thu, 22 Nov 2012 16:31:53 +0900
+
+tts (0.1.1-38slp2+1) unstable; urgency=low
+
+  * Add manifest and license file
+  * Add tag for binary merge
+  * Git: framework/uifw/voice/tts
+  * Tag: tts_0.1.1-38slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Wed, 10 Oct 2012 14:48:46 +0900
+
+tts (0.1.1-37slp2+1) unstable; urgency=low
+
+  * Fix the bug of player BS
+  * Git: framework/uifw/voice/tts
+  * Tag: tts_0.1.1-37slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Thu, 16 Aug 2012 11:30:47 +0900
+
+tts (0.1.1-36slp2+1) unstable; urgency=low
+
+  * Update Setting API for async init
+  * Git: slp/pkgs/t/tts
+  * Tag: tts_0.1.1-36slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Mon, 06 Aug 2012 19:30:59 +0900
+
+tts (0.1.1-35slp2+1) unstable; urgency=low
+
+  * Remove fd write option of dbus in client lib
+  * Git: slp/pkgs/t/tts
+  * Tag: tts_0.1.1-35slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Tue, 31 Jul 2012 10:17:11 +0900
+
+tts (0.1.1-34slp2+1) unstable; urgency=low
+
+  * Fix the bug of setting client management
+  * Git: slp/pkgs/t/tts
+  * Tag: tts_0.1.1-34slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Tue, 24 Jul 2012 13:47:43 +0900
+
+tts (0.1.1-33slp2+1) unstable; urgency=low
+
+  * Update API for async init
+  * Git: slp/pkgs/t/tts
+  * Tag: tts_0.1.1-33slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Mon, 04 Jun 2012 19:48:29 +0900
+
+tts (0.1.1-32slp2+1) unstable; urgency=low
+
+  * Add config file
+  * Git: slp/pkgs/t/tts
+  * Tag: tts_0.1.1-32slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Thu, 24 May 2012 14:50:30 +0900
+
+tts (0.1.1-31slp2+1) unstable; urgency=low
+
+  * update config not to depend on VConf
+  * Git: slp/pkgs/t/tts
+  * Tag: tts_0.1.1-31slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Fri, 18 May 2012 18:56:19 +0900
+
+tts (0.1.1-30slp2+1) unstable; urgency=low
+
+  * fix bug about fork daemon
+  * Git: slp/pkgs/t/tts
+  * Tag: tts_0.1.1-30slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Mon, 26 Mar 2012 15:48:37 +0900
+
+tts (0.1.1-29slp2+1) unstable; urgency=low
+
+  * udpate changelog
+  * Git: slp/pkgs/t/tts
+  * Tag: tts_0.1.1-29slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Mon, 19 Mar 2012 19:20:22 +0900
+
+tts (0.1.1-28slp2+1) unstable; urgency=low
+
+  * udpate setting api
+  * Git: slp/pkgs/t/tts
+  * Tag: tts_0.1.1-28slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Mon, 19 Mar 2012 11:37:32 +0900
+
+tts (0.1.1-27slp2+1) unstable; urgency=low
+
+  * fix IPC bug
+  * Git: slp/pkgs/t/tts
+  * Tag: tts_0.1.1-27slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Wed, 14 Mar 2012 16:14:08 +0900
+
+tts (0.1.1-26slp2+1) unstable; urgency=low
+
+  * beta release
+  * Git: slp/pkgs/t/tts
+  * Tag: tts_0.1.1-26slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Fri, 17 Feb 2012 17:42:12 +0900
+
+tts (0.1.1-25slp2+1) unstable; urgency=low
+
+  * fix player bug and update doxygen
+  * Git: slp/pkgs/t/tts
+  * Tag: tts_0.1.1-25slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Fri, 17 Feb 2012 10:45:28 +0900
+
+tts (0.1.1-24slp2+1) unstable; urgency=low
+
+  * update engine api
+  * Git: slp/pkgs/t/tts
+  * Tag: tts_0.1.1-24slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Thu, 05 Jan 2012 15:53:48 +0900
+
+tts (0.1.1-23slp2+1) unstable; urgency=low
+
+  * update changelog
+  * Git: slp/pkgs/t/tts
+  * Tag: tts_0.1.1-23slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Mon, 19 Dec 2011 13:50:50 +0900
+
+tts (0.1.1-22slp2+1) unstable; urgency=low
+
+  * code cleanup and update log 
+  * Git: slp/pkgs/t/tts
+  * Tag: tts_0.1.1-22slp2+1 
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Fri, 16 Dec 2011 15:56:08 +0900
+
+tts (0.1.1-21slp2+1) unstable; urgency=low
+
+  * code cleanup and update log 
+  * Git: 165.213.180.234:slp/pkgs/t/tts
+  * Tag: tts_0.1.1-21slp2+1 
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Tue, 06 Dec 2011 19:01:19 +0900
+
+tts (0.1.1-20slp2+1) unstable; urgency=low
+
+  * change boiler plate 
+  * Git: 165.213.180.234:slp/pkgs/t/tts
+  * Tag: tts_0.1.1-20slp2+1 
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Fri, 02 Dec 2011 10:52:46 +0900
+
+tts (0.1.1-19slp2+1) unstable; urgency=low
+
+  * update for connman 
+  * Git: 165.213.180.234:slp/pkgs/t/tts
+  * Tag: tts_0.1.1-19slp2+1 
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Tue, 29 Nov 2011 16:14:14 +0900
+
+tts (0.1.1-18slp2+1) unstable; urgency=low
+
+  * bug fix about unref message
+  * Git: 165.213.180.234:slp/pkgs/t/tts
+  * Tag: tts_0.1.1-18slp2+1 
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Wed, 23 Nov 2011 15:34:46 +0900
+
+tts (0.1.1-17slp2+1) unstable; urgency=low
+
+  * update API : change sync function and use add_text in 'Play' state
+  * Git: 165.213.180.234:slp/pkgs/t/tts
+  * Tag: tts_0.1.1-17slp2+1 
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Wed, 16 Nov 2011 11:28:03 +0900
+
+tts (0.1.1-16slp2+1) unstable; urgency=low
+
+  * update Setting API 
+  * Git: 165.213.180.234:slp/pkgs/t/tts
+  * Tag: tts_0.1.1-16slp2+1 
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Tue, 01 Nov 2011 11:24:58 +0900
+
+tts (0.1.1-15slp2+1) unstable; urgency=low
+
+  * update API doxygen and fix bug about initial default voice 
+  * Git: 165.213.180.234:slp/pkgs/t/tts
+  * Tag: tts_0.1.1-15slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Thu, 27 Oct 2011 11:06:49 +0900
+
+tts (0.1.1-14slp2+1) unstable; urgency=low
+
+  * change API for SDK release
+  * Git: 165.213.180.234:slp/pkgs/t/tts
+  * Tag: tts_0.1.1-14slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Fri, 21 Oct 2011 16:42:51 +0900
+
+tts (0.1.1-13slp2+1) unstable; urgency=low
+
+  * update API's new callback 
+  * Git: 165.213.180.234:slp/pkgs/t/tts
+  * Tag: tts_0.1.1-13slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Thu, 20 Oct 2011 17:49:13 +0900
+
+tts (0.1.1-12slp2+1) unstable; urgency=low
+
+  * update new API for sdk release and change boilerplate
+  * Git: 165.213.180.234:slp/pkgs/t/tts
+  * Tag: tts_0.1.1-12slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Wed, 19 Oct 2011 16:31:50 +0900
+
+tts (0.1.1-11slp2+1) unstable; urgency=low
+
+  * update bug of prevent and remove dependency of gtk
+  * Git: 165.213.180.234:slp/pkgs/t/tts
+  * Tag: tts_0.1.1-11slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Wed, 07 Sep 2011 14:47:34 +0900
+
+tts (0.1.1-10slp2+1) unstable; urgency=low
+
+  * update build file
+  * Git: 165.213.180.234:slp/pkgs/t/tts
+  * Tag: tts_0.1.1-10slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Tue, 19 Jul 2011 16:15:13 +0900
+
+tts (0.1.1-9slp2+1) unstable; urgency=low
+
+  * update build file
+  * Git: 165.213.180.234:slp/pkgs/t/tts
+  * Tag: tts_0.1.1-9slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Mon, 18 Jul 2011 10:27:52 +0900
+
+tts (0.1.1-8slp2+1) unstable; urgency=low
+
+  * Change IPC and Code Cleanup
+  * Git: 165.213.180.234:slp/pkgs/t/tts
+  * Tag: tts_0.1.1-8slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Fri, 15 Jul 2011 18:01:31 +0900
+
+tts (0.1.1-7slp2+1) unstable; urgency=low
+
+  * support multi instance 
+  * Git: 165.213.180.234:slp/pkgs/t/tts
+  * Tag: tts_0.1.1-7slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Fri, 24 Jun 2011 14:36:36 +0900
+
+tts (0.1.1-6slp2+1) unstable; urgency=low
+
+  * fix defect from prevent
+  * Git: 165.213.180.234:slp/pkgs/t/tts
+  * Tag: tts_0.1.1-6slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Tue, 07 Jun 2011 17:05:49 +0900
+
+tts (0.1.1-5slp2+1) unstable; urgency=low
+
+  * Git: 165.213.180.234:slp/pkgs/t/tts
+  * Tag: tts_0.1.1-5slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Mon, 23 May 2011 15:14:10 +0900
+
+tts (0.1.1-4slp2+1) unstable; urgency=low
+
+  * Change API - change error code
+  * Git: 165.213.180.234:slp/pkgs/t/tts
+  * Tag: tts_0.1.1-4slp2+1
+
+ -- Dongyeol Lee <dy3.lee@samsung.com>  Mon, 23 May 2011 09:00:57 +0900
+
+tts (0.1.1-3slp2+1) unstable; urgency=low
+
+  * change control file
+  * Git: 165.213.180.234:slp/pkgs/t/tts
+  * Tag: tts_0.1.1-3slp2+1
+
+ -- Jae-Yong Lee <jaeyong911.lee@samsung.com>  Mon, 16 May 2011 10:45:01 +0900
+
+tts (0.1.1-2slp2+1) unstable; urgency=low
+
+  * Initial Release (change files to unix type).
+  * Git: 165.213.180.234:slp/pkgs/t/tts
+  * Tag: tts_0.1.1-2slp2+1
+
+ -- Jae-Yong Lee <jaeyong911.lee@samsung.com>  Mon, 16 May 2011 10:11:02 +0900
+
+tts (0.1.1-1slp2+1) unstable; urgency=low
+
+  * Initial Release.
+  * Git: 165.213.180.234:slp/pkgs/t/tts
+  * Tag: tts_0.1.1-1slp2+1
+
+ -- Jae-Yong Lee <jaeyong911.lee@samsung.com>  Fri, 13 May 2011 16:15:22 +0900

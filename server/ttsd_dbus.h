@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2012, 2013 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -24,17 +24,15 @@ int ttsd_dbus_open_connection();
 int ttsd_dbus_close_connection();
 
 
-int ttsdc_send_utt_start_signal(int pid, int uid, int uttid);
+int ttsdc_send_hello(int pid, int uid);
 
-int ttsdc_send_utt_finish_signal(int pid, int uid, int uttid);
+int ttsdc_send_utt_start_message(int pid, int uid, int uttid);
 
-int ttsdc_send_error_signal(int pid, int uid, int uttid, int reason);
+int ttsdc_send_utt_finish_message(int pid, int uid, int uttid);
 
-int ttsdc_send_interrupt_signal(int pid, int uid, ttsd_interrupted_code_e code);
+int ttsdc_send_error_message(int pid, int uid, int uttid, int reason);
 
-int ttsd_send_start_next_play(int uid);
-
-int ttsd_send_start_next_synthesis(int uid);
+int ttsdc_send_set_state_message(int pid, int uid, int state);
 
 #ifdef __cplusplus
 }
