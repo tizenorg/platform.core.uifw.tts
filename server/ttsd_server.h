@@ -54,6 +54,11 @@ int ttsd_server_stop(int uid);
 int ttsd_server_pause(int uid, int* utt_id);
 
 /*
+* Server API for internal event
+*/
+int ttsd_server_start_next_synthesis();
+
+/*
 * Server API for setting
 */
 

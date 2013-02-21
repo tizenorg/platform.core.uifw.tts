@@ -506,6 +506,13 @@ int ttsd_dbus_server_pause(DBusConnection* conn, DBusMessage* msg)
 	return 0;
 }
 
+/*
+* Dbus Server functions for tts daemon internal
+*/ 
+int ttsd_dbus_server_start_next_synthesis()
+{
+	return ttsd_server_start_next_synthesis();
+}
 
 /*
 * Dbus Setting-Daemon Server

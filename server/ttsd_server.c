@@ -117,7 +117,7 @@ int __server_start_synthesis(int uid, int mode)
 				/* mode 2 : Add text in playing state */
 				if (2 == mode) {
 					__server_send_error(uid, sdata.utt_id, TTSD_ERROR_OPERATION_FAILED);
-					//ttsd_config_save_error();
+					ttsd_config_save_error(utt->uid, utt->uttid, sdata.lang, sdata.vctype, sdata.text, __FUNCTION__, __LINE__, "fail to start synthesis (mode=2)");
 
 					ttsd_server_stop(uid);
 
@@ -221,6 +221,7 @@ int __server_next_synthesis(int uid)
 			__server_set_is_synthesizing(false);
 
 			__server_send_error(current_uid, sdata.utt_id, TTSD_ERROR_OPERATION_FAILED);
+			ttsd_config_save_error(utt->uid, utt->uttid, sdata.lang, sdata.vctype, sdata.text, __FUNCTION__, __LINE__, "fail to start synthesis");
 
 			g_free(utt);
 
@@ -261,6 +262,7 @@ int __player_result_callback(player_event_e event, int uid, int utt_id)
 	case PLAYER_ERROR:
 		SLOG(LOG_ERROR, get_tag(), "[SERVER ERROR][%s] player result error", __FUNCTION__);
 		__server_send_error(uid, utt_id, TTSD_ERROR_OPERATION_FAILED);
+		ttsd_config_save_error(uid, utt_id, NULL, -1, NULL, __FUNCTION__, __LINE__, "PLAYER_ERROR");
 		// break;
 
 	case PLAYER_EMPTY_SOUND_QUEUE:
@@ -278,23 +280,6 @@ int __player_result_callback(player_event_e event, int uid, int utt_id)
 	}
 
 	return 0;
-}
-
-Eina_Bool __start_next_synthesis(void *data)
-{
-	/* get current play */
-	int uid = ttsd_data_is_current_playing();
-
-	if (uid < 0) {
-		return EINA_FALSE;
-	}
-
-	if (true == __server_get_is_next_synthesis()) {
-		__server_set_is_next_synthesis(false);
-		__server_next_synthesis(uid);
-	}
-
-	return EINA_TRUE;	
 }
 
 int __synthesis_result_callback(ttsp_result_event_e event, const void* data, unsigned int data_size, void *user_data)
@@ -364,15 +349,11 @@ int __synthesis_result_callback(ttsp_result_event_e event, const void* data, uns
 			__server_set_is_synthesizing(false);
 			__server_set_is_next_synthesis(true);
 		}
-	} 
-	
-	else if (event == TTSP_RESULT_EVENT_CANCEL) {
+	} else if (event == TTSP_RESULT_EVENT_CANCEL) {
 		SLOG(LOG_DEBUG, get_tag(), "[SERVER] Event : TTSP_RESULT_EVENT_CANCEL");
 		__server_set_is_synthesizing(false);
 		__server_set_is_next_synthesis(true);
-	} 
-	
-	else {
+	} else {
 		SLOG(LOG_DEBUG, get_tag(), "[SERVER] Event ERROR");
 		__server_set_is_synthesizing(false);
 		__server_set_is_next_synthesis(true);
@@ -385,6 +366,14 @@ int __synthesis_result_callback(ttsp_result_event_e event, const void* data, uns
 
 	SLOG(LOG_DEBUG, get_tag(), "===== SYNTHESIS RESULT CALLBACK END");
 	SLOG(LOG_DEBUG, get_tag(), "  ");
+
+	if (true == __server_get_is_next_synthesis()) {
+		__server_set_is_next_synthesis(false);
+
+		/* Do NOT work ecore timer because of This function is thread callbacked */ 
+		/* need to send dbus message event */
+		ttsd_send_start_next_synthesis();
+	}
 
 	return 0;
 }
@@ -403,7 +392,6 @@ bool __get_client_cb(int pid, int uid, app_state_e state, void* user_data)
 
 	return true;
 }
-
 
 void __config_lang_changed_cb(const char* language, int type)
 {
@@ -697,8 +685,6 @@ int ttsd_server_play(int uid)
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
-	ecore_timer_add(0, __start_next_synthesis, NULL);
-
 	return TTSD_ERROR_NONE;
 }
 
@@ -801,6 +787,21 @@ int ttsd_server_get_current_voice(int uid, char** language, int* voice_type)
 	return TTSD_ERROR_NONE;
 }
 
+/*
+* Server API for Internal event
+*/
+
+int ttsd_server_start_next_synthesis()
+{
+	/* get current play */
+	int uid = ttsd_data_is_current_playing();
+
+	if (uid < 0) {
+		return 0;
+	}
+
+	return __server_next_synthesis(uid);
+}
 
 /*
 * TTS Server Functions for Setting														  *
@@ -908,6 +909,8 @@ int ttsd_server_setting_set_current_engine(int uid, const char* engine_id)
 
 	/* send interrupt message to  all clients */
 	ttsd_data_foreach_clients(__get_client_cb, NULL);
+
+	ttsd_engine_cancel_synthesis();
 
 	/* set engine */
 	int ret = 0;
@@ -1049,5 +1052,3 @@ int ttsd_server_setting_set_default_speed(int uid, int default_speed)
 
 	return TTSD_ERROR_NONE;
 }
-
-

@@ -26,6 +26,7 @@ static DBusConnection* g_conn;
 static int g_waiting_time = 3000;
 
 static char *g_service_name;
+static char *g_service_object;
 static char *g_service_interface;
 
 int ttsdc_send_hello(int pid, int uid)
@@ -221,6 +222,10 @@ static Eina_Bool listener_event_callback(void* data, Ecore_Fd_Handler *fd_handle
 	else if (dbus_message_is_method_call(msg, g_service_interface, TTS_METHOD_PAUSE)) 
 		ttsd_dbus_server_pause(conn, msg);
 
+	/* daemon internal event*/
+	else if (dbus_message_is_signal(msg, g_service_interface, TTSD_SIGNAL_NEXT_SYNTHESIS)) 
+		ttsd_dbus_server_start_next_synthesis();
+
 	/* setting event */
 	else if (dbus_message_is_method_call(msg, g_service_interface, TTS_SETTING_METHOD_HELLO))
 		ttsd_dbus_server_hello(conn, msg);
@@ -268,7 +273,7 @@ static Eina_Bool listener_event_callback(void* data, Ecore_Fd_Handler *fd_handle
 	return ECORE_CALLBACK_RENEW;
 }
 
-int ttsd_dbus_open_connection(ttsd_mode_e mode)
+int ttsd_dbus_open_connection()
 {
 	DBusError err;
 	dbus_error_init(&err);
@@ -290,21 +295,27 @@ int ttsd_dbus_open_connection(ttsd_mode_e mode)
 
 	if (TTSD_MODE_SCREEN_READER == ttsd_get_mode()) {
 		g_service_name = (char*)malloc(sizeof(char) * strlen(TTS_SR_SERVER_SERVICE_NAME) + 1);
+		g_service_object = (char*)malloc(sizeof(char) * strlen(TTS_SR_SERVER_SERVICE_OBJECT_PATH) + 1);
 		g_service_interface = (char*)malloc(sizeof(char) * strlen(TTS_SR_SERVER_SERVICE_INTERFACE) + 1);
 
 		strcpy(g_service_name, TTS_SR_SERVER_SERVICE_NAME);
+		strcpy(g_service_object, TTS_SR_SERVER_SERVICE_OBJECT_PATH);
 		strcpy(g_service_interface, TTS_SR_SERVER_SERVICE_INTERFACE);
 	} else if (TTSD_MODE_NOTIFICATION == ttsd_get_mode()) {
 		g_service_name = (char*)malloc(sizeof(char) * strlen(TTS_NOTI_SERVER_SERVICE_NAME) + 1);
+		g_service_object = (char*)malloc(sizeof(char) * strlen(TTS_NOTI_SERVER_SERVICE_OBJECT_PATH) + 1);
 		g_service_interface = (char*)malloc(sizeof(char) * strlen(TTS_NOTI_SERVER_SERVICE_INTERFACE) + 1);
 
 		strcpy(g_service_name, TTS_NOTI_SERVER_SERVICE_NAME);
+		strcpy(g_service_object, TTS_NOTI_SERVER_SERVICE_OBJECT_PATH);
 		strcpy(g_service_interface, TTS_NOTI_SERVER_SERVICE_INTERFACE);
 	} else {
 		g_service_name = (char*)malloc(sizeof(char) * strlen(TTS_SERVER_SERVICE_NAME) + 1);
+		g_service_object = (char*)malloc(sizeof(char) * strlen(TTS_SERVER_SERVICE_OBJECT_PATH) + 1);
 		g_service_interface = (char*)malloc(sizeof(char) * strlen(TTS_SERVER_SERVICE_INTERFACE) + 1);
 
 		strcpy(g_service_name, TTS_SERVER_SERVICE_NAME);
+		strcpy(g_service_object, TTS_SERVER_SERVICE_OBJECT_PATH);
 		strcpy(g_service_interface, TTS_SERVER_SERVICE_INTERFACE);
 	}
 
@@ -368,10 +379,38 @@ int ttsd_dbus_close_connection()
 	if (NULL != g_service_name)
 		free(g_service_name);
 
+	if (NULL != g_service_object)
+		free(g_service_object);
+
 	if (NULL != g_service_interface)
 		free(g_service_interface);
 
 	SLOG(LOG_DEBUG, get_tag(), "[Dbus SUCCESS] Close connection. ");
+
+	return 0;
+}
+
+int ttsd_send_start_next_synthesis()
+{
+	DBusMessage* msg;
+
+	msg = dbus_message_new_signal(
+		g_service_object,		/* object name of the signal */
+		g_service_interface,		/* interface name of the signal */
+		TTSD_SIGNAL_NEXT_SYNTHESIS);	/* name of the signal */
+
+	if (NULL == msg) { 
+		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] >>>> Fail to make message for 'start next synthesis'"); 
+		return -1;
+	}
+
+	if (!dbus_connection_send(g_conn, msg, NULL)) {
+		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] >>>> Fail to send message for 'start next synthesis'"); 
+		return -1;
+	}
+
+	dbus_connection_flush(g_conn);
+	dbus_message_unref(msg);
 
 	return 0;
 }

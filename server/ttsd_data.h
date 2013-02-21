@@ -15,10 +15,7 @@
 #ifndef __TTSD_DATA_H_
 #define __TTSD_DATA_H_
 
-//#include <vector>
 #include "ttsp.h"
-
-//using namespace std;
 
 #ifdef __cplusplus
 extern "C" {

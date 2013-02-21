@@ -82,6 +82,12 @@ extern "C" {
 #define TTS_SETTING_METHOD_GET_ENGINE_SETTING	"tts_setting_method_get_engine_setting"
 #define TTS_SETTING_METHOD_SET_ENGINE_SETTING	"tts_setting_method_set_engine_setting"
 
+/******************************************************************************************
+* Message Definition for tts-daemon internal
+*******************************************************************************************/
+
+#define TTSD_SIGNAL_NEXT_SYNTHESIS	"ttsd_signal_start_synthesis"
+
 #ifdef __cplusplus
 }
 #endif
