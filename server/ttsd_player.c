@@ -1024,12 +1024,12 @@ int __set_and_start(player_s* player)
 		return -1;
 	}
 
-	if (TTSD_MODE_DEFAULT != ttsd_get_mode()) {
-		ret = mm_player_ignore_session(player->player_handle);
-		if (MM_ERROR_NONE != ret) {
-			SLOG(LOG_WARN, get_tag(), "[Player WARNING] fail mm_player_ignore_session() : %x", ret);
-		}
-	}
+	//if (TTSD_MODE_DEFAULT != ttsd_get_mode()) {
+	//	ret = mm_player_ignore_session(player->player_handle);
+	//	if (MM_ERROR_NONE != ret) {
+	//		SLOG(LOG_WARN, get_tag(), "[Player WARNING] fail mm_player_ignore_session() : %x", ret);
+	//	}
+	//}
 	
 	/* realize and start mm player */ 
 	ret = mm_player_realize(player->player_handle);
