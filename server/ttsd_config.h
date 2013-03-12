@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2012, 2013 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -15,45 +15,25 @@
 #ifndef __TTSD_CONFIG_H_
 #define __TTSD_CONFIG_H_
 
-#include <stdbool.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define TTSD_CONFIG_PREFIX "db/ttsd/"
+int ttsd_config_initialize();
 
-#define CONFIG_KEY_DEFAULT_ENGINE_ID	TTSD_CONFIG_PREFIX"engine"
-#define CONFIG_KEY_DEFAULT_LANGUAGE	TTSD_CONFIG_PREFIX"language"
-#define CONFIG_KEY_DEFAULT_VOICE_TYPE	TTSD_CONFIG_PREFIX"vctype"
-#define CONFIG_KEY_DEFAULT_SPEED	TTSD_CONFIG_PREFIX"speed"
+int ttsd_config_finalize();
 
-/*
-* tts-daemon config
-*/
+int ttsd_config_get_default_engine(char** engine_id);
 
-int ttsd_config_get_char_type(const char* key, char** value);
+int ttsd_config_set_default_engine(const char* engine_id);
 
-int ttsd_config_set_char_type(const char* key, const char* value);
+int ttsd_config_get_default_voice(char** language, int* type);
 
-int ttsd_config_get_bool_type(const char* key, bool* value);
+int ttsd_config_set_default_voice(const char* langauge, int type);
 
-int ttsd_config_set_bool_type(const char* key, const bool value);
+int ttsd_config_get_default_speed(int* speed);
 
-int ttsd_config_get_int_type(const char* key, int* value);
-
-int ttsd_config_set_int_type(const char* key, const int value);
-
-/*
-* interface for engine plug-in
-*/
-
-int ttsd_config_set_persistent_data(const char* engine_id, const char* key, const char* value);
-
-int ttsd_config_get_persistent_data(const char* engine_id, const char* key, char** value);
-
-int ttsd_config_remove_persistent_data(const char* engine_id, const char* key);
-
+int ttsd_config_set_default_speed(int speed);
 
 #ifdef __cplusplus
 }

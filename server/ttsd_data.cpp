@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2012, 2013 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -18,6 +18,8 @@
 using namespace std;
 
 static vector<app_data_s> g_app_list;
+
+static vector<setting_app_data_s> g_setting_list;
 
 static bool g_mutex_state = false;
 
@@ -40,10 +42,25 @@ int __data_show_list()
 	}
 
 	SLOG(LOG_DEBUG, TAG_TTSD, "-----------------------");
+
+	SLOG(LOG_DEBUG, TAG_TTSD, "----- setting client list -----");
+
+	vsize = g_setting_list.size();
+
+	for (int i=0; i<vsize; i++) {
+		SLOG(LOG_DEBUG, TAG_TTSD, "[%dth] pid(%d)", i, g_setting_list[i].pid );
+	}
+
+	if (0 == vsize) {
+		SLOG(LOG_DEBUG, TAG_TTSD, "No Setting Client");
+	}
+
+	SLOG(LOG_DEBUG, TAG_TTSD, "--------------------------------");
+
 	return TTSD_ERROR_NONE;
 }
 
-int __data_show_sound_list(const int index)
+int __data_show_sound_list(int index)
 {
 	SLOG(LOG_DEBUG, TAG_TTSD, "----- Sound list -----");
 	
@@ -61,7 +78,7 @@ int __data_show_sound_list(const int index)
 	return TTSD_ERROR_NONE;
 }
 
-int __data_show_text_list(const int index)
+int __data_show_text_list(int index)
 {
 	SLOG(LOG_DEBUG, TAG_TTSD, "----- Text list -----");
 
@@ -85,7 +102,7 @@ int __data_show_text_list(const int index)
 * ttsd data functions
 */
 
-int ttsd_data_new_client(const int pid, const int uid)
+int ttsd_data_new_client(int pid, int uid)
 {
 	if( -1 != ttsd_data_is_client(uid) ) {
 		SLOG(LOG_ERROR, TAG_TTSD, "[DATA ERROR] ttsd_data_new_client() : uid is not valid (%d)\n", uid);	
@@ -106,7 +123,7 @@ int ttsd_data_new_client(const int pid, const int uid)
 	return TTSD_ERROR_NONE;
 }
 
-int ttsd_data_delete_client(const int uid)
+int ttsd_data_delete_client(int uid)
 {
 	int index = 0;
 
@@ -130,7 +147,7 @@ int ttsd_data_delete_client(const int uid)
 	return TTSD_ERROR_NONE;
 }
 
-int ttsd_data_is_client(const int uid)
+int ttsd_data_is_client(int uid)
 {
 	int vsize = g_app_list.size();
 
@@ -145,10 +162,10 @@ int ttsd_data_is_client(const int uid)
 
 int ttsd_data_get_client_count()
 {
-	return g_app_list.size();
+	return g_app_list.size() + g_setting_list.size();
 }
 
-int ttsd_data_get_pid(const int uid)
+int ttsd_data_get_pid(int uid)
 {
 	int index;
 
@@ -162,7 +179,7 @@ int ttsd_data_get_pid(const int uid)
 	return g_app_list[index].pid;
 }
 
-int ttsd_data_get_speak_data_size(const int uid)
+int ttsd_data_get_speak_data_size(int uid)
 {
 	int index = 0;
 	index = ttsd_data_is_client(uid);
@@ -176,7 +193,7 @@ int ttsd_data_get_speak_data_size(const int uid)
 	return size;
 }
 
-int ttsd_data_add_speak_data(const int uid, const speak_data_s data)
+int ttsd_data_add_speak_data(int uid, speak_data_s data)
 {
 	int index = 0;
 	index = ttsd_data_is_client(uid);
@@ -197,7 +214,7 @@ int ttsd_data_add_speak_data(const int uid, const speak_data_s data)
 	return TTSD_ERROR_NONE;
 }
 
-int ttsd_data_get_speak_data(const int uid, speak_data_s* data)
+int ttsd_data_get_speak_data(int uid, speak_data_s* data)
 {
 	int index = 0;
 	index = ttsd_data_is_client(uid);
@@ -227,7 +244,7 @@ int ttsd_data_get_speak_data(const int uid, speak_data_s* data)
 	return TTSD_ERROR_NONE;
 }
 
-int ttsd_data_add_sound_data(const int uid, const sound_data_s data)
+int ttsd_data_add_sound_data(int uid, sound_data_s data)
 {
 	int index = 0;
 	index = ttsd_data_is_client(uid);
@@ -245,7 +262,7 @@ int ttsd_data_add_sound_data(const int uid, const sound_data_s data)
 	return TTSD_ERROR_NONE;
 }
 
-int ttsd_data_get_sound_data(const int uid, sound_data_s* data)
+int ttsd_data_get_sound_data(int uid, sound_data_s* data)
 {
 	int index = 0;
 	index = ttsd_data_is_client(uid);
@@ -276,7 +293,7 @@ int ttsd_data_get_sound_data(const int uid, sound_data_s* data)
 	return TTSD_ERROR_NONE;
 }
 
-int ttsd_data_get_sound_data_size(const int uid)
+int ttsd_data_get_sound_data_size(int uid)
 {
 	int index = 0;
 	index = ttsd_data_is_client(uid);
@@ -289,7 +306,7 @@ int ttsd_data_get_sound_data_size(const int uid)
 	return g_app_list[index].m_wav_data.size();
 }
 
-int ttsd_data_clear_data(const int uid)
+int ttsd_data_clear_data(int uid)
 {
 	int index = 0;
 
@@ -332,7 +349,7 @@ int ttsd_data_clear_data(const int uid)
 	return TTSD_ERROR_NONE;
 }
 
-int ttsd_data_get_client_state(const int uid, app_state_e* state)
+int ttsd_data_get_client_state(int uid, app_state_e* state)
 {
 	int index = 0;
 
@@ -347,7 +364,7 @@ int ttsd_data_get_client_state(const int uid, app_state_e* state)
 	return TTSD_ERROR_NONE;
 }
 
-int ttsd_data_set_client_state(const int uid, const app_state_e state)
+int ttsd_data_set_client_state(int uid, app_state_e state)
 {
 	int index = 0;
 
@@ -430,4 +447,72 @@ bool ttsd_data_is_uttid_valid(int uid, int uttid)
 		return false;
 
 	return true;
+}
+
+int ttsd_data_is_current_playing()
+{
+	int vsize = g_app_list.size();
+
+	for (int i=0; i<vsize; i++) {
+		if(g_app_list[i].state == APP_STATE_PLAYING) {
+			return g_app_list[i].uid;		
+		}
+	}
+
+	return -1;
+}
+
+/*
+* setting data
+*/
+
+int ttsd_setting_data_add(int pid)
+{
+	if (-1 != ttsd_setting_data_is_setting(pid)) {
+		SLOG(LOG_ERROR, TAG_TTSD, "[DATA ERROR] pid(%d) is not valid", pid);	
+		return TTSD_ERROR_INVALID_PARAMETER;
+	}
+
+	setting_app_data_s setting_app;
+	setting_app.pid = pid;
+	
+	g_setting_list.insert(g_setting_list.end(), setting_app);
+
+#ifdef DATA_DEBUG
+	__data_show_list();
+#endif 
+	return TTSD_ERROR_NONE;
+
+}
+
+int ttsd_setting_data_delete(int pid)
+{
+	int index = 0;
+
+	index = ttsd_setting_data_is_setting(pid);
+
+	if (index < 0) {
+		SLOG(LOG_ERROR, TAG_TTSD, "[DATA ERROR] uid is not valid (%d)", pid);	
+		return -1;
+	}
+
+	g_setting_list.erase(g_setting_list.begin()+index);
+
+#ifdef DATA_DEBUG
+	__data_show_list();
+#endif 
+	return TTSD_ERROR_NONE;
+}
+
+int ttsd_setting_data_is_setting(int pid)
+{
+	int vsize = g_setting_list.size();
+
+	for (int i=0; i<vsize; i++) {
+		if(g_setting_list[i].pid == pid) {
+			return i;		
+		}
+	}
+
+	return -1;
 }

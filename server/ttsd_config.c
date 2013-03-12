@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2012, 2013 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -11,212 +11,229 @@
 *  limitations under the License.
 */
 
-
-#include <vconf.h>
+#include <Ecore_File.h>
 #include "ttsd_main.h"
 #include "ttsd_config.h"
 
-/*
-* tts-daemon config
-*/
+#define CONFIG_FILE_PATH	CONFIG_DIRECTORY"/ttsd.conf"
+#define CONFIG_DEFAULT		BASE_DIRECTORY_DEFAULT"/ttsd.conf"
 
-int ttsd_config_get_char_type(const char* key, char** value)
+#define ENGINE_ID	"ENGINE_ID"
+#define VOICE		"VOICE"
+#define SPEED		"SPEED"
+
+
+static char*	g_engine_id;
+static char*	g_language;
+static int	g_vc_type;
+static int	g_speed;
+
+int __ttsd_config_save()
 {
-	if (NULL == key || NULL == value) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Config ERROR] Input parameter is NULL\n");
-		return TTSD_ERROR_INVALID_PARAMETER;
-	} 
+	if (0 != access(CONFIG_FILE_PATH, R_OK|W_OK)) {
+		if (0 == ecore_file_mkpath(CONFIG_DIRECTORY)) {
+			SLOG(LOG_ERROR, TAG_TTSD, "[Config ERROR ] Fail to create directory (%s)", CONFIG_DIRECTORY);
+			return -1;
+		}
 
-	*value = vconf_get_str(key);
-	if (NULL == *value) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Config ERROR] fail to get char type from config : key(%s)\n", key);
+		SLOG(LOG_WARN, TAG_TTSD, "[Config] Create directory (%s)", CONFIG_DIRECTORY);
+	}
+
+	FILE* config_fp;
+	config_fp = fopen(CONFIG_FILE_PATH, "w+");
+
+	if (NULL == config_fp) {
+		/* make file and file default */
+		SLOG(LOG_WARN, TAG_TTSD, "[Config WARNING] Fail to open config (%s)", CONFIG_FILE_PATH);
 		return -1;
 	}
+
+	SLOG(LOG_DEBUG, TAG_TTSD, "[Config] Rewrite config file");
+
+	/* Write engine id */
+	fprintf(config_fp, "%s %s\n", ENGINE_ID, g_engine_id);
+
+	/* Write voice */
+	fprintf(config_fp, "%s %s %d\n", VOICE, g_language, g_vc_type);
+
+	/* Read speed */
+	fprintf(config_fp, "%s %d\n", SPEED, g_speed);
+
+	fclose(config_fp);
 
 	return 0;
 }
 
-int ttsd_config_set_char_type(const char* key, const char* value)
+
+int __ttsd_config_load()
 {
-	if (NULL == key || NULL == value) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Config ERROR] Input parameter is NULL\n");
-		return TTSD_ERROR_INVALID_PARAMETER;
-	} 
+	FILE* config_fp;
+	char buf_id[256] = {0};
+	char buf_param[256] = {0};
+	int int_param = 0;
+	bool is_default_open = false;
 
-	if (0 != vconf_set_str(key, value)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Config ERROR] fail to set char type \n"); 
-		return -1;
-	}
+	config_fp = fopen(CONFIG_FILE_PATH, "r");
 
-	return 0;
-}
-
-int ttsd_config_get_bool_type(const char* key, bool* value)
-{
-	if (NULL == key || NULL == value) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Config ERROR] Input parameter is NULL\n");
-		return TTSD_ERROR_INVALID_PARAMETER;
-	} 
-
-	int result ;
-	if (0 != vconf_get_int(key, &result)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Config ERROR] fail to get bool type config : key(%s)\n", key);
-		return -1;
-	}
-
-	*value = (bool) result;
-
-	return 0;
-}
-
-int ttsd_config_set_bool_type(const char* key, const bool value)
-{
-	if (NULL == key) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Config ERROR] Input parameter is NULL\n");
-		return TTSD_ERROR_INVALID_PARAMETER;
-	} 
-
-	int result = (int)value;
-	if (0 != vconf_set_int(key, result)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Config ERROR] fail to set bool type config : key(%s)\n", key);
-		return -1;
-	}
-
-	return 0;
-}
-
-int ttsd_config_get_int_type(const char* key, int* value)
-{
-	if (NULL == key || NULL == value) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Config ERROR] Input parameter is NULL\n");
-		return TTSD_ERROR_INVALID_PARAMETER;
-	} 
-
-	if (0 != vconf_get_int(key, value)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Config ERROR] fail to get bool type config : key(%s)\n", key);
-		return -1;
-	}
-
-	return 0;
-}
-
-int ttsd_config_set_int_type(const char* key, const int value)
-{
-	if (NULL == key) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Config ERROR] Input parameter is NULL\n");
-		return TTSD_ERROR_INVALID_PARAMETER;
-	} 
-
-	if (0 != vconf_set_int(key, value)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Config ERROR] fail to set int type config : key(%s)\n", key);
-		return -1;
-	}
-
-	return 0;
-}
-
-/*
-* interface for engine plug-in
-*/
-
-int config_make_key_for_engine(const char* engine_id, const char* key, char** out_key)
-{
-	int key_size = strlen(TTSD_CONFIG_PREFIX) + strlen(engine_id) + strlen(key) + 2; /* 2 is '/' and '\0' */
-
-	*out_key = (char*) g_malloc0( sizeof(char) * key_size);
-
-	if (*out_key == NULL) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Config ERROR] Not enough memory!! \n");
-		return -1;
-	} else {
-		snprintf(*out_key, key_size, "%s%s/%s", TTSD_CONFIG_PREFIX, engine_id, key );
-		SLOG(LOG_DEBUG, TAG_TTSD, "[Config DEBUG] make key (%s) \n", *out_key);
-	}
-
-	return 0;
-}
-
-int ttsd_config_set_persistent_data(const char* engine_id, const char* key, const char* value)
-{
-	char* vconf_key = NULL;
-
-	if (0 != config_make_key_for_engine(engine_id, key, &vconf_key)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Config ERROR] fail config_make_key_for_engine()\n"); 
-		return -1;
-	}
-
-	if (0 != vconf_set_str(vconf_key, value)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Config ERROR] fail to set key, value\n");
+	if (NULL == config_fp) {
+		SLOG(LOG_WARN, TAG_TTSD, "[Config WARNING] Not open file(%s)", CONFIG_FILE_PATH);
 		
-		if(vconf_key != NULL)	
-			g_free(vconf_key);
-
-		return -1;
+		config_fp = fopen(CONFIG_DEFAULT, "r");
+		if (NULL == config_fp) {
+			SLOG(LOG_ERROR, TAG_TTSD, "[Config WARNING] Not open original config file(%s)", CONFIG_FILE_PATH);
+			return -1;
+		}
+		is_default_open = true;
 	}
 
-	SLOG(LOG_DEBUG, TAG_TTSD, "[Config DEBUG] Set data : key(%s), value(%s) \n", vconf_key, value);
-
-	if (vconf_key != NULL)	
-		g_free(vconf_key);
-
-	return 0;
-}
-
-int ttsd_config_get_persistent_data(const char* engine_id, const char* key, char** value)
-{
-	char* vconf_key = NULL;
-
-	if (0 != config_make_key_for_engine(engine_id, key, &vconf_key)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Config ERROR] fail config_make_key_for_engine()\n");
+	/* Read engine id */
+	if (EOF == fscanf(config_fp, "%s %s", buf_id, buf_param)) {
+		fclose(config_fp);
+		SLOG(LOG_WARN, TAG_TTSD, "[Config WARNING] Fail to read config (engine id)");
+		__ttsd_config_save();
 		return -1;
-	}
-
-	char* temp;
-	temp = vconf_get_str(vconf_key);
-	if (temp == NULL) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Config ERROR] fail to get value\n");
-
-		if(vconf_key != NULL)	
-			g_free(vconf_key);
-
-		return -1;
-	}
-
-	*value = g_strdup(temp);
-
-	SLOG(LOG_DEBUG, TAG_TTSD, "[Config DEBUG] Get data : key(%s), value(%s) \n", vconf_key, *value);
-
-	if (NULL != vconf_key)	
-		g_free(vconf_key);
-
-	if (NULL != temp)		
-		g_free(temp);
-
-	return 0;
-}
-
-int ttsd_config_remove_persistent_data(const char* engine_id, const char* key)
-{
-	char* vconf_key = NULL;
-	int result = 0;
-
-	if (0 != config_make_key_for_engine(engine_id, key, &vconf_key)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Config ERROR] fail config_make_key_for_engine()\n");
-		return -1;
-	}
-
-	if( NULL == vconf_key )		
-		return -1;
-
-	if (0 != vconf_unset(vconf_key)) {
-		SLOG(LOG_ERROR, TAG_TTSD, "[Config ERROR] fail to remove key\n");
-		result = -1;
 	} else {
-		SLOG(LOG_DEBUG, TAG_TTSD, "[Config DEBUG] Remove data : key(%s)", vconf_key);
+		if (0 == strncmp(ENGINE_ID, buf_id, strlen(ENGINE_ID))) {
+			g_engine_id = strdup(buf_param);
+		} else {
+			fclose(config_fp);
+			SLOG(LOG_WARN, TAG_TTSD, "[Config WARNING] Fail to load config (engine id)");
+			__ttsd_config_save();
+			return -1;
+		}
 	}
 
-	if( vconf_key != NULL )	
-		g_free(vconf_key);
+	
 
-	return result;
+	/* Read voice */
+	if (EOF == fscanf(config_fp, "%s %s %d", buf_id, buf_param, &int_param)) {
+		fclose(config_fp);
+		SLOG(LOG_WARN, TAG_TTSD, "[Config WARNING] Fail to read config (voice)");
+		__ttsd_config_save();
+		return -1;
+	} else {
+		if (0 == strncmp(VOICE, buf_id, strlen(VOICE))) {
+			g_language = strdup(buf_param);
+			g_vc_type = int_param;
+		} else {
+			fclose(config_fp);
+			SLOG(LOG_WARN, TAG_TTSD, "[Config WARNING] Fail to load config (voice)");
+			__ttsd_config_save();
+			return -1;
+		}
+	}
+	
+	/* Read speed */
+	if (EOF == fscanf(config_fp, "%s %d", buf_id, &int_param)) {
+		fclose(config_fp);
+		SLOG(LOG_WARN, TAG_TTSD, "[Config WARNING] Fail to read config (speed)");
+		__ttsd_config_save();
+		return -1;
+	} else {
+		if (0 == strncmp(SPEED, buf_id, strlen(SPEED))) {
+			g_speed = int_param;
+		} else {
+			fclose(config_fp);
+			SLOG(LOG_WARN, TAG_TTSD, "[Config WARNING] Fail to load config (speed)");
+			__ttsd_config_save();
+			return -1;
+		}
+	}
+	
+	fclose(config_fp);
+
+	SLOG(LOG_DEBUG, TAG_TTSD, "[Config] Load config : engine(%s), voice(%s,%d), speed(%d)",
+		g_engine_id, g_language, g_vc_type, g_speed);
+
+	if (true == is_default_open) {
+		if(0 == __ttsd_config_save()) {
+			SLOG(LOG_DEBUG, TAG_TTSD, "[Config] Create config(%s)", CONFIG_FILE_PATH);
+		}
+	}
+
+	return 0;
+}
+
+int ttsd_config_initialize()
+{
+	g_engine_id = NULL;
+	g_language = NULL;
+	g_vc_type = 1;
+	g_speed = 3;
+
+	__ttsd_config_load();
+
+	return 0;
+}
+
+int ttsd_config_finalize()
+{
+	__ttsd_config_save();
+	return 0;
+}
+
+int ttsd_config_get_default_engine(char** engine_id)
+{
+	if (NULL == engine_id)
+		return -1;
+
+	*engine_id = strdup(g_engine_id);
+	return 0;
+}
+
+int ttsd_config_set_default_engine(const char* engine_id)
+{
+	if (NULL == engine_id)
+		return -1;
+
+	if (NULL != g_engine_id)
+		free(g_engine_id);
+
+	g_engine_id = strdup(engine_id);
+	__ttsd_config_save();
+	return 0;
+}
+
+int ttsd_config_get_default_voice(char** language, int* type)
+{
+	if (NULL == language || NULL == type)
+		return -1;
+
+	*language = strdup(g_language);
+	*type = g_vc_type;
+
+	return 0;
+}
+
+int ttsd_config_set_default_voice(const char* language, int type)
+{
+	if (NULL == language)
+		return -1;
+
+	if (NULL != g_language)
+		free(g_language);
+
+	g_language = strdup(language);
+	g_vc_type = type;
+
+	__ttsd_config_save();
+
+	return 0;
+}
+
+int ttsd_config_get_default_speed(int* speed)
+{
+	if (NULL == speed)
+		return -1;
+
+	*speed = g_speed;
+
+	return 0;
+}
+
+int ttsd_config_set_default_speed(int speed)
+{
+	g_speed = speed;
+	__ttsd_config_save();
+	return 0;
 }

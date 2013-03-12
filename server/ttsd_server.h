@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2012, 2013 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -16,6 +16,7 @@
 #define __TTSD_SERVER_CORE_H_
 
 #include <glib.h>
+#include <Ecore.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,6 +28,8 @@ extern "C" {
 
 /** Daemon initialize */
 int ttsd_initialize();
+
+Eina_Bool ttsd_cleanup_client(void *data);
 
 /*
 * Server API for client
@@ -47,14 +50,6 @@ int ttsd_server_play(int uid);
 int ttsd_server_stop(int uid);
 
 int ttsd_server_pause(int uid, int* utt_id);
-
-/*
-* Server API for Internal event
-*/
-
-int ttsd_server_start_next_play(int uid);
-
-int ttsd_server_start_next_synthesis(int uid);
 
 /*
 * Server API for setting
