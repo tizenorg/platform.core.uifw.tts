@@ -47,6 +47,15 @@ typedef enum {
 } tts_error_e;
 
 /** 
+* @brief Enumerations of tts mode.
+*/
+typedef enum {
+	TTS_MODE_DEFAULT = 0,		/**< Default mode for normal application */
+	TTS_MODE_NOTIFICATION,		/**< Notification mode */
+	TTS_MODE_SCREEN_READER		/**< Screen reader mode */
+}tts_mode_e;
+
+/** 
 * @brief Enumerations of speaking speed.
 */
 typedef enum {
@@ -56,7 +65,7 @@ typedef enum {
 	TTS_SPEED_NORMAL,		/**< Normal */
 	TTS_SPEED_FAST,			/**< Fast */
 	TTS_SPEED_VERY_FAST		/**< Very fast */
-} tts_speed_e;
+}tts_speed_e;
 
 /** 
 * @brief Enumerations of voice type.
@@ -69,7 +78,7 @@ typedef enum {
 	TTS_VOICE_TYPE_USER1,		/**< Engine defined */
 	TTS_VOICE_TYPE_USER2,		/**< Engine defined */
 	TTS_VOICE_TYPE_USER3		/**< Engine defined */
-} tts_voice_type_e;
+}tts_voice_type_e;
 
 /** 
 * @brief Enumerations of state.
@@ -196,6 +205,40 @@ int tts_create(tts_h* tts);
 * @see tts_create()
 */
 int tts_destroy(tts_h tts);
+
+/**
+* @brief Set tts mode. 
+*
+* @param[in] tts The handle for TTS
+* @param[in] mode The mode
+*
+* @return 0 on success, otherwise a negative error value
+* @retval #TTS_ERROR_NONE Successful
+* @retval #TTS_ERROR_INVALID_PARAMETER Invalid parameter
+* @retval #TTS_ERROR_INVALID_STATE Invalid state
+*
+* @pre The state should be #TTS_STATE_CREATED.
+*
+* @see tts_get_mode()
+*/
+int tts_set_mode(tts_h tts, tts_mode_e mode);
+
+/**
+* @brief Get tts mode. 
+*
+* @param[in] tts The handle for TTS
+* @param[out] mode The mode
+*
+* @return 0 on success, otherwise a negative error value
+* @retval #TTS_ERROR_NONE Successful
+* @retval #TTS_ERROR_INVALID_PARAMETER Invalid parameter
+* @retval #TTS_ERROR_INVALID_STATE Invalid state
+*
+* @pre The state should be #TTS_STATE_CREATED.
+*
+* @see tts_set_mode()
+*/
+int tts_get_mode(tts_h tts, tts_mode_e* mode);
 
 /**
 * @brief Connects the daemon asynchronously. 

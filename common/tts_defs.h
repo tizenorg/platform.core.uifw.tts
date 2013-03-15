@@ -35,6 +35,13 @@ extern "C" {
 #define TTS_SERVER_SERVICE_OBJECT_PATH	"/com/samsung/voice/ttsserver"
 #define TTS_SERVER_SERVICE_INTERFACE	"com.samsung.voice.ttsserver"
 
+#define TTS_NOTI_SERVER_SERVICE_NAME		"service.connect.ttsnotiserver"
+#define TTS_NOTI_SERVER_SERVICE_OBJECT_PATH	"/com/samsung/voice/ttsnotiserver"
+#define TTS_NOTI_SERVER_SERVICE_INTERFACE	"com.samsung.voice.ttsnotiserver"
+
+#define TTS_SR_SERVER_SERVICE_NAME		"service.connect.ttssrserver"
+#define TTS_SR_SERVER_SERVICE_OBJECT_PATH	"/com/samsung/voice/ttssrserver"
+#define TTS_SR_SERVER_SERVICE_INTERFACE		"com.samsung.voice.ttssrserver"
 
 /******************************************************************************************
 * Message Definition for APIs
@@ -74,6 +81,12 @@ extern "C" {
 #define TTS_SETTING_METHOD_SET_DEFAULT_SPEED	"tts_setting_method_set_speed"
 #define TTS_SETTING_METHOD_GET_ENGINE_SETTING	"tts_setting_method_get_engine_setting"
 #define TTS_SETTING_METHOD_SET_ENGINE_SETTING	"tts_setting_method_set_engine_setting"
+
+/******************************************************************************************
+* Message Definition for tts-daemon internal
+*******************************************************************************************/
+
+#define TTSD_SIGNAL_NEXT_SYNTHESIS	"ttsd_signal_start_synthesis"
 
 #ifdef __cplusplus
 }

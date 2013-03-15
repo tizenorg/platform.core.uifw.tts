@@ -19,9 +19,13 @@
 extern "C" {
 #endif
 
-int ttsd_config_initialize();
+typedef void (*ttsd_config_lang_changed_cb)(const char* langauge, int type);
+
+int ttsd_config_initialize(ttsd_config_lang_changed_cb callback);
 
 int ttsd_config_finalize();
+
+int ttsd_config_update_language();
 
 int ttsd_config_get_default_engine(char** engine_id);
 
@@ -34,6 +38,9 @@ int ttsd_config_set_default_voice(const char* langauge, int type);
 int ttsd_config_get_default_speed(int* speed);
 
 int ttsd_config_set_default_speed(int speed);
+
+int ttsd_config_save_error(int uid, int uttid, const char* lang, int vctype, const char* text, 
+			   const char* func, int line, const char* message);
 
 #ifdef __cplusplus
 }

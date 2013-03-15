@@ -34,6 +34,8 @@ int ttsdc_send_error_message(int pid, int uid, int uttid, int reason);
 
 int ttsdc_send_set_state_message(int pid, int uid, int state);
 
+int ttsd_send_start_next_synthesis();
+
 #ifdef __cplusplus
 }
 #endif

@@ -1,0 +1,12 @@
+tts-server system::app_logging wx
+tts-server tts-engine-samsung::vdata rx
+tts-server system::vconf rwxat
+tts-server sound_server rw
+tts-server system::share rwxat
+tts-server pulseaudio rwxat
+tts-server dbus rw
+tts-server mdm-server w
+tts-server system::use_internet rw
+system::use_internet tts-server w
+tts-server stt-server rwx
+tts-server sys-assert::core rwxat

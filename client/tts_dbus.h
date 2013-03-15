@@ -25,8 +25,7 @@ int tts_dbus_open_connection();
 
 int tts_dbus_close_connection();
 
-
-int tts_dbus_request_hello();
+int tts_dbus_request_hello(int uid);
 
 int tts_dbus_request_initialize(int uid);
 

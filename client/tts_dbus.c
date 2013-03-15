@@ -311,16 +311,54 @@ int tts_dbus_reconnect()
 	return 0;
 }
 
+DBusMessage* __tts_dbus_make_message(int uid, const char* method)
+{
+	if (NULL == method) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input method is NULL"); 
+		return NULL;
+	}
 
-int tts_dbus_request_hello()
+	tts_client_s* client = tts_client_get_by_uid(uid);
+
+	/* check handle */
+	if (NULL == client) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] uid is not available");
+		return NULL;
+	}
+
+	DBusMessage* msg;
+
+	if (TTS_MODE_DEFAULT == client->mode) {
+		msg = dbus_message_new_method_call(
+			TTS_SERVER_SERVICE_NAME, 
+			TTS_SERVER_SERVICE_OBJECT_PATH, 
+			TTS_SERVER_SERVICE_INTERFACE, 
+			method);
+	} else if (TTS_MODE_NOTIFICATION == client->mode) {
+		msg = dbus_message_new_method_call(
+			TTS_NOTI_SERVER_SERVICE_NAME, 
+			TTS_NOTI_SERVER_SERVICE_OBJECT_PATH, 
+			TTS_NOTI_SERVER_SERVICE_INTERFACE, 
+			method);
+	} else if (TTS_MODE_SCREEN_READER == client->mode) {
+		msg = dbus_message_new_method_call(
+			TTS_SR_SERVER_SERVICE_NAME, 
+			TTS_SR_SERVER_SERVICE_OBJECT_PATH, 
+			TTS_SR_SERVER_SERVICE_INTERFACE, 
+			method);
+	} else {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input mode is not available"); 
+		return NULL;
+	}
+
+	return msg;
+}
+
+int tts_dbus_request_hello(int uid)
 {
 	DBusMessage* msg;
 
-	msg = dbus_message_new_method_call(
-		TTS_SERVER_SERVICE_NAME, 
-		TTS_SERVER_SERVICE_OBJECT_PATH, 
-		TTS_SERVER_SERVICE_INTERFACE, 
-		TTS_METHOD_HELLO);
+	msg = __tts_dbus_make_message(uid, TTS_METHOD_HELLO);
 
 	if (NULL == msg) { 
 		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts hello : Fail to make message \n"); 
@@ -355,11 +393,7 @@ int tts_dbus_request_initialize(int uid)
 	DBusError err;
 	dbus_error_init(&err);
 
-	msg = dbus_message_new_method_call(
-		TTS_SERVER_SERVICE_NAME, 
-		TTS_SERVER_SERVICE_OBJECT_PATH, 
-		TTS_SERVER_SERVICE_INTERFACE, 
-		TTS_METHOD_INITIALIZE);
+	msg = __tts_dbus_make_message(uid, TTS_METHOD_INITIALIZE);
 
 	if (NULL == msg) { 
 		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts initialize : Fail to make message \n");
@@ -423,11 +457,7 @@ int tts_dbus_request_finalize(int uid)
 	DBusError err;
 	dbus_error_init(&err);
 
-	msg = dbus_message_new_method_call(
-		TTS_SERVER_SERVICE_NAME, 
-		TTS_SERVER_SERVICE_OBJECT_PATH, 
-		TTS_SERVER_SERVICE_INTERFACE, 
-		TTS_METHOD_FINALIZE);
+	msg = __tts_dbus_make_message(uid, TTS_METHOD_FINALIZE);
 
 	if (NULL == msg) { 
 		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts finalize : Fail to make message"); 
@@ -487,11 +517,7 @@ int tts_dbus_request_get_support_voice(int uid, tts_h tts, tts_supported_voice_c
 	DBusError err;
 	dbus_error_init(&err);
 
-	msg = dbus_message_new_method_call(
-		TTS_SERVER_SERVICE_NAME, 
-		TTS_SERVER_SERVICE_OBJECT_PATH, 
-		TTS_SERVER_SERVICE_INTERFACE, 
-		TTS_METHOD_GET_SUPPORT_VOICES);
+	msg = __tts_dbus_make_message(uid, TTS_METHOD_GET_SUPPORT_VOICES);
 
 	if (NULL == msg) { 
 		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts get supported voices : Fail to make message"); 
@@ -587,11 +613,7 @@ int tts_dbus_request_get_default_voice(int uid , char** lang, tts_voice_type_e* 
 	DBusError err;
 	dbus_error_init(&err);
 
-	msg = dbus_message_new_method_call(
-		TTS_SERVER_SERVICE_NAME, 
-		TTS_SERVER_SERVICE_OBJECT_PATH, 
-		TTS_SERVER_SERVICE_INTERFACE, 
-		TTS_METHOD_GET_CURRENT_VOICE);
+	msg = __tts_dbus_make_message(uid, TTS_METHOD_GET_CURRENT_VOICE);
 
 	if (NULL == msg) { 
 		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts get default voice : Fail to make message"); 
@@ -672,11 +694,7 @@ int tts_dbus_request_add_text(int uid, const char* text, const char* lang, int v
 	DBusError err;
 	dbus_error_init(&err);
 
-	msg = dbus_message_new_method_call(
-		TTS_SERVER_SERVICE_NAME, 
-		TTS_SERVER_SERVICE_OBJECT_PATH, 
-		TTS_SERVER_SERVICE_INTERFACE, 
-		TTS_METHOD_ADD_QUEUE);
+	msg = __tts_dbus_make_message(uid, TTS_METHOD_ADD_QUEUE);
 
 	if (NULL == msg) { 
 		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts add text : Fail to make message"); 
@@ -745,11 +763,7 @@ int tts_dbus_request_play(int uid)
 	DBusError err;
 	dbus_error_init(&err);
 
-	msg = dbus_message_new_method_call(
-		TTS_SERVER_SERVICE_NAME,
-		TTS_SERVER_SERVICE_OBJECT_PATH,  
-		TTS_SERVER_SERVICE_INTERFACE,    
-		TTS_METHOD_PLAY );               
+	msg = __tts_dbus_make_message(uid, TTS_METHOD_PLAY);
 
 	if (NULL == msg) { 
 		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts play : Fail to make message"); 
@@ -811,11 +825,7 @@ int tts_dbus_request_stop(int uid)
 	DBusError err;
 	dbus_error_init(&err);
 
-	msg = dbus_message_new_method_call(
-		TTS_SERVER_SERVICE_NAME, 
-		TTS_SERVER_SERVICE_OBJECT_PATH, 
-		TTS_SERVER_SERVICE_INTERFACE, 
-		TTS_METHOD_STOP);
+	msg = __tts_dbus_make_message(uid, TTS_METHOD_STOP);
 
 	if (NULL == msg) { 
 		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts stop : Fail to make message"); 
@@ -876,11 +886,7 @@ int tts_dbus_request_pause(int uid)
 	DBusError err;
 	dbus_error_init(&err);
 
-	msg = dbus_message_new_method_call(
-		TTS_SERVER_SERVICE_NAME, 
-		TTS_SERVER_SERVICE_OBJECT_PATH, 
-		TTS_SERVER_SERVICE_INTERFACE, 
-		TTS_METHOD_PAUSE);
+	msg = __tts_dbus_make_message(uid, TTS_METHOD_PAUSE);
 
 	if (NULL == msg) { 
 		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts pause : Fail to make message"); 

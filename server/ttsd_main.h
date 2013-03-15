@@ -32,8 +32,6 @@ extern "C" {
 #endif
 
 /* TTS Daemon Define */ 
-#define TAG_TTSD "ttsd"
-
 #define BASE_DIRECTORY_DEFAULT			"/usr/lib/voice/tts/1.0"
 #define ENGINE_DIRECTORY_DEFAULT		"/usr/lib/voice/tts/1.0/engine"
 #define ENGINE_DIRECTORY_DEFAULT_SETTING	"/usr/lib/voice/tts/1.0/setting"
@@ -60,6 +58,11 @@ typedef enum {
 	TTSD_ERROR_OPERATION_FAILED	= -0x0100000 | 0x25	/**< Operation failed  */
 }ttsd_error_e;
 
+typedef enum {
+	TTSD_MODE_DEFAULT = 0,		/**< Default mode for normal application */
+	TTSD_MODE_NOTIFICATION,		/**< Notification mode */
+	TTSD_MODE_SCREEN_READER		/**< Screen reader mode */
+}ttsd_mode_e;
 
 typedef enum {
 	TTSD_INTERRUPTED_PAUSED = 0,	/**< Current state change 'Pause' */
@@ -82,6 +85,12 @@ typedef struct {
 	char* key;
 	char* value;
 }engine_setting_s;
+
+/* get daemon mode : default, notification or screen reader */
+ttsd_mode_e ttsd_get_mode();
+
+/* Get log tag : default, notification, screen reader */
+char* get_tag();
 
 #ifdef __cplusplus
 }

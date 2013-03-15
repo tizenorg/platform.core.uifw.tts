@@ -24,6 +24,8 @@
 
 static bool g_is_daemon_started = false;
 
+static Ecore_Timer* g_setting_connect_timer = NULL;
+
 static int __check_setting_tts_daemon();
 
 static tts_setting_state_e g_state = TTS_SETTING_STATE_NONE;
@@ -72,6 +74,8 @@ static Eina_Bool __tts_setting_connect_daemon(void *data)
 
 	ecore_timer_add(0, __tts_setting_initialized, NULL);
 
+	g_setting_connect_timer = NULL;
+
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
 
@@ -83,14 +87,14 @@ int tts_setting_initialize()
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Initialize TTS Setting");
 
 	if (TTS_SETTING_STATE_READY == g_state) {
-		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] TTS Setting has already been initialized. \n");
+		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] TTS Setting has already been initialized.");
 		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_SETTING_ERROR_NONE;
 	}
 
 	if( 0 != tts_setting_dbus_open_connection() ) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to open connection\n ");
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to open connection");
 		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_SETTING_ERROR_OPERATION_FAILED;
@@ -140,14 +144,14 @@ int tts_setting_initialize_async(tts_setting_initialized_cb callback, void* user
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Initialize TTS Setting");
 
 	if (TTS_SETTING_STATE_READY == g_state) {
-		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] TTS Setting has already been initialized. \n");
+		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] TTS Setting has already been initialized.");
 		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_SETTING_ERROR_NONE;
 	}
 
 	if( 0 != tts_setting_dbus_open_connection() ) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to open connection\n ");
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to open connection");
 		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_SETTING_ERROR_OPERATION_FAILED;
@@ -156,7 +160,7 @@ int tts_setting_initialize_async(tts_setting_initialized_cb callback, void* user
 	g_initialized_cb = callback;
 	g_user_data = user_data;
 
-	ecore_timer_add(0, __tts_setting_connect_daemon, NULL);
+	g_setting_connect_timer = ecore_timer_add(0, __tts_setting_connect_daemon, NULL);
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
@@ -169,24 +173,24 @@ int tts_setting_finalize()
 {
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Finalize TTS Setting");
 
-	if (TTS_SETTING_STATE_NONE == g_state) {
-		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] Not initialized");
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
-		return TTS_SETTING_ERROR_INVALID_STATE;
+	int ret = 0;
+
+	if (TTS_SETTING_STATE_READY == g_state) {
+		ret = tts_setting_dbus_request_finalilze(); 
+		if (0 != ret) {
+			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] result : %d", ret);
+		}
 	}
 
-	int ret = tts_setting_dbus_request_finalilze(); 
-	if (0 != ret) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] result : %d", ret);
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
-
-		return TTS_SETTING_ERROR_OPERATION_FAILED;
+	if (NULL != g_setting_connect_timer) {
+		SLOG(LOG_DEBUG, TAG_TTSC, "Setting Connect Timer is remained");
+		ecore_timer_del(g_setting_connect_timer);
 	}
 
+	g_is_daemon_started = false;
+	
 	if (0 != tts_setting_dbus_close_connection()) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to close connection\n ");
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to close connection");
 	} else {
 		SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Finalize");
 	}
@@ -527,7 +531,6 @@ int tts_setting_set_engine_setting(const char* key, const char* value)
 int __setting_get_cmd_line(char *file, char *buf) 
 {
 	FILE *fp = NULL;
-	int i;
 
 	fp = fopen(file, "r");
 	if (fp == NULL) {
@@ -536,7 +539,11 @@ int __setting_get_cmd_line(char *file, char *buf)
 	}
 
 	memset(buf, 0, 256);
-	fgets(buf, 256, fp);
+	if (NULL == fgets(buf, 256, fp)) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail fgets command line");
+		fclose(fp);
+		return -1;
+	}
 	fclose(fp);
 
 	return 0;
@@ -577,32 +584,16 @@ static bool __tts_setting_is_alive()
 		if (0 == strncmp(cmdLine, "[tts-daemon]", strlen("[tts-daemon]")) ||
 			0 == strncmp(cmdLine, "tts-daemon", strlen("tts-daemon")) ||
 			0 == strncmp(cmdLine, "/usr/bin/tts-daemon", strlen("/usr/bin/tts-daemon"))) {
-				SLOG(LOG_DEBUG, TAG_TTSC, "tts-daemon is ALIVE !! \n");
+				SLOG(LOG_DEBUG, TAG_TTSC, "tts-daemon is ALIVE !!");
 				closedir(dir);
 				return TRUE;
 		}
 	}
-	SLOG(LOG_DEBUG, TAG_TTSC, "THERE IS NO tts-daemon !! \n");
+	SLOG(LOG_DEBUG, TAG_TTSC, "THERE IS NO tts-daemon !!");
 
 	closedir(dir);
 	return FALSE;
 
-}
-
-static void __setting_my_sig_child(int signo, siginfo_t *info, void *data)
-{
-	int status;
-	pid_t child_pid, child_pgid;
-
-	child_pgid = getpgid(info->si_pid);
-	SLOG(LOG_DEBUG, TAG_TTSC, "Signal handler: dead pid = %d, pgid = %d", info->si_pid, child_pgid);
-
-	while ((child_pid = waitpid(-1, &status, WNOHANG)) > 0)	{
-		if(child_pid == child_pgid)
-			killpg(child_pgid, SIGKILL);
-	}
-
-	return;
 }
 
 static int __check_setting_tts_daemon()
@@ -612,17 +603,6 @@ static int __check_setting_tts_daemon()
 
 	/* fork-exec tts-daemom */
 	int pid, i;
-	struct sigaction act, dummy;
-
-	act.sa_handler = NULL;
-	act.sa_sigaction = __setting_my_sig_child;
-	sigemptyset(&act.sa_mask);
-	act.sa_flags = SA_NOCLDSTOP | SA_SIGINFO;
-
-	if (sigaction(SIGCHLD, &act, &dummy) < 0) {
-		SLOG(LOG_ERROR, TAG_TTSC, "Cannot make a signal handler");
-		return -1;
-	}
 
 	pid = fork();
 
