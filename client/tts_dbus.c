@@ -13,6 +13,8 @@
 
 
 #include <Ecore.h>
+#include <sys/inotify.h>
+
 #include "tts_main.h"
 #include "tts_dbus.h"
 #include "tts_defs.h"
@@ -21,10 +23,15 @@
 #define INIT_WAITING_TIME 5000
 #define WAITING_TIME 1000
 
+#define BUFFER_SIZE 20
+
 static Ecore_Fd_Handler* g_fd_handler = NULL;
 
 static DBusConnection* g_conn = NULL;
 
+static Ecore_Fd_Handler* g_fd_handler_noti = NULL;
+static int g_fd_noti;
+static int g_wd_noti;
 
 extern int __tts_cb_error(int uid, tts_error_e reason, int utt_id);
 
@@ -100,6 +107,7 @@ static Eina_Bool listener_event_callback(void* data, Ecore_Fd_Handler *fd_handle
 		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 	} /* TTSD_METHOD_HELLO */
 
+#if 0
 	else if (dbus_message_is_method_call(msg, if_name, TTSD_METHOD_UTTERANCE_STARTED)) {
 		SLOG(LOG_DEBUG, TAG_TTSC, "===== Get utterance started");
 		int uid, uttid;
@@ -160,6 +168,7 @@ static Eina_Bool listener_event_callback(void* data, Ecore_Fd_Handler *fd_handle
 		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 	} /* TTSD_METHOD_SET_STATE */
+#endif
 
 	else if (dbus_message_is_method_call(msg, if_name, TTSD_METHOD_ERROR)) {
 		SLOG(LOG_DEBUG, TAG_TTSC, "===== Get error callback");
@@ -191,7 +200,6 @@ static Eina_Bool listener_event_callback(void* data, Ecore_Fd_Handler *fd_handle
 
 	return ECORE_CALLBACK_PASS_ON;
 }
-
 
 int tts_dbus_open_connection()
 {
@@ -295,7 +303,7 @@ int tts_dbus_close_connection()
 int tts_dbus_reconnect()
 {
 	bool connected = dbus_connection_get_is_connected(g_conn);
-	SLOG(LOG_DEBUG, "[DBUS] %s\n", connected ? "Connected" : "Not connected");
+	SLOG(LOG_DEBUG, TAG_TTSC, "[DBUS] %s\n", connected ? "Connected" : "Not connected");
 
 	if (false == connected) {
 		tts_dbus_close_connection();
@@ -682,7 +690,6 @@ int tts_dbus_request_get_default_voice(int uid , char** lang, tts_voice_type_e* 
 	return result;
 }
 
-
 int tts_dbus_request_add_text(int uid, const char* text, const char* lang, int vctype, int speed, int uttid)
 {
 	if (NULL == text || NULL == lang) {
@@ -939,4 +946,131 @@ int tts_dbus_request_pause(int uid)
 	}
 
 	return result;
+}
+
+
+static Eina_Bool inotify_event_callback(void* data, Ecore_Fd_Handler *fd_handler)
+{
+	SLOG(LOG_DEBUG, TAG_TTSC, "===== [File message] Inotify event call");
+
+	int length;
+
+	char buffer[sizeof(struct inotify_event) * BUFFER_SIZE];
+
+	length = read(g_fd_noti, buffer, (sizeof(struct inotify_event) * BUFFER_SIZE));
+	if (0 > length) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[File message] Empty Inotify event");
+		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+		SLOG(LOG_DEBUG, TAG_TTSC, " ");
+		return ECORE_CALLBACK_RENEW; 
+	}
+
+	bool is_empty_file = true;
+
+	char filename[64];
+	memset(filename, 0, 64);
+	snprintf(filename, 64, "%s_%d", MESSAGE_FILE_PATH, getpid());
+	FILE *fp;
+
+	int i = 0;
+	while (i < length) {
+		char text[256];
+		char msg[256];
+		int uid, send_data;
+
+		struct inotify_event *event = (struct inotify_event *)&buffer[i];
+		i = i + sizeof(struct inotify_event) + event->len;
+
+		if (IN_CLOSE_WRITE == event->mask) {
+
+			fp = fopen(filename, "r");
+			if (NULL == fp) {
+				SLOG(LOG_ERROR, TAG_TTSC, "[File message ERROR] open file failed");
+				SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+				SLOG(LOG_DEBUG, TAG_TTSC, " ");
+				return ECORE_CALLBACK_RENEW;
+			}
+
+			while (NULL != fgets(text, 256, fp)) {
+				if (0 > sscanf(text, "%s %d %d", msg, &uid, &send_data)) {
+					SLOG(LOG_ERROR, TAG_TTSC, "[File message] sscanf failed");
+					continue;
+				}
+				SLOG(LOG_DEBUG, TAG_TTSC, "[File message] message - %s, uid - %d, send_data - %d", msg, uid, send_data);
+				is_empty_file = false;
+
+				int uttid;
+				if (!strcmp(TTSD_METHOD_UTTERANCE_STARTED, msg)) {
+					uttid = send_data;
+					SLOG(LOG_DEBUG, TAG_TTSC, "<<<< Get Utterance started message : uid(%d), uttid(%d) \n", uid, uttid);
+					__tts_cb_utt_started(uid, uttid);
+				} else if (!strcmp(TTSD_METHOD_UTTERANCE_COMPLETED, msg)) {
+					uttid = send_data;
+					SLOG(LOG_DEBUG, TAG_TTSC, "<<<< Get Utterance completed message : uid(%d), uttid(%d) \n", uid, uttid);
+					__tts_cb_utt_completed(uid, uttid);
+
+				} else if (!strcmp(TTSD_METHOD_SET_STATE, msg)) {
+					int state = send_data;
+					SLOG(LOG_DEBUG, TAG_TTSC, "<<<< Get state change : uid(%d) , state(%d)", uid, state);
+					__tts_cb_set_state(uid, state);
+				}
+			}
+			fclose(fp);
+		} else {
+			SLOG(LOG_ERROR, TAG_TTSC, "[File message] Undefined event");
+		}
+	}
+
+	if (true == is_empty_file)
+		return ECORE_CALLBACK_PASS_ON;
+
+	fp = fopen(filename, "w+");
+	if (NULL == fp) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[File message ERROR] open file failed");
+	} else {
+		fclose(fp);
+	}
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+	SLOG(LOG_DEBUG, TAG_TTSC, " ");
+
+	return ECORE_CALLBACK_PASS_ON;
+}
+
+int tts_file_msg_open_connection()
+{
+	/* get file notification handler */
+	int fd;
+	int wd;
+
+	fd = inotify_init();
+	if (fd < 0) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[File message ERROR] Fail get inotify_fd");
+		return -1;
+	}
+	g_fd_noti = fd;
+
+	int pid = getpid();
+	char path[64];
+	memset(path, 0, 64);
+	snprintf(path, 64, "%s_%d", MESSAGE_FILE_PATH, pid);
+
+	wd = inotify_add_watch(fd, path, IN_CLOSE_WRITE);
+	g_wd_noti = wd;
+	g_fd_handler_noti = ecore_main_fd_handler_add(fd, ECORE_FD_READ, (Ecore_Fd_Cb)inotify_event_callback, NULL, NULL, NULL);		
+	if (NULL == g_fd_handler_noti) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[File message ERROR] Fail to get handler_noti");
+		return -1;
+	}
+	return 0;
+}
+
+int tts_file_msg_close_connection()
+{
+	/* del inotify variable */
+	ecore_main_fd_handler_del(g_fd_handler_noti);
+	inotify_rm_watch(g_fd_noti, g_wd_noti);
+	close(g_fd_noti);
+
+	return 0;
 }

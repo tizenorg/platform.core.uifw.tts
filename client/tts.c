@@ -22,7 +22,7 @@
 #include "tts_client.h"
 #include "tts_dbus.h"
 
-#define MAX_TEXT_COUNT 1000
+#define MAX_TEXT_COUNT 2000
 
 static bool g_is_daemon_started = false;
 
@@ -111,8 +111,9 @@ int tts_destroy(tts_h tts)
 	case TTS_STATE_READY:
 		/* Request Finalize */
 		ret = tts_dbus_request_finalize(client->uid);
-		if (0 != ret) 
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to request finalize");
+		if (0 != ret) {
+			SLOG(LOG_WARN, TAG_TTSC, "[ERROR] Fail to request finalize");
+		}
 
 		if (TTS_MODE_SCREEN_READER == client->mode) 
 			g_is_sr_daemon_started = false;
@@ -120,6 +121,19 @@ int tts_destroy(tts_h tts)
 			g_is_noti_daemon_started = false;
 		else 
 			g_is_daemon_started = false;
+
+		client->before_state = client->current_state;
+		client->current_state = TTS_STATE_CREATED;
+
+		ecore_timer_add(0, __tts_notify_state_changed, (void*)tts);
+
+		/* Close file message connection */
+		if (0 == tts_client_get_connected_client_count()) {
+			SLOG(LOG_DEBUG, TAG_TTSC, "Close file msg connection");
+			ret = tts_file_msg_close_connection();
+			if (0 != ret)
+				SLOG(LOG_WARN, TAG_TTSC, "[ERROR] Fail to close file message connection");
+		}
 
 	case TTS_STATE_CREATED:
 		if (NULL != g_connect_timer) {
@@ -279,6 +293,16 @@ static Eina_Bool __tts_connect_daemon(void *data)
 		/* success to connect tts-daemon */
 	}
 
+	if (0 == tts_client_get_connected_client_count()) {
+		SLOG(LOG_DEBUG, TAG_TTSC, "Open file msg connection");
+		ret = tts_file_msg_open_connection();
+		if (0 != ret) {
+			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to open file message connection");
+			ecore_timer_add(0, __tts_notify_error, (void*)client->tts);
+			return EINA_FALSE;
+		}
+	}
+
 	client->before_state = client->current_state;
 	client->current_state = TTS_STATE_READY;
 
@@ -343,8 +367,10 @@ int tts_unprepare(tts_h tts)
 		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_ERROR_INVALID_STATE;
 	}
+	
+	int ret;
 
-	int ret = tts_dbus_request_finalize(client->uid);
+	ret = tts_dbus_request_finalize(client->uid);
 	if (0 != ret) {
 		SLOG(LOG_WARN, TAG_TTSC, "[ERROR] Fail to request finalize");
 	}
@@ -356,11 +382,18 @@ int tts_unprepare(tts_h tts)
 	else 
 		g_is_daemon_started = false;
 
-
 	client->before_state = client->current_state;
 	client->current_state = TTS_STATE_CREATED;
 
 	ecore_timer_add(0, __tts_notify_state_changed, (void*)tts);
+
+	/* Close file message connection */
+	if (0 == tts_client_get_connected_client_count()) {
+		SLOG(LOG_DEBUG, TAG_TTSC, "Close file msg connection");
+		ret = tts_file_msg_close_connection();
+		if (0 != ret)
+			SLOG(LOG_WARN, TAG_TTSC, "[ERROR] Fail to close file message connection");
+	}
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");

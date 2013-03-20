@@ -63,6 +63,8 @@ extern "C" {
 #define TTSD_METHOD_ERROR		"ttsd_method_error"
 #define TTSD_METHOD_SET_STATE		"ttsd_method_set_state"
 #define TTSD_METHOD_GET_STATE		"ttsd_method_get_state"
+	
+#define MESSAGE_FILE_PATH		"/opt/home/app/.voice/tts"
 
 /******************************************************************************************
 * Message Definition for Setting
@@ -82,11 +84,13 @@ extern "C" {
 #define TTS_SETTING_METHOD_GET_ENGINE_SETTING	"tts_setting_method_get_engine_setting"
 #define TTS_SETTING_METHOD_SET_ENGINE_SETTING	"tts_setting_method_set_engine_setting"
 
+#if 0
 /******************************************************************************************
 * Message Definition for tts-daemon internal
 *******************************************************************************************/
 
 #define TTSD_SIGNAL_NEXT_SYNTHESIS	"ttsd_signal_start_synthesis"
+#endif
 
 #ifdef __cplusplus
 }

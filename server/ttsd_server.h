@@ -23,10 +23,8 @@ extern "C" {
 #endif
 
 /**
-* Daemon init
+* Server APIs
 */
-
-/** Daemon initialize */
 int ttsd_initialize();
 
 int ttsd_finalize();
@@ -53,10 +51,12 @@ int ttsd_server_stop(int uid);
 
 int ttsd_server_pause(int uid, int* utt_id);
 
+#if 0
 /*
 * Server API for internal event
 */
 int ttsd_server_start_next_synthesis();
+#endif
 
 /*
 * Server API for setting

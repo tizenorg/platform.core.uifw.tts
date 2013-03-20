@@ -31,6 +31,11 @@ static char *g_service_interface;
 
 int ttsdc_send_hello(int pid, int uid)
 {
+	if (NULL == g_conn) { 
+		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] Dbus connection is not available" );
+		return -1;
+	}
+
 	char service_name[64];
 	memset(service_name, 0, 64);
 	snprintf(service_name, 64, "%s%d", TTS_CLIENT_SERVICE_NAME, pid);
@@ -84,7 +89,13 @@ int ttsdc_send_hello(int pid, int uid)
 }
 
 int ttsdc_send_message(int pid, int uid, int data, char *method)
-{   
+{
+#if 0
+	if (NULL == g_conn) { 
+		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] Dbus connection is not available" );
+		return -1;
+	}
+
 	char service_name[64];
 	memset(service_name, 0, 64);
 	snprintf(service_name, 64, "%s%d", TTS_CLIENT_SERVICE_NAME, pid);
@@ -118,6 +129,23 @@ int ttsdc_send_message(int pid, int uid, int data, char *method)
 	}
 
 	dbus_message_unref(msg);
+#endif
+	char send_filename[64];
+	memset(send_filename, 0, 64);
+	snprintf(send_filename, 64, "/%s_%d", MESSAGE_FILE_PATH, pid);
+
+	FILE* fp;
+	fp = fopen(send_filename, "a+");
+	if (NULL == fp) {
+		SLOG(LOG_ERROR, get_tag(), "[File message ERROR] Fail to open message file");
+		return -1;
+	}
+	SLOG(LOG_DEBUG, get_tag(), "[File message] Write send file - %s, uid=%d, send_data=%d", method, uid, data);
+
+	fprintf(fp, "%s %d %d\n", method, uid, data);
+
+	fclose(fp);
+
 
 	return 0;
 }
@@ -139,6 +167,11 @@ int ttsdc_send_set_state_message(int pid, int uid, int state)
 
 int ttsdc_send_error_message(int pid, int uid, int uttid, int reason)
 {
+	if (NULL == g_conn) { 
+		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] Dbus connection is not available" );
+		return -1;
+	}
+
 	char service_name[64];
 	memset(service_name, 0, 64);
 	snprintf(service_name, 64, "%s%d", TTS_CLIENT_SERVICE_NAME, pid);
@@ -177,6 +210,39 @@ int ttsdc_send_error_message(int pid, int uid, int uttid, int reason)
 	return 0;
 }
 
+#if 0
+int ttsd_send_start_next_synthesis()
+{
+	if (NULL == g_conn) { 
+		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] Dbus connection is not available" );
+		return -1;
+	}
+
+	DBusMessage* msg;
+
+	msg = dbus_message_new_signal(
+		g_service_object,		/* object name of the signal */
+		g_service_interface,		/* interface name of the signal */
+		TTSD_SIGNAL_NEXT_SYNTHESIS);	/* name of the signal */
+
+	if (NULL == msg) { 
+		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] >>>> Fail to make message for 'start next synthesis'"); 
+		return -1;
+	}
+
+	if (!dbus_connection_send(g_conn, msg, NULL)) {
+		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] >>>> Fail to send message for 'start next synthesis'"); 
+		return -1;
+	}
+
+	SLOG(LOG_DEBUG, get_tag(), "[Dbus] >>>> Send message for 'start next synthesis'"); 
+
+	dbus_connection_flush(g_conn);
+	dbus_message_unref(msg);
+
+	return 0;
+}
+#endif
 
 static Eina_Bool listener_event_callback(void* data, Ecore_Fd_Handler *fd_handler)
 {
@@ -221,10 +287,11 @@ static Eina_Bool listener_event_callback(void* data, Ecore_Fd_Handler *fd_handle
 
 	else if (dbus_message_is_method_call(msg, g_service_interface, TTS_METHOD_PAUSE)) 
 		ttsd_dbus_server_pause(conn, msg);
-
+#if 0
 	/* daemon internal event*/
 	else if (dbus_message_is_signal(msg, g_service_interface, TTSD_SIGNAL_NEXT_SYNTHESIS)) 
 		ttsd_dbus_server_start_next_synthesis();
+#endif
 
 	/* setting event */
 	else if (dbus_message_is_method_call(msg, g_service_interface, TTS_SETTING_METHOD_HELLO))
@@ -390,27 +457,35 @@ int ttsd_dbus_close_connection()
 	return 0;
 }
 
-int ttsd_send_start_next_synthesis()
+int ttsd_file_msg_open_connection(int pid)
 {
-	DBusMessage* msg;
+	/* Make file for Inotify */
+	char send_filename[64];
+	memset(send_filename, 0, 64);
+	snprintf(send_filename, 64, "%s_%d", MESSAGE_FILE_PATH, pid);
 
-	msg = dbus_message_new_signal(
-		g_service_object,		/* object name of the signal */
-		g_service_interface,		/* interface name of the signal */
-		TTSD_SIGNAL_NEXT_SYNTHESIS);	/* name of the signal */
-
-	if (NULL == msg) { 
-		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] >>>> Fail to make message for 'start next synthesis'"); 
+	FILE* fp;
+	fp = fopen(send_filename, "a+");
+	if (NULL == fp) {
+		SLOG(LOG_ERROR, get_tag(), "[File message ERROR] Fail to make message file");
 		return -1;
 	}
+	SLOG(LOG_DEBUG, get_tag(), "[File message] Make message file");
+	fclose(fp);
+	return 0;
+}
 
-	if (!dbus_connection_send(g_conn, msg, NULL)) {
-		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] >>>> Fail to send message for 'start next synthesis'"); 
-		return -1;
+int ttsd_file_msg_close_connection(int pid)
+{
+	/* delete inotify file */
+	char path[64];
+	memset(path, 0, 64);
+	snprintf(path, 64, "%s_%d", MESSAGE_FILE_PATH, pid);
+	if (0 == access(path, R_OK)) {
+		if (0 != remove(path)) {
+			SLOG(LOG_WARN, get_tag(), "[File message WARN] Fail to remove message file");
+		}
 	}
-
-	dbus_connection_flush(g_conn);
-	dbus_message_unref(msg);
-
+	SLOG(LOG_DEBUG, get_tag(), "[File message] Delete message file");
 	return 0;
 }

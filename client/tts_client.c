@@ -194,3 +194,26 @@ int tts_client_get_use_callback(tts_client_s* client)
 {
 	return client->cb_ref_count;
 }
+
+int tts_client_get_connected_client_count()
+{
+	GList *iter = NULL;
+	tts_client_s *data = NULL;
+	int number = 0;
+
+	if (g_list_length(g_client_list) > 0) {
+		/* Get a first item */
+		iter = g_list_first(g_client_list);
+
+		while (NULL != iter) {
+			data = iter->data;
+			if (0 < data->current_state) {
+				number++;
+			}
+
+			/* Next item */
+			iter = g_list_next(iter);
+		}
+	}
+	return number;
+}

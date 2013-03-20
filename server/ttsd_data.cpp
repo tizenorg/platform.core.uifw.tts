@@ -577,3 +577,17 @@ int ttsd_data_save_error_log(int uid, FILE* fp)
 	
 	return 0;
 }
+
+int ttsd_data_get_same_pid_client_count(int pid)
+{
+	int vsize = g_app_list.size();
+	int number = 0;
+
+	for (int i=0; i<vsize; i++) {
+		if(g_app_list[i].pid == pid) {
+			number++;		
+		}
+	}
+
+	return number;
+}

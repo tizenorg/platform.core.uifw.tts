@@ -69,6 +69,8 @@ int tts_client_not_use_callback(tts_client_s* client);
 
 int tts_client_get_use_callback(tts_client_s* client);
 
+int tts_client_get_connected_client_count();
+
 #ifdef __cplusplus
 }
 #endif

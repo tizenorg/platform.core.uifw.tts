@@ -933,7 +933,10 @@ int ttsd_engine_agent_set_default_voice(const char* language, ttsp_voice_type_e 
 			g_cur_engine.default_lang, g_cur_engine.default_vctype); 
 	} else {
 		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] fail to write default voice to config (%d)", ret); 
+		return TTSD_ERROR_OPERATION_FAILED;
 	}
+
+	return 0;
 }
 
 /******************************************************************************************

@@ -1,3 +1,32 @@
+tts (0.1.56) -- Wed, 20 Mar 2013
+
+  * Release version (Dongyeol Lee <dy3.lee@samsung.com>)
+
+tts (0.1.55-2) -- Wed, 20 Mar 2013
+
+  * Fix bug not to resume tts in 'pause' state (Dongyeol Lee <dy3.lee@samsung.com>)
+
+tts (0.1.55-1) -- Wed, 20 Mar 2013
+
+  * File message(IPC) is applied (Kwangyoun Kim <ky85.kim@samsung.com)
+
+tts (0.1.55) -- Mon, 04 Mar 2013
+
+  * Clean up code (Dongyeol Lee <dy3.lee@samsung.com>)
+  * Fix prevent issue (Kwangyoun Kim <ky85.kim@samsung.com>)
+
+tts (0.1.1-54)
+
+  * Fix code for synthesis by dbus
+
+ -- Kwangyoun Kim <ky85.kim@samsung.com>  Mon, 4 Mar 2013
+ 
+tts (0.1.1-53)
+
+  * Update smack rule
+
+ -- Kwangyoun Kim <ky85.kim@samsung.com>  Wed, 27 Feb 2013
+
 tts (0.1.1-52)
 
   * Improve high CPU share

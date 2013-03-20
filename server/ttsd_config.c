@@ -246,15 +246,19 @@ int ttsd_config_update_language()
 			SLOG(LOG_ERROR, get_tag(), "[Config ERROR] Fail to get system language : %d", ret);
 			return -1;
 		} else {
-			SLOG(LOG_DEBUG, get_tag(), "[Config] System language : %s", value);
+			if (NULL == value) {
+				SLOG(LOG_ERROR, get_tag(), "[Config] Fail to get system language");
+				return -1;
+			} else {
+				SLOG(LOG_DEBUG, get_tag(), "[Config] System language : %s", value);
 
-			if (0 != strcmp(value, g_language)) {
-				if (NULL != g_callback)
-					g_callback(value, g_vc_type);
-			}
-			
-			if (NULL != value)
+				if (0 != strcmp(value, g_language)) {
+					if (NULL != g_callback)
+						g_callback(value, g_vc_type);
+				}
+
 				free(value);
+			}
 		}
 	}
 
@@ -334,14 +338,26 @@ int ttsd_config_save_error(int uid, int uttid, const char* lang, int vctype, con
 
 	if (TTSD_MODE_NOTIFICATION == ttsd_get_mode()) {
 		err_file = (char*)malloc(strlen(CONFIG_DIRECTORY) + strlen(NOTI_ERROR_FILE_NAME) + 1);
+		if (NULL == err_file) {
+			SLOG(LOG_WARN, get_tag(), "[WARNING] Fail to get error file name");
+			return -1;
+		}
 		strcpy(err_file, CONFIG_DIRECTORY);
 		strcat(err_file, NOTI_ERROR_FILE_NAME);
 	} else if (TTSD_MODE_SCREEN_READER == ttsd_get_mode()) {
 		err_file = (char*)malloc(strlen(CONFIG_DIRECTORY) + strlen(SR_ERROR_FILE_NAME) + 1);
+		if (NULL == err_file) {
+			SLOG(LOG_WARN, get_tag(), "[WARNING] Fail to get error file name");
+			return -1;
+		}
 		strcpy(err_file, CONFIG_DIRECTORY);
 		strcat(err_file, SR_ERROR_FILE_NAME);
 	} else {
 		err_file = (char*)malloc(strlen(CONFIG_DIRECTORY) + strlen(DEFAULT_ERROR_FILE_NAME) + 1);
+		if (NULL == err_file) {
+			SLOG(LOG_WARN, get_tag(), "[WARNING] Fail to get error file name");
+			return -1;
+		}
 		strcpy(err_file, CONFIG_DIRECTORY);
 		strcat(err_file, DEFAULT_ERROR_FILE_NAME);
 	}
@@ -350,6 +366,7 @@ int ttsd_config_save_error(int uid, int uttid, const char* lang, int vctype, con
 	err_fp = fopen(err_file, "w+");
 	if (NULL == err_fp) {
 		SLOG(LOG_WARN, get_tag(), "[WARNING] Fail to open error file (%s)", err_file);
+		free(err_file);
 		return -1;
 	}
 	SLOG(LOG_DEBUG, get_tag(), "Save Error File (%s)", err_file);
@@ -399,6 +416,8 @@ int ttsd_config_save_error(int uid, int uttid, const char* lang, int vctype, con
 
 	/* get data */
 	ttsd_data_save_error_log(uid, err_fp);
+
+	free(err_file);
 
 	fclose(err_fp);
 

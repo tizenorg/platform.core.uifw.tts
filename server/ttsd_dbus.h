@@ -23,6 +23,9 @@ int ttsd_dbus_open_connection();
 
 int ttsd_dbus_close_connection();
 
+int ttsd_file_msg_open_connection(int pid);
+
+int ttsd_file_msg_close_connection(int pid);
 
 int ttsdc_send_hello(int pid, int uid);
 
@@ -34,7 +37,9 @@ int ttsdc_send_error_message(int pid, int uid, int uttid, int reason);
 
 int ttsdc_send_set_state_message(int pid, int uid, int state);
 
+#if 0
 int ttsd_send_start_next_synthesis();
+#endif
 
 #ifdef __cplusplus
 }

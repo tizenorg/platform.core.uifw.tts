@@ -95,7 +95,7 @@ static int g_paused_uid;
 
 player_s* __player_get_item(int uid);
 
-int __save_file(const int uid, const int index, const sound_data_s data, char** filename);
+int __save_file(int uid, int index, sound_data_s data, char** filename);
 
 int __set_and_start(player_s* player);
 
@@ -147,7 +147,7 @@ int ttsd_player_release(void)
 	return 0;
 }
 
-int ttsd_player_create_instance(const int uid)
+int ttsd_player_create_instance(int uid)
 {
 	if (false == g_player_init) {
 		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Not Initialized" );
@@ -182,7 +182,6 @@ int ttsd_player_create_instance(const int uid)
 
 	return 0;
 }
-
 
 int ttsd_player_destroy_instance(int uid)
 {
@@ -262,7 +261,7 @@ int ttsd_player_destroy_instance(int uid)
 	return 0;
 }
 
-int ttsd_player_play(const int uid)
+int ttsd_player_play(int uid)
 {
 	SLOG(LOG_DEBUG, get_tag(), "[Player] start play : uid(%d)", uid );
 
@@ -401,7 +400,7 @@ int ttsd_player_next_play(int uid)
 }
 
 
-int ttsd_player_stop(const int uid)
+int ttsd_player_stop(int uid)
 {
 	SLOG(LOG_DEBUG, get_tag(), "[Player] stop player : uid(%d)", uid );
 
@@ -459,7 +458,7 @@ int ttsd_player_stop(const int uid)
 	return 0;
 }
 
-int ttsd_player_pause(const int uid)
+int ttsd_player_pause(int uid)
 {
 	SLOG(LOG_DEBUG, get_tag(), "[Player] pause player : uid(%d)", uid );
 
@@ -505,7 +504,7 @@ int ttsd_player_pause(const int uid)
 	return 0;
 }
 
-int ttsd_player_resume(const int uid)
+int ttsd_player_resume(int uid)
 {
 	SLOG(LOG_DEBUG, get_tag(), "[Player] Resume player : uid(%d)", uid );
 
@@ -564,6 +563,49 @@ int ttsd_player_resume(const int uid)
 	return 0;
 }
 
+int ttsd_player_get_state(int uid, ttsd_player_state_e* state)
+{
+	if (false == g_player_init) {
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Not Initialized" );
+		return -1;
+	}
+
+	player_s* current;
+	current = __player_get_item(uid);
+	if (NULL == current) {
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] uid(%d) is not valid", uid); 
+		return -1;
+	}
+
+	MMPlayerStateType player_state;
+	mm_player_get_state(current->player_handle, &player_state);
+
+	SLOG(LOG_DEBUG, get_tag(), "[PLAYER] State changed : state(%d)", player_state);
+
+	int ret = -1;
+	/* destroy player */
+	switch (player_state) {
+		case MM_PLAYER_STATE_PLAYING:
+			*state = TTSD_PLAYER_STATE_PLAYING;
+			break;
+		case MM_PLAYER_STATE_PAUSED:
+			*state = TTSD_PLAYER_STATE_PAUSED;
+			break;
+		
+		case MM_PLAYER_STATE_NULL:
+			*state = TTSD_PLAYER_STATE_NULL;
+			break;
+
+		case MM_PLAYER_STATE_READY:
+		default:
+			SLOG(LOG_ERROR, get_tag(), "[Player ERROR] player state of uid(%d) is not valid", uid); 
+			return -1;
+			break;
+	}
+
+	return 0;
+}
+
 int ttsd_player_get_current_client()
 {
 	if (false == g_player_init) {
@@ -579,7 +621,7 @@ int ttsd_player_get_current_client()
 	return 0;
 }
 
-int ttsd_player_get_current_utterance_id(const int uid)
+int ttsd_player_get_current_utterance_id(int uid)
 {
 	SLOG(LOG_DEBUG, get_tag(), "[Player] get current utt id : uid(%d)", uid );
 
@@ -838,7 +880,7 @@ player_s* __player_get_item(int uid)
 	return NULL;
 }
 
-int __save_file(const int uid, const int index, const sound_data_s data, char** filename)
+int __save_file(int uid, int index, sound_data_s data, char** filename)
 {
 	char postfix[5];
 	memset(postfix, '\0', 5);
@@ -1024,12 +1066,12 @@ int __set_and_start(player_s* player)
 		return -1;
 	}
 
-	//if (TTSD_MODE_DEFAULT != ttsd_get_mode()) {
-	//	ret = mm_player_ignore_session(player->player_handle);
-	//	if (MM_ERROR_NONE != ret) {
-	//		SLOG(LOG_WARN, get_tag(), "[Player WARNING] fail mm_player_ignore_session() : %x", ret);
-	//	}
-	//}
+	if (TTSD_MODE_DEFAULT != ttsd_get_mode()) {
+		ret = mm_player_ignore_session(player->player_handle);
+		if (MM_ERROR_NONE != ret) {
+			SLOG(LOG_WARN, get_tag(), "[Player WARNING] fail mm_player_ignore_session() : %x", ret);
+		}
+	}
 	
 	/* realize and start mm player */ 
 	ret = mm_player_realize(player->player_handle);
