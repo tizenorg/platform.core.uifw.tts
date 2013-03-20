@@ -43,10 +43,12 @@ int ttsd_dbus_server_stop(DBusConnection* conn, DBusMessage* msg);
 
 int ttsd_dbus_server_pause(DBusConnection* conn, DBusMessage* msg);
 
+#if 0
 /*
 * Dbus Server functions for tts daemon internal
 */ 
 int ttsd_dbus_server_start_next_synthesis();
+#endif
 
 /*
 * Dbus Server functions for Setting

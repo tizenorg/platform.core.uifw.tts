@@ -47,7 +47,7 @@ int main()
 		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] fail to initialize tts-daemon-noti"); 
 		return EXIT_FAILURE;
 	}
-	
+
 	if (0 != ttsd_dbus_open_connection()) {
 		printf("Fail to initialize IPC connection \n");
 		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] fail to open dbus connection");

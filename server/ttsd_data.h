@@ -87,6 +87,8 @@ bool ttsd_data_is_uttid_valid(int uid, int uttid);
 
 int ttsd_data_is_current_playing();
 
+int ttsd_data_get_same_pid_client_count(int pid);
+
 
 int ttsd_setting_data_add(int pid);
 
@@ -94,8 +96,10 @@ int ttsd_setting_data_delete(int pid);
 
 int ttsd_setting_data_is_setting(int pid);
 
+
 /* for error log */
 int ttsd_data_save_error_log(int uid, FILE* fp);
+
 
 #ifdef __cplusplus
 }

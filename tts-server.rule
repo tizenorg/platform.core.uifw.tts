@@ -1,4 +1,4 @@
-tts-server system::app_logging wx
+tts-server device::app_logging wx
 tts-server tts-engine-samsung::vdata rx
 tts-server system::vconf rwxat
 tts-server sound_server rw

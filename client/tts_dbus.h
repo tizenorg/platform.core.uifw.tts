@@ -46,6 +46,11 @@ int tts_dbus_request_stop(int uid);
 
 int tts_dbus_request_pause(int uid);
 
+
+int tts_file_msg_open_connection();
+
+int tts_file_msg_close_connection();
+
 #ifdef __cplusplus
 }
 #endif

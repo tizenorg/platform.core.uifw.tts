@@ -25,6 +25,12 @@ typedef enum {
 	PLAYER_ERROR
 }player_event_e;
 
+typedef enum {
+	TTSD_PLAYER_STATE_NULL,
+	TTSD_PLAYER_STATE_PAUSED,
+	TTSD_PLAYER_STATE_PLAYING
+}ttsd_player_state_e;
+
 typedef int (*player_result_callback_func)(player_event_e event, int uid, int utt_id);
 
 /*
@@ -35,23 +41,25 @@ int ttsd_player_init(player_result_callback_func result_cb);
 
 int ttsd_player_release(void);
 
-int ttsd_player_create_instance(const int uid);
+int ttsd_player_create_instance(int uid);
 
-int ttsd_player_destroy_instance(const int uid);
+int ttsd_player_destroy_instance(int uid);
 
-int ttsd_player_play(const int uid);
+int ttsd_player_play(int uid);
 
 int ttsd_player_next_play(int uid);
 
-int ttsd_player_stop(const int uid);
+int ttsd_player_stop(int uid);
 
-int ttsd_player_pause(const int uid);
+int ttsd_player_pause(int uid);
 
-int ttsd_player_resume(const int uid);
+int ttsd_player_resume(int uid);
+
+int ttsd_player_get_state(int uid, ttsd_player_state_e* state);
 
 int ttsd_player_get_current_client();
 
-int ttsd_player_get_current_utterance_id(const int uid);
+int ttsd_player_get_current_utterance_id(int uid);
 
 int ttsd_player_all_stop();
 
