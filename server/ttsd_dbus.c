@@ -293,10 +293,6 @@ static Eina_Bool listener_event_callback(void* data, Ecore_Fd_Handler *fd_handle
 		ttsd_dbus_server_start_next_synthesis();
 #endif
 
-	/* daemon internal event*/
-	else if (dbus_message_is_signal(msg, g_service_interface, TTSD_SIGNAL_NEXT_SYNTHESIS)) 
-		ttsd_dbus_server_start_next_synthesis();
-
 	/* setting event */
 	else if (dbus_message_is_method_call(msg, g_service_interface, TTS_SETTING_METHOD_HELLO))
 		ttsd_dbus_server_hello(conn, msg);
