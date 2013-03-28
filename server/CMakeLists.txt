@@ -29,7 +29,7 @@ SET(NOTI_SRCS
     ttsd_data.cpp
 	ttsd_player.c
 	ttsd_engine_agent.c
-	ttsd_config.c
+	ttsd_config_noti.c
 	ttsd_server.c
 	ttsd_network.c
 	ttsd_dbus.c
@@ -41,7 +41,7 @@ SET(SR_SRCS
     ttsd_data.cpp
 	ttsd_player.c
 	ttsd_engine_agent.c
-	ttsd_config.c
+	ttsd_config_sr.c
 	ttsd_server.c
 	ttsd_network.c
 	ttsd_dbus.c

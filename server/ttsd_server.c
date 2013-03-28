@@ -347,6 +347,17 @@ void __config_lang_changed_cb(const char* language, int type)
 	return;
 }
 
+void __config_speed_changed_cb(int speed) 
+{
+	if (TTSP_SPEED_VERY_SLOW <= speed && speed <= TTSP_SPEED_VERY_FAST) {
+		/* set default speed */
+		int ret = 0;
+		ret = ttsd_engine_setting_set_default_speed((ttsp_speed_e)speed);
+		if (0 != ret) {
+			SLOG(LOG_ERROR, get_tag(), "[Server ERROR] fail to set default speed : result(%d)", ret);
+		}	
+	}
+}
 
 /*
 * Server APIs
@@ -354,7 +365,7 @@ void __config_lang_changed_cb(const char* language, int type)
 
 int ttsd_initialize()
 {
-	if (ttsd_config_initialize(__config_lang_changed_cb)) {
+	if (ttsd_config_initialize(__config_lang_changed_cb, __config_speed_changed_cb)) {
 		SLOG(LOG_ERROR, get_tag(), "[Server WARNING] Fail to initialize config.");
 	}
 

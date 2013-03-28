@@ -7,7 +7,7 @@ INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/common")
 ## Dependent packages ##
 INCLUDE(FindPkgConfig)
 pkg_check_modules(pkgs REQUIRED  
-	mm-player vconf dlog ecore ecore-file dbus-1 mm-session capi-system-runtime-info
+	mm-player dlog ecore ecore-file dbus-1 mm-session capi-system-runtime-info vconf vconf-internal-keys
 )
 
 ## Client library ##

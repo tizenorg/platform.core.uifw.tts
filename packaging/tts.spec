@@ -1,6 +1,6 @@
 Name:       tts
 Summary:    Text To Speech client library and daemon
-Version:    0.1.56
+Version:    0.1.57
 Release:    1
 Group:      libs
 License:    Samsung
@@ -14,6 +14,7 @@ BuildRequires:  pkgconfig(mm-common)
 BuildRequires:  pkgconfig(mm-session)
 BuildRequires:  pkgconfig(dlog)
 BuildRequires:  pkgconfig(vconf)
+BuildRequires:  pkgconfig(vconf-internal-keys)
 BuildRequires:  pkgconfig(ecore)
 BuildRequires:  pkgconfig(ecore-file)
 BuildRequires:  pkgconfig(capi-system-runtime-info)

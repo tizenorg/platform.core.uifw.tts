@@ -21,7 +21,9 @@ extern "C" {
 
 typedef void (*ttsd_config_lang_changed_cb)(const char* langauge, int type);
 
-int ttsd_config_initialize(ttsd_config_lang_changed_cb callback);
+typedef void (*ttsd_config_speed_changed_cb)(int speed);
+
+int ttsd_config_initialize(ttsd_config_lang_changed_cb lang_cb, ttsd_config_speed_changed_cb speed_cb);
 
 int ttsd_config_finalize();
 
