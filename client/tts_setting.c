@@ -82,7 +82,7 @@ static Eina_Bool __tts_setting_connect_daemon(void *data)
 	return EINA_FALSE;
 }
 
-int tts_setting_initialize()
+int tts_setting_initialize(tts_setting_initialized_cb callback, void* user_data)
 {
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Initialize TTS Setting");
 
@@ -100,43 +100,15 @@ int tts_setting_initialize()
 		return TTS_SETTING_ERROR_OPERATION_FAILED;
 	}
 
-	/* Send hello */
-	if (0 != tts_setting_dbus_request_hello()) {
-		__check_setting_tts_daemon();
-	}
+	g_initialized_cb = callback;
+	g_user_data = user_data;
 
-	/* do request */
-	int i = 1;
-	int ret = 0;
-	while(1) {
-		ret = tts_setting_dbus_request_initialize();
-
-		if( TTS_SETTING_ERROR_ENGINE_NOT_FOUND == ret ) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Engine not found");
-			break;
-		} else if(ret) {
-			sleep(1);
-			if (i == 3) {
-				SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Connection Time out");
-				ret = TTS_SETTING_ERROR_TIMED_OUT;			    
-				break;
-			}    
-			i++;
-		} else {
-			/* success to connect tts-daemon */
-			break;
-		}
-	}
-
-	if (TTS_SETTING_ERROR_NONE == ret) {
-		g_state = TTS_SETTING_STATE_READY;
-		SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Initialize");
-	}
+	g_setting_connect_timer = ecore_timer_add(0, __tts_setting_connect_daemon, NULL);
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
 
-	return ret;
+	return TTS_SETTING_ERROR_NONE;
 }
 
 int tts_setting_initialize_async(tts_setting_initialized_cb callback, void* user_data)

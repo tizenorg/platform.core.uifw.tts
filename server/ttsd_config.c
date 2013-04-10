@@ -20,7 +20,6 @@
 
 #define CONFIG_DEFAULT			BASE_DIRECTORY_DEFAULT"/ttsd.conf"
 
-#define DEFAULT_CONFIG_FILE_NAME	CONFIG_DIRECTORY"/ttsd_default.conf"
 #define DEFAULT_ERROR_FILE_NAME		CONFIG_DIRECTORY"/ttsd_default.err"
 
 #define ENGINE_ID	"ENGINE_ID"
@@ -32,8 +31,7 @@ static char*	g_language;
 static int	g_vc_type;
 static int	g_speed;
 
-static ttsd_config_lang_changed_cb g_lang_cb;
-static ttsd_config_speed_changed_cb g_speed_cb;
+static ttsd_config_changed_cb g_callback;
 
 int __ttsd_config_save()
 {
@@ -157,16 +155,15 @@ int __ttsd_config_load()
 	return 0;
 }
 
-int ttsd_config_initialize(ttsd_config_lang_changed_cb lang_cb, ttsd_config_speed_changed_cb speed_cb)
+int ttsd_config_initialize(ttsd_config_changed_cb callback)
 {
 	g_engine_id = NULL;
 	g_language = NULL;
 	g_vc_type = 1;
 	g_speed = 3;
 
-	g_lang_cb = lang_cb;
-	g_speed_cb = speed_cb;
-
+	g_callback = callback;
+	
 	ecore_file_mkpath(CONFIG_DIRECTORY);
 
 	__ttsd_config_load();

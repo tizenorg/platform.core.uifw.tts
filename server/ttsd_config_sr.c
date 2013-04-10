@@ -12,7 +12,7 @@
 */
 
 #include <Ecore_File.h>
-#include <vconf-internal-keys.h>
+#include <vconf-internal-voice-keys.h>
 #include <vconf.h>
 #include <runtime_info.h>
 #include "ttsd_main.h"
@@ -20,7 +20,6 @@
 #include "ttsd_engine_agent.h"
 #include "ttsd_data.h"
 
-#define CONFIG_DEFAULT			BASE_DIRECTORY_DEFAULT"/ttsd.conf"
 #define SR_ERROR_FILE_NAME		CONFIG_DIRECTORY"/ttsd_sr.err"
 
 #define ENGINE_ID	"ENGINE_ID"
@@ -30,8 +29,7 @@ static char*	g_language;
 static int	g_vc_type;
 static int	g_speed;
 
-static ttsd_config_lang_changed_cb g_lang_cb;
-static ttsd_config_speed_changed_cb g_speed_cb;
+static ttsd_config_changed_cb g_callback;
 
 void __sr_system_language_changed_cb(runtime_info_key_e key, void *user_data)
 {
@@ -46,8 +44,8 @@ void __sr_system_language_changed_cb(runtime_info_key_e key, void *user_data)
 				return;
 			} else {
 				SLOG(LOG_DEBUG, get_tag(), "[Config] System language changed : %s", value);
-				if (NULL != g_lang_cb)
-					g_lang_cb(value, g_vc_type);
+				if (NULL != g_callback)
+					g_callback(TTS_CONFIG_TYPE_VOICE, value, g_vc_type);
 		
 				if (NULL != value)
 					free(value);
@@ -72,13 +70,13 @@ void __sr_speech_rate_changed_cb(keynode_t *key, void *data)
 				temp_speech_rate, g_speed);
 			g_speed = temp_speech_rate;
 
-			if (NULL != g_speed_cb)
-				g_speed_cb(g_speed);
+			if (NULL != g_callback)
+				g_callback(TTS_CONFIG_TYPE_SPEED, NULL, g_speed);
 		}
 	}
 }
 
-int ttsd_config_initialize(ttsd_config_lang_changed_cb lang_cb, ttsd_config_speed_changed_cb speed_cb)
+int ttsd_config_initialize(ttsd_config_changed_cb callback)
 {
 	int ret = -1;
 	char* value = NULL;
@@ -91,8 +89,7 @@ int ttsd_config_initialize(ttsd_config_lang_changed_cb lang_cb, ttsd_config_spee
 	g_vc_type = 2;
 	g_speed = 3;
 
-	g_lang_cb = lang_cb;
-	g_speed_cb = speed_cb;
+	g_callback = callback;
 
 	ecore_file_mkpath(CONFIG_DIRECTORY);
 
@@ -110,7 +107,16 @@ int ttsd_config_initialize(ttsd_config_lang_changed_cb lang_cb, ttsd_config_spee
 		return -1;
 	}
 
-	fclose(config_fp);
+	if (0 == strncmp(ENGINE_ID, buf_id, strlen(ENGINE_ID))) {
+		g_engine_id = strdup(buf_param);
+		SLOG(LOG_DEBUG, get_tag(), "[Config] Current engine id : %s", g_engine_id);
+
+		fclose(config_fp);
+	} else {
+		fclose(config_fp);
+		SLOG(LOG_WARN, get_tag(), "[Config WARNING] Fail to load config (engine id)");
+		return -1;
+	}
 
 	/* Get display language */
 	ret = runtime_info_get_value_string(RUNTIME_INFO_KEY_LANGUAGE, &value);
@@ -118,7 +124,7 @@ int ttsd_config_initialize(ttsd_config_lang_changed_cb lang_cb, ttsd_config_spee
 		SLOG(LOG_ERROR, get_tag(), "[Config ERROR] Fail to get system language : %d", ret);
 		return -1;
 	} else {
-		SLOG(LOG_DEBUG, get_tag(), "[Config] System language changed : %s", value);
+		SLOG(LOG_DEBUG, get_tag(), "[Config] Current system language : %s", value);
 
 		g_language = strdup(value);
 
@@ -187,8 +193,8 @@ int ttsd_config_update_language()
 				SLOG(LOG_DEBUG, get_tag(), "[Config] System language : %s", value);
 
 				if (0 != strcmp(value, g_language)) {
-					if (NULL != g_lang_cb)
-						g_lang_cb(value, g_vc_type);
+					if (NULL != g_callback)
+						g_callback(TTS_CONFIG_TYPE_VOICE, value, g_vc_type);
 				}
 
 				free(value);

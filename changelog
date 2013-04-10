@@ -1,3 +1,28 @@
+tts (0.1.59) -- Wed, 10 Apr 2013
+
+  * Release version (Kwangyoun Kim <ky85.kim@samsung.com>)
+
+tts (0.1.58-2) -- Wed, 10 Apr 2013
+
+  * Add file for sysinfo check (Kwangyoun Kim <ky85.kim@samsung.com>)
+
+tts (0.1.58-1) -- Mon, 01 Apr 2013
+
+  * Add setting init api to change name (Dongyeol Lee <dy3.lee@samsung.com>)
+
+tts (0.1.58) -- Fri, 29 Mar 2013
+
+  * Release version (Dongyeol Lee <dy3.lee@samsung.com>)
+
+tts (0.1.57-2) -- Tue, 26 Mar 2013
+
+  * Update config to adapt voice setting in notification daemon (Dongyeol Lee <dy3.lee@samsung.com>)
+
+tts (0.1.57-1) -- Tue, 26 Mar 2013
+
+  * Fix bug to get engine id from config file (Dongyeol Lee <dy3.lee@samsung.com>)
+  * Fix default language is english (Dongyeol Lee <dy3.lee@samsung.com>)
+
 tts (0.1.57) -- Fri, 22 Mar 2013
 
   * Release version (Dongyeol Lee <dy3.lee@samsung.com>)

@@ -19,11 +19,15 @@
 extern "C" {
 #endif
 
-typedef void (*ttsd_config_lang_changed_cb)(const char* langauge, int type);
+typedef enum {
+	TTS_CONFIG_TYPE_ENGINE,
+	TTS_CONFIG_TYPE_VOICE,
+	TTS_CONFIG_TYPE_SPEED
+}tts_config_type_e;
 
-typedef void (*ttsd_config_speed_changed_cb)(int speed);
+typedef void (*ttsd_config_changed_cb)(tts_config_type_e type, const char* str_param, int int_param); 
 
-int ttsd_config_initialize(ttsd_config_lang_changed_cb lang_cb, ttsd_config_speed_changed_cb speed_cb);
+int ttsd_config_initialize(ttsd_config_changed_cb callback);
 
 int ttsd_config_finalize();
 

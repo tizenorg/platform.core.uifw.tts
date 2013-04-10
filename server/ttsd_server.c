@@ -318,46 +318,92 @@ bool __get_client_cb(int pid, int uid, app_state_e state, void* user_data)
 	return true;
 }
 
-void __config_lang_changed_cb(const char* language, int type)
+void __config_changed_cb(tts_config_type_e type, const char* str_param, int int_param)
 {
-	char* out_lang;
-	ttsp_voice_type_e out_type;
-	int ret = -1;
+	switch(type) {
+	case TTS_CONFIG_TYPE_ENGINE:
+	{
+		if (NULL == str_param) {
+			SLOG(LOG_ERROR, get_tag(), "[Server] engine id from config is NULL");
+			return;
+		}
 
-	if (true == ttsd_engine_select_valid_voice(language, type, &out_lang, &out_type)) {
-		SLOG(LOG_ERROR, get_tag(), "[Server] valid language : lang(%s), type(%d)", out_lang, out_type);
-		ret = ttsd_engine_setting_set_default_voice(out_lang, out_type);
-		if (0 != ret)
-			SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to set vaild language : lang(%s), type(%d)", out_lang, out_type);
+		if (true == ttsd_engine_agent_is_same_engine(str_param)) {
+			SLOG(LOG_DEBUG, get_tag(), "[Server Setting] new engine is the same as current engine ");
+			return;
+		}
+
+		/* stop all player */ 
+		ttsd_player_all_stop();
+
+		/* send interrupt message to  all clients */
+		ttsd_data_foreach_clients(__get_client_cb, NULL);
+
+		ttsd_engine_cancel_synthesis();
+
+		/* set engine */
+		int ret = 0;
+		ret = ttsd_engine_setting_set_engine(str_param);
+		if (0 != ret) {
+			SLOG(LOG_ERROR, get_tag(), "[Server Setting ERROR] fail to set current engine : result(%d) ", ret);
+		}
+
+		break;
+	}
 		
-		if (NULL == out_lang)
-			free(out_lang);
-	} else {
-		/* Current language is not available */
-		if (true == ttsd_engine_select_valid_voice("en_US", type, &out_lang, &out_type)) {
+	case TTS_CONFIG_TYPE_VOICE:
+	{
+		if (NULL == str_param) {
+			SLOG(LOG_ERROR, get_tag(), "[Server] language from config is NULL");
+			return;
+		}
+
+		char* out_lang;
+		ttsp_voice_type_e out_type;
+		int ret = -1;
+
+		if (true == ttsd_engine_select_valid_voice(str_param, int_param, &out_lang, &out_type)) {
+			SLOG(LOG_ERROR, get_tag(), "[Server] valid language : lang(%s), type(%d)", out_lang, out_type);
 			ret = ttsd_engine_setting_set_default_voice(out_lang, out_type);
-			if (0 != ret) 
+			if (0 != ret)
 				SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to set valid language : lang(%s), type(%d)", out_lang, out_type);
-			
+
 			if (NULL == out_lang)
 				free(out_lang);
+		} else {
+			/* Current language is not available */
+			if (true == ttsd_engine_select_valid_voice("en_US", 2, &out_lang, &out_type)) {
+				ret = ttsd_engine_setting_set_default_voice(out_lang, out_type);
+				if (0 != ret) 
+					SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to set valid language : lang(%s), type(%d)", out_lang, out_type);
+
+				if (NULL == out_lang)
+					free(out_lang);
+			}
 		}
+		break;
+	}
+	
+	case TTS_CONFIG_TYPE_SPEED:
+	{
+		if (TTSP_SPEED_VERY_SLOW <= int_param && int_param <= TTSP_SPEED_VERY_FAST) {
+			/* set default speed */
+			int ret = 0;
+			ret = ttsd_engine_setting_set_default_speed((ttsp_speed_e)int_param);
+			if (0 != ret) {
+				SLOG(LOG_ERROR, get_tag(), "[Server ERROR] fail to set default speed : result(%d)", ret);
+			}	
+		}
+		break;
+	}
+		
+	default:
+		break;
 	}
 	
 	return;
 }
 
-void __config_speed_changed_cb(int speed) 
-{
-	if (TTSP_SPEED_VERY_SLOW <= speed && speed <= TTSP_SPEED_VERY_FAST) {
-		/* set default speed */
-		int ret = 0;
-		ret = ttsd_engine_setting_set_default_speed((ttsp_speed_e)speed);
-		if (0 != ret) {
-			SLOG(LOG_ERROR, get_tag(), "[Server ERROR] fail to set default speed : result(%d)", ret);
-		}	
-	}
-}
 
 /*
 * Server APIs
@@ -365,7 +411,7 @@ void __config_speed_changed_cb(int speed)
 
 int ttsd_initialize()
 {
-	if (ttsd_config_initialize(__config_lang_changed_cb, __config_speed_changed_cb)) {
+	if (ttsd_config_initialize(__config_changed_cb)) {
 		SLOG(LOG_ERROR, get_tag(), "[Server WARNING] Fail to initialize config.");
 	}
 

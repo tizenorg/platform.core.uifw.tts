@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<sys-info>
+  <default>
+    <key id="tts-support" string="true"/>
+  </default>
+</sys-info>

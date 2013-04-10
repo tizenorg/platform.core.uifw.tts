@@ -41,6 +41,8 @@ extern "C" {
 #define ENGINE_DIRECTORY_DOWNLOAD		"/opt/usr/voice/tts/1.0/engine"
 #define ENGINE_DIRECTORY_DOWNLOAD_SETTING	"/opt/usr/voice/tts/1.0/setting"
 
+#define CONFIG_DEFAULT				BASE_DIRECTORY_DEFAULT"/ttsd.conf"
+#define DEFAULT_CONFIG_FILE_NAME		CONFIG_DIRECTORY"/ttsd_default.conf"
 
 /* for debug message */
 #define DATA_DEBUG

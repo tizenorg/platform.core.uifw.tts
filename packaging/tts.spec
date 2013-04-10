@@ -1,6 +1,6 @@
 Name:       tts
 Summary:    Text To Speech client library and daemon
-Version:    0.1.57
+Version:    0.1.59
 Release:    1
 Group:      libs
 License:    Samsung
@@ -54,6 +54,7 @@ mkdir -p %{buildroot}/usr/share/license
 %files
 %manifest tts-server.manifest
 /etc/smack/accesses2.d/tts-server.rule
+/etc/config/sysinfo-tts.xml
 %defattr(-,root,root,-)
 %{_libdir}/lib*.so
 %{_libdir}/voice/tts/1.0/ttsd.conf
