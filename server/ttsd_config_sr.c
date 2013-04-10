@@ -12,7 +12,7 @@
 */
 
 #include <Ecore_File.h>
-#include <vconf-internal-voice-keys.h>
+#include <vconf-internal-keys.h>
 #include <vconf.h>
 #include <runtime_info.h>
 #include "ttsd_main.h"
