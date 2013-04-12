@@ -675,6 +675,10 @@ int ttsd_engine_agent_load_current_engine()
 
 				iter = g_list_next(iter);
 			}
+			if (NULL == voice) {
+				SLOG(LOG_ERROR, get_tag(), "[Engine ERROR] Fail to find voice in list");
+				return TTSD_ERROR_OPERATION_FAILED;
+			}
 	
 			/* Set selected language and type */
 			if (true != g_cur_engine.pefuncs->is_valid_voice(voice->language, voice->type)) {

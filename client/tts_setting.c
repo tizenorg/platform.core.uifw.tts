@@ -111,36 +111,6 @@ int tts_setting_initialize(tts_setting_initialized_cb callback, void* user_data)
 	return TTS_SETTING_ERROR_NONE;
 }
 
-int tts_setting_initialize_async(tts_setting_initialized_cb callback, void* user_data)
-{
-	SLOG(LOG_DEBUG, TAG_TTSC, "===== Initialize TTS Setting");
-
-	if (TTS_SETTING_STATE_READY == g_state) {
-		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] TTS Setting has already been initialized.");
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
-		return TTS_SETTING_ERROR_NONE;
-	}
-
-	if( 0 != tts_setting_dbus_open_connection() ) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to open connection");
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
-		return TTS_SETTING_ERROR_OPERATION_FAILED;
-	}
-	
-	g_initialized_cb = callback;
-	g_user_data = user_data;
-
-	g_setting_connect_timer = ecore_timer_add(0, __tts_setting_connect_daemon, NULL);
-
-	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-	SLOG(LOG_DEBUG, TAG_TTSC, " ");
-
-	return TTS_SETTING_ERROR_NONE;
-}
-
-
 int tts_setting_finalize()
 {
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Finalize TTS Setting");

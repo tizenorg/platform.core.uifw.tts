@@ -148,8 +148,6 @@ typedef void(*tts_setting_initialized_cb)(tts_setting_state_e state, tts_setting
 */
 int tts_setting_initialize(tts_setting_initialized_cb callback, void* user_data);
 
-int tts_setting_initialize_async(tts_setting_initialized_cb callback, void* user_data);
-
 /**
 * @brief finalize tts setting and disconnect to tts-daemon. 
 *

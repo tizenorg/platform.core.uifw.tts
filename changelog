@@ -1,3 +1,7 @@
+tts (0.1.59-1) -- Fri, 12 Apr 2013
+
+  * Fix prevent issue (Kwangyoun Kim <ky85.kim@samsung.com>)
+
 tts (0.1.59) -- Wed, 10 Apr 2013
 
   * Release version (Kwangyoun Kim <ky85.kim@samsung.com>)

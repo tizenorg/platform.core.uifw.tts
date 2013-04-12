@@ -270,6 +270,7 @@ static Eina_Bool inotify_event_callback(void* data, Ecore_Fd_Handler *fd_handler
 	int length;
 
 	char buffer[sizeof(struct inotify_event) * BUFFER_SIZE];
+	memset(buffer, 0, (sizeof(struct inotify_event) * BUFFER_SIZE));
 
 	length = read(g_fd_noti, buffer, (sizeof(struct inotify_event) * BUFFER_SIZE));
 	if (0 > length) {
