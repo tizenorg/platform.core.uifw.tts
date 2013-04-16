@@ -1,3 +1,11 @@
+tts (0.1.60) -- Tue, 16 Apr 2013
+
+  * Release version 0.1.60 (Kwangyoun Kim <ky85.kim@samsung.com>)
+
+tts (0.1.59-2) -- Fri, 12 Apr 2013
+
+  * Fix code for setting init API change (Kwangyoun Kim <ky85.kim@samsung.com>)
+
 tts (0.1.59-1) -- Fri, 12 Apr 2013
 
   * Fix prevent issue (Kwangyoun Kim <ky85.kim@samsung.com>)

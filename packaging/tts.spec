@@ -1,6 +1,6 @@
 Name:       tts
 Summary:    Text To Speech client library and daemon
-Version:    0.1.59
+Version:    0.1.60
 Release:    1
 Group:      libs
 License:    Samsung
