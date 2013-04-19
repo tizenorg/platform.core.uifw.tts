@@ -268,11 +268,10 @@ static Eina_Bool inotify_event_callback(void* data, Ecore_Fd_Handler *fd_handler
 	SLOG(LOG_DEBUG, get_tag(), "===== [Config] Inotify event call");
 
 	int length;
+	char buffer[sizeof(struct inotify_event)];
+	memset(buffer, 0, (sizeof(struct inotify_event)));
 
-	char buffer[sizeof(struct inotify_event) * BUFFER_SIZE];
-	memset(buffer, 0, (sizeof(struct inotify_event) * BUFFER_SIZE));
-
-	length = read(g_fd_noti, buffer, (sizeof(struct inotify_event) * BUFFER_SIZE));
+	length = read(g_fd_noti, buffer, (sizeof(struct inotify_event)));
 	if (0 > length) {
 		SLOG(LOG_ERROR, get_tag(), "[Config] Empty Inotify event");
 		SLOG(LOG_DEBUG, get_tag(), "=====");
@@ -280,22 +279,13 @@ static Eina_Bool inotify_event_callback(void* data, Ecore_Fd_Handler *fd_handler
 		return ECORE_CALLBACK_RENEW; 
 	}
 
-	FILE *fp;
+	struct inotify_event *event;
+	event = (struct inotify_event *)&buffer;
 
-	int i = 0;
-	while (i < length) {
-		char text[256];
-		char msg[256];
-		int uid, send_data;
-
-		struct inotify_event *event = (struct inotify_event *)&buffer[i];
-		i = i + sizeof(struct inotify_event) + event->len;
-
-		if (IN_CLOSE_WRITE == event->mask) {
-			__ttsd_config_compare();
-		} else {
-			SLOG(LOG_ERROR, get_tag(), "[Config] Undefined event");
-		}
+	if (IN_CLOSE_WRITE == event->mask) {
+		__ttsd_config_compare();
+	} else {
+		SLOG(LOG_ERROR, get_tag(), "[Config] Undefined event");
 	}
 
 	SLOG(LOG_DEBUG, get_tag(), "=====");
