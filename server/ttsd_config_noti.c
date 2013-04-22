@@ -26,7 +26,6 @@
 #define VOICE		"VOICE"
 #define SPEED		"SPEED"
 
-#define BUFFER_SIZE 20
 
 static char*	g_engine_id;
 static char*	g_language;

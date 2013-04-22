@@ -23,7 +23,6 @@
 #define INIT_WAITING_TIME 5000
 #define WAITING_TIME 1000
 
-#define BUFFER_SIZE 20
 
 static Ecore_Fd_Handler* g_fd_handler = NULL;
 
@@ -955,10 +954,10 @@ static Eina_Bool inotify_event_callback(void* data, Ecore_Fd_Handler *fd_handler
 
 	int length;
 
-	char buffer[sizeof(struct inotify_event) * BUFFER_SIZE];
-	memset(buffer, 0, (sizeof(struct inotify_event) * BUFFER_SIZE));
+	char buffer[sizeof(struct inotify_event)];
+	memset(buffer, 0, (sizeof(struct inotify_event)));
 
-	length = read(g_fd_noti, buffer, (sizeof(struct inotify_event) * BUFFER_SIZE));
+	length = read(g_fd_noti, buffer, (sizeof(struct inotify_event)));
 	if (0 > length) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[File message] Empty Inotify event");
 		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
@@ -973,53 +972,49 @@ static Eina_Bool inotify_event_callback(void* data, Ecore_Fd_Handler *fd_handler
 	snprintf(filename, 64, "%s_%d", MESSAGE_FILE_PATH, getpid());
 	FILE *fp;
 
-	int i = 0;
-	while (i < length) {
-		char text[256];
-		char msg[256];
-		int uid, send_data;
+	char text[256];
+	char msg[256];
+	int uid, send_data;
 
-		struct inotify_event *event = (struct inotify_event *)&buffer[i];
-		i = i + sizeof(struct inotify_event) + event->len;
+	struct inotify_event *event = (struct inotify_event *)&buffer;
 
-		if (IN_CLOSE_WRITE == event->mask) {
+	if (IN_CLOSE_WRITE == event->mask) {
 
-			fp = fopen(filename, "r");
-			if (NULL == fp) {
-				SLOG(LOG_ERROR, TAG_TTSC, "[File message ERROR] open file failed");
-				SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-				SLOG(LOG_DEBUG, TAG_TTSC, " ");
-				return ECORE_CALLBACK_RENEW;
-			}
-
-			while (NULL != fgets(text, 256, fp)) {
-				if (0 > sscanf(text, "%s %d %d", msg, &uid, &send_data)) {
-					SLOG(LOG_ERROR, TAG_TTSC, "[File message] sscanf failed");
-					continue;
-				}
-				SLOG(LOG_DEBUG, TAG_TTSC, "[File message] message - %s, uid - %d, send_data - %d", msg, uid, send_data);
-				is_empty_file = false;
-
-				int uttid;
-				if (!strcmp(TTSD_METHOD_UTTERANCE_STARTED, msg)) {
-					uttid = send_data;
-					SLOG(LOG_DEBUG, TAG_TTSC, "<<<< Get Utterance started message : uid(%d), uttid(%d) \n", uid, uttid);
-					__tts_cb_utt_started(uid, uttid);
-				} else if (!strcmp(TTSD_METHOD_UTTERANCE_COMPLETED, msg)) {
-					uttid = send_data;
-					SLOG(LOG_DEBUG, TAG_TTSC, "<<<< Get Utterance completed message : uid(%d), uttid(%d) \n", uid, uttid);
-					__tts_cb_utt_completed(uid, uttid);
-
-				} else if (!strcmp(TTSD_METHOD_SET_STATE, msg)) {
-					int state = send_data;
-					SLOG(LOG_DEBUG, TAG_TTSC, "<<<< Get state change : uid(%d) , state(%d)", uid, state);
-					__tts_cb_set_state(uid, state);
-				}
-			}
-			fclose(fp);
-		} else {
-			SLOG(LOG_ERROR, TAG_TTSC, "[File message] Undefined event");
+		fp = fopen(filename, "r");
+		if (NULL == fp) {
+			SLOG(LOG_ERROR, TAG_TTSC, "[File message ERROR] open file failed");
+			SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+			SLOG(LOG_DEBUG, TAG_TTSC, " ");
+			return ECORE_CALLBACK_RENEW;
 		}
+
+		while (NULL != fgets(text, 256, fp)) {
+			if (0 > sscanf(text, "%s %d %d", msg, &uid, &send_data)) {
+				SLOG(LOG_ERROR, TAG_TTSC, "[File message] sscanf failed");
+				continue;
+			}
+			SLOG(LOG_DEBUG, TAG_TTSC, "[File message] message - %s, uid - %d, send_data - %d", msg, uid, send_data);
+			is_empty_file = false;
+
+			int uttid;
+			if (!strcmp(TTSD_METHOD_UTTERANCE_STARTED, msg)) {
+				uttid = send_data;
+				SLOG(LOG_DEBUG, TAG_TTSC, "<<<< Get Utterance started message : uid(%d), uttid(%d) \n", uid, uttid);
+				__tts_cb_utt_started(uid, uttid);
+			} else if (!strcmp(TTSD_METHOD_UTTERANCE_COMPLETED, msg)) {
+				uttid = send_data;
+				SLOG(LOG_DEBUG, TAG_TTSC, "<<<< Get Utterance completed message : uid(%d), uttid(%d) \n", uid, uttid);
+				__tts_cb_utt_completed(uid, uttid);
+
+			} else if (!strcmp(TTSD_METHOD_SET_STATE, msg)) {
+				int state = send_data;
+				SLOG(LOG_DEBUG, TAG_TTSC, "<<<< Get state change : uid(%d) , state(%d)", uid, state);
+				__tts_cb_set_state(uid, state);
+			}
+		}
+		fclose(fp);
+	} else {
+		SLOG(LOG_ERROR, TAG_TTSC, "[File message] Undefined event");
 	}
 
 	if (true == is_empty_file)
