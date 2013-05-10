@@ -53,7 +53,7 @@ mkdir -p %{buildroot}/usr/share/license
 
 %files
 %manifest tts-server.manifest
-/etc/smack/accesses2.d/tts-server.rule
+/opt/etc/smack/accesses.d/tts-server.rule
 /etc/config/sysinfo-tts.xml
 %defattr(-,root,root,-)
 %{_libdir}/lib*.so

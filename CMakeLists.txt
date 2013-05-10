@@ -17,5 +17,5 @@ ADD_SUBDIRECTORY(client)
 ADD_SUBDIRECTORY(server)
 
 INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.APLv2 RENAME tts DESTINATION /usr/share/license)
-INSTALL(FILES ${CMAKE_SOURCE_DIR}/tts-server.rule DESTINATION  /etc/smack/accesses2.d)
+INSTALL(FILES ${CMAKE_SOURCE_DIR}/tts-server.rule DESTINATION /opt/etc/smack/accesses.d)
 INSTALL(FILES ${CMAKE_SOURCE_DIR}/sysinfo-tts.xml DESTINATION /etc/config)
