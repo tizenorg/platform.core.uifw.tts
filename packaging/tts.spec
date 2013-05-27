@@ -39,7 +39,7 @@ Text To Speech header files for TTS development.
 
 
 %build
-cmake . -DCMAKE_INSTALL_PREFIX=/usr
+%cmake .
 make %{?jobs:-j%jobs}
 
 %install

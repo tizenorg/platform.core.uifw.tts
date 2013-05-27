@@ -1,0 +1,2 @@
+* Sun May 26 2013 Rusty Lynch <rusty.lynch@intel.com> accepted/tizen/20130520.101430@cfdfdae
+- Fix build for 64bit systems
