@@ -1,0 +1,8 @@
+Change-Id: I72e22c3694545ddc51e842205afc0b2d7b0b7ddd
+Code-Review+2: Anas Nashif
+Verified+1: Rusty Lynch <rusty.lynch@intel.com>
+Submitted-by: Anas Nashif
+Submitted-at: Tue, 28 May 2013 03:52:36 -0700
+Reviewed-on: https://review.tizen.org/gerrit/3674
+Project: platform/core/uifw/tts
+Branch: refs/heads/tizen
