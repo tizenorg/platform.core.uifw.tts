@@ -390,7 +390,6 @@ int ttsd_dbus_open_connection()
 	ret = dbus_bus_request_name(g_conn, g_service_name, DBUS_NAME_FLAG_REPLACE_EXISTING , &err);
 
 	if (DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER != ret) {
-		printf("Fail to be primary owner in dbus request. \n");
 		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] fail to be primary owner \n");
 		return -1;
 	}

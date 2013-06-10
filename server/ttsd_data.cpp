@@ -560,7 +560,7 @@ int ttsd_data_save_error_log(int uid, FILE* fp)
 	fprintf(fp, "----- Sound list -----\n");
 	
 	for (i=0 ; i < g_app_list[index].m_wav_data.size() ; i++) {
-		fprintf(fp, "[%dth] data size(%ld), uttid(%d), type(%d) \n", 
+		fprintf(fp, "[%dth] data size(%d), uttid(%d), type(%d) \n", 
 			i+1, g_app_list[index].m_wav_data[i].data_size, g_app_list[index].m_wav_data[i].utt_id, g_app_list[index].m_wav_data[i].audio_type );
 	}
 	fprintf(fp, "----------------------\n");

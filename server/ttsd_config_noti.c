@@ -15,6 +15,8 @@
 #include <Ecore_File.h>
 #include <runtime_info.h>
 #include <sys/inotify.h>
+#include <vconf.h>
+
 #include "ttsd_main.h"
 #include "ttsd_config.h"
 #include "ttsd_engine_agent.h"
@@ -230,6 +232,22 @@ int __ttsd_config_load()
 			fclose(config_fp);
 			SLOG(LOG_WARN, get_tag(), "[Config WARNING] Fail to load config (voice)");
 			return -1;
+		}
+	}
+
+	if (true == is_default_open) {
+		/* Change default language to display language */
+		char* value;
+		value = vconf_get_str(VCONFKEY_LANGSET);
+
+		if (NULL != value) {
+			SLOG(LOG_DEBUG, get_tag(), "[Config] System language : %s", value);
+			strncpy(g_language, value, strlen(g_language));
+			SLOG(LOG_DEBUG, get_tag(), "[Config] Default language : %s", g_language);
+
+			free(value);
+		} else {
+			SLOG(LOG_ERROR, get_tag(), "[Config ERROR] Fail to get system language");
 		}
 	}
 

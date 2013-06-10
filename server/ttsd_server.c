@@ -626,10 +626,15 @@ Eina_Bool __send_interrupt_client(void *data)
 	
 	if (NULL != uid) {
 		int pid = ttsd_data_get_pid(*uid);
-		/* send message to client about changing state */
-		ttsdc_send_set_state_message (pid, *uid, APP_STATE_PAUSED);
+
+		if (TTSD_MODE_SCREEN_READER == ttsd_get_mode()) {
+			/* send message to client about changing state */
+			ttsdc_send_set_state_message (pid, *uid, APP_STATE_READY);
+		} else {
+			ttsdc_send_set_state_message (pid, *uid, APP_STATE_PAUSED);
+		}
 		free(uid);
-	}
+	}	
 	return EINA_FALSE;
 }
 
@@ -657,20 +662,34 @@ int ttsd_server_play(int uid)
 	int current_uid = ttsd_data_get_current_playing();
 
 	if (uid != current_uid && -1 != current_uid) {
-		/* Send interrupt message */
-		SLOG(LOG_DEBUG, get_tag(), "[Server] Old uid(%d) will be interrupted into 'Pause' state ", current_uid);
+		if (TTSD_MODE_SCREEN_READER == ttsd_get_mode()) {
+			/* Send interrupt message */
+			SLOG(LOG_DEBUG, get_tag(), "[Server] Old uid(%d) will be interrupted into 'Stop' state ", current_uid);
 
-		/* pause player */
-		if (0 != ttsd_player_pause(current_uid)) {
-			SLOG(LOG_WARN, get_tag(), "[Server ERROR] fail to ttsd_player_pause() : uid (%d)", current_uid);
-		} 
+			/* pause player */
+			if (0 != ttsd_server_stop(current_uid)) {
+				SLOG(LOG_WARN, get_tag(), "[Server ERROR] fail to stop : uid (%d)", current_uid);
+			} 
+			
+			int* temp_uid = (int*)malloc(sizeof(int));
+			*temp_uid = current_uid;
+			ecore_timer_add(0, __send_interrupt_client, temp_uid);
+		} else {
+			/* Send interrupt message */
+			SLOG(LOG_DEBUG, get_tag(), "[Server] Old uid(%d) will be interrupted into 'Pause' state ", current_uid);
 
-		/* change state */
-		ttsd_data_set_client_state(current_uid, APP_STATE_PAUSED);
+			/* pause player */
+			if (0 != ttsd_player_pause(current_uid)) {
+				SLOG(LOG_WARN, get_tag(), "[Server ERROR] fail to ttsd_player_pause() : uid (%d)", current_uid);
+			} 
 
-		int* temp_uid = (int*)malloc(sizeof(int));
-		*temp_uid = current_uid;
-		ecore_timer_add(0, __send_interrupt_client, temp_uid);
+			/* change state */
+			ttsd_data_set_client_state(current_uid, APP_STATE_PAUSED);
+
+			int* temp_uid = (int*)malloc(sizeof(int));
+			*temp_uid = current_uid;
+			ecore_timer_add(0, __send_interrupt_client, temp_uid);
+		}
 	}
 	
 	/* Change current play */

@@ -21,6 +21,8 @@
 
 #define CLIENT_CLEAN_UP_TIME 500
 
+static Ecore_Timer* g_check_client_timer = NULL;
+
 char* get_tag()
 {
 	return "ttsdnoti";
@@ -43,13 +45,11 @@ int main()
 	}
 
 	if (0 != ttsd_initialize()) {
-		printf("Fail to initialize tts-daemon-noti \n");
 		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] fail to initialize tts-daemon-noti"); 
 		return EXIT_FAILURE;
 	}
 
 	if (0 != ttsd_dbus_open_connection()) {
-		printf("Fail to initialize IPC connection \n");
 		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] fail to open dbus connection");
 		return EXIT_FAILURE;
 	}
@@ -59,18 +59,23 @@ int main()
 		return EXIT_FAILURE;
 	}
 
-	ecore_timer_add(CLIENT_CLEAN_UP_TIME, ttsd_cleanup_client, NULL);
+	g_check_client_timer = ecore_timer_add(CLIENT_CLEAN_UP_TIME, ttsd_cleanup_client, NULL);
+	if (NULL == g_check_client_timer) {
+		SLOG(LOG_WARN, get_tag(), "[Main Warning] Fail to create timer of client check");
+	}
 
 	SLOG(LOG_DEBUG, get_tag(), "[Main] start tts-daemon-noti start..."); 
 	SLOG(LOG_DEBUG, get_tag(), "=====");
 	SLOG(LOG_DEBUG, get_tag(), "  ");
 	SLOG(LOG_DEBUG, get_tag(), "  ");
-
-	printf("Start tts-daemon-noti ...\n");
 	
 	ecore_main_loop_begin();
 
 	SLOG(LOG_DEBUG, get_tag(), "===== TTS DAEMON NOTI FINALIZE");
+
+	if (NULL != g_check_client_timer) {
+		ecore_timer_del(g_check_client_timer);
+	}
 
 	ttsd_network_finalize();
 

@@ -603,8 +603,7 @@ int ttsd_engine_agent_load_current_engine()
 	int ret = 0;
 	ret = g_cur_engine.ttsp_load_engine(g_cur_engine.pdfuncs, g_cur_engine.pefuncs); 
 	if (0 != ret) {
-		printf("Fail load '%s' engine", g_cur_engine.engine_path);
-		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] fail to load engine : result(%d)");
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] fail to load engine - %s : result(%d)", g_cur_engine.engine_path, ret);
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
@@ -660,7 +659,7 @@ int ttsd_engine_agent_load_current_engine()
 
 		if (0 == ret && 0 < g_list_length(voice_list)) {
 			GList *iter = NULL;
-			voice_s* voice;
+			voice_s* voice = NULL;
 			
 			iter = g_list_first(voice_list);
 

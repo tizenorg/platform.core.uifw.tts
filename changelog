@@ -1,3 +1,27 @@
+tts (0.1.62) -- Tue, 14 May 2013
+
+  * Release version 0.1.62 (Kwangyoun Kim <ky85.kim@samsung.com>)
+
+tts (0.1.61-2) -- Tue, 14 May 2013
+
+  * Initialize default language from display language (Dongyeol Lee <dy3.lee@samsung.com>)
+
+tts (0.1.61-1) -- Tue, 07 May 2013
+
+  * Delete code about print (Kwangyoun Kim <ky85.kim@samsung.com>)
+
+tts (0.1.61) -- Thu, 02 May 2013
+
+  * Release version 0.1.61 (Dongyeol Lee <dy3.lee@samsung.com>)
+
+tts (0.1.60-2) -- Thu, 02 May 2013
+
+  * Add to remove timer when daemon is destroyed (Dongyeol Lee <dy3.lee@samsung.com>)
+
+tts (0.1.60-1) -- Fri, 19 Apr 2013
+
+  * Update interrupt scheduling of Screen reader (Dongyeol Lee <dy3.lee@samsung.com>)
+
 tts (0.1.60) -- Tue, 16 Apr 2013
 
   * Release version 0.1.60 (Kwangyoun Kim <ky85.kim@samsung.com>)

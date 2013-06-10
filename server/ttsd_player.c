@@ -582,7 +582,6 @@ int ttsd_player_get_state(int uid, ttsd_player_state_e* state)
 
 	SLOG(LOG_DEBUG, get_tag(), "[PLAYER] State changed : state(%d)", player_state);
 
-	int ret = -1;
 	/* destroy player */
 	switch (player_state) {
 		case MM_PLAYER_STATE_PLAYING:

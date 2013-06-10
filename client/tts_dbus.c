@@ -552,7 +552,7 @@ int tts_dbus_request_get_support_voice(int uid, tts_h tts, tts_supported_voice_c
 
 	if (dbus_error_is_set(&err)) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] %s", err.message);
-		printf("result message : %p\n", result_msg);
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] result message : %p", result_msg);
 	}
 
 	if (NULL != result_msg) {
@@ -649,7 +649,7 @@ int tts_dbus_request_get_default_voice(int uid , char** lang, tts_voice_type_e* 
 
 	if (dbus_error_is_set(&err)) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] %s", err.message);
-		printf("result message : %p\n", result_msg);
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] result message : %p", result_msg);
 	}
 
 	if (NULL != result_msg) {

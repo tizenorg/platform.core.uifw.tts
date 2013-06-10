@@ -62,7 +62,7 @@ int tts_setting_dbus_open_connection()
 	}
 
 	if (DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER != ret) {
-		printf("fail dbus_bus_request_name()\n");
+		SLOG(LOG_ERROR, TAG_TTSC, "[Dbus ERROR] fail to be primary owner \n");
 		return TTS_SETTING_ERROR_OPERATION_FAILED;
 	}
 

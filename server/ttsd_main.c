@@ -21,6 +21,8 @@
 
 #define CLIENT_CLEAN_UP_TIME 500
 
+static Ecore_Timer* g_check_client_timer = NULL;
+
 char* get_tag()
 {
 	return "ttsd";
@@ -38,40 +40,43 @@ int main()
 	SLOG(LOG_DEBUG, get_tag(), "  ");
 	SLOG(LOG_DEBUG, get_tag(), "===== TTS DAEMON DEFAULT INITIALIZE");
 	if (!ecore_init()) {
-		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] fail ecore_init() \n");
+		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] Fail ecore_init()");
 		return -1;
 	}
 
 	if (0 != ttsd_initialize()) {
-		printf("Fail to initialize tts-daemon \n");
-		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] fail to initialize tts-daemon"); 
+		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] Fail to initialize tts-daemon"); 
 		return EXIT_FAILURE;
 	}
 	
 	if (0 != ttsd_dbus_open_connection()) {
-		printf("Fail to initialize IPC connection \n");
-		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] fail to open dbus connection");
+		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] Fail to open dbus connection");
 		return EXIT_FAILURE;
 	}
 
 	if (0 != ttsd_network_initialize()) {
-		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] fail to initialize network");
+		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] Fail to initialize network");
 		return EXIT_FAILURE;
 	}
 
-	ecore_timer_add(CLIENT_CLEAN_UP_TIME, ttsd_cleanup_client, NULL);
+	g_check_client_timer = ecore_timer_add(CLIENT_CLEAN_UP_TIME, ttsd_cleanup_client, NULL);
+	if (NULL == g_check_client_timer) {
+		SLOG(LOG_WARN, get_tag(), "[Main Warning] Fail to create timer of client check");
+	}
 
 	SLOG(LOG_DEBUG, get_tag(), "[Main] tts-daemon start...\n"); 
 	SLOG(LOG_DEBUG, get_tag(), "=====");
 	SLOG(LOG_DEBUG, get_tag(), "  ");
 	SLOG(LOG_DEBUG, get_tag(), "  ");
-
-	printf("Start tts-daemon ...\n");
 	
 	ecore_main_loop_begin();
 
 	SLOG(LOG_DEBUG, get_tag(), "===== TTS DAEMON DEFAULT FINALIZE");
 	
+	if (NULL != g_check_client_timer) {
+		ecore_timer_del(g_check_client_timer);
+	}
+
 	ttsd_network_finalize();
 
 	ttsd_dbus_close_connection();
