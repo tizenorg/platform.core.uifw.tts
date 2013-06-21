@@ -47,8 +47,6 @@ int ttsd_player_destroy_instance(int uid);
 
 int ttsd_player_play(int uid);
 
-int ttsd_player_next_play(int uid);
-
 int ttsd_player_stop(int uid);
 
 int ttsd_player_pause(int uid);
