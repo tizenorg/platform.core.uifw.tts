@@ -5,6 +5,7 @@ Release:    1
 Group:      libs
 License:    Samsung
 Source0:    %{name}-%{version}.tar.gz
+Source1001: 	tts.manifest
 Requires(post): /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
 BuildRequires:  pkgconfig(glib-2.0)
@@ -36,6 +37,7 @@ Text To Speech header files for TTS development.
 
 %prep
 %setup -q -n %{name}-%{version}
+cp %{SOURCE1001} .
 
 
 %build
@@ -52,7 +54,7 @@ mkdir -p %{buildroot}/usr/share/license
 %postun -p /sbin/ldconfig
 
 %files
-%manifest tts-server.manifest
+%manifest %{name}.manifest
 /opt/etc/smack/accesses.d/tts-server.rule
 /etc/config/sysinfo-tts.xml
 %defattr(-,root,root,-)
@@ -62,6 +64,7 @@ mkdir -p %{buildroot}/usr/share/license
 /usr/share/license/*
 
 %files devel
+%manifest %{name}.manifest
 %defattr(-,root,root,-)
 %{_libdir}/pkgconfig/tts.pc
 %{_libdir}/pkgconfig/tts-setting.pc
