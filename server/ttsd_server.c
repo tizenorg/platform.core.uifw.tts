@@ -188,7 +188,6 @@ int __player_result_callback(player_event_e event, int uid, int utt_id)
 	switch(event) {
 	case PLAYER_ERROR:
 		SLOG(LOG_ERROR, get_tag(), "[SERVER ERROR][%s] player result error", __FUNCTION__);
-		__server_send_error(uid, utt_id, TTSD_ERROR_OPERATION_FAILED);
 		ttsd_config_save_error(uid, utt_id, NULL, -1, NULL, __FUNCTION__, __LINE__, "PLAYER_ERROR");
 
 	case PLAYER_EMPTY_SOUND_QUEUE:
@@ -763,11 +762,6 @@ int ttsd_server_stop(int uid)
 			ret = ttsd_engine_cancel_synthesis();
 			if (0 != ret)
 				SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to cancel synthesis : ret(%d)", ret);
-		}
-
-		if (NULL != g_wait_timer) {
-			SLOG(LOG_DEBUG, get_tag(), "Wait timer is deleted");
-			ecore_timer_del(g_wait_timer);
 		}
 
 		__server_set_synth_control(TTSD_SYNTHESIS_CONTROL_EXPIRED);

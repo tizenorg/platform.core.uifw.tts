@@ -265,61 +265,16 @@ int ttsd_config_set_default_speed(int speed)
 int ttsd_config_save_error(int uid, int uttid, const char* lang, int vctype, const char* text, 
 			   const char* func, int line, const char* message)
 {
-	FILE* err_fp;
-	err_fp = fopen(SR_ERROR_FILE_NAME, "a");
-	if (NULL == err_fp) {
-		SLOG(LOG_WARN, get_tag(), "[WARNING] Fail to open error file (%s)", SR_ERROR_FILE_NAME);
-		return -1;
-	}
-	SLOG(LOG_DEBUG, get_tag(), "Save Error File (%s)", SR_ERROR_FILE_NAME);
+	SLOG(LOG_ERROR, get_tag(), "=============== TTS ERROR LOG ====================");
 
-	/* func */
-	if (NULL != func) {
-		fprintf(err_fp, "function - %s\n", func);
-	}
-	
-	/* line */
-	fprintf(err_fp, "line - %d\n", line);
+	SLOG(LOG_ERROR, get_tag(), "uid(%d) uttid(%d)", uid, uttid);
 
-	/* message */
-	if (NULL != message) {
-		fprintf(err_fp, "message - %s\n", message);
-	}
+	if (NULL != func) 	SLOG(LOG_ERROR, get_tag(), "Function(%s) Line(%d)", func, line);
+	if (NULL != message) 	SLOG(LOG_ERROR, get_tag(), "Message(%s)", message);
+	if (NULL != lang) 	SLOG(LOG_ERROR, get_tag(), "Lang(%s), type(%d)", lang, vctype);
+	if (NULL != text) 	SLOG(LOG_ERROR, get_tag(), "Text(%s)", text);
 
-	int ret;
-	/* uid */
-	fprintf(err_fp, "uid - %d\n", uid);
-	
-	/* uttid */
-	fprintf(err_fp, "uttid - %d\n", uttid);
-
-	/* lang */
-	if (NULL != lang) {
-		fprintf(err_fp, "language - %s\n", lang);
-	}
-
-	/* vctype */
-	fprintf(err_fp, "vctype - %d\n", vctype);
-
-	/* text */
-	if (NULL != text) {
-		fprintf(err_fp, "text - %s\n", text);
-	}
-
-	/* get current engine */
-	char *engine_id = NULL;
-
-	ret = ttsd_engine_setting_get_engine(&engine_id);
-	if (0 != ret) {
-		SLOG(LOG_ERROR, get_tag(), "[ERROR] Fail to get current engine");
-	} else {
-		fprintf(err_fp, "current engine - %s", engine_id);
-	}
-
-	/* get data */
-	ttsd_data_save_error_log(uid, err_fp);
-
-	fclose(err_fp);
+	SLOG(LOG_ERROR, get_tag(), "==================================================");
 
 	return 0;
 }
