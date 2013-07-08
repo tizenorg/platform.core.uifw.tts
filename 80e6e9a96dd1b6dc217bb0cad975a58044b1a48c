@@ -1,0 +1,8 @@
+Change-Id: I80e6e9a96dd1b6dc217bb0cad975a58044b1a48c
+Code-Review+2: Ryan Ware <ware@linux.intel.com>
+Verified+1: Ryan Ware <ware@linux.intel.com>
+Submitted-by: Ryan Ware <ware@linux.intel.com>
+Submitted-at: Mon, 08 Jul 2013 10:06:08 -0700
+Reviewed-on: https://review.tizen.org/gerrit/4611
+Project: platform/core/uifw/tts
+Branch: refs/heads/tizen
