@@ -100,6 +100,9 @@ int ttsd_setting_data_is_setting(int pid);
 /* for error log */
 int ttsd_data_save_error_log(int uid, FILE* fp);
 
+int ttsd_data_set_error_data(int uid, int uttid, int error_code);
+
+int ttsd_data_get_error_data(int* uid, int* uttid, int* error_code);
 
 #ifdef __cplusplus
 }
