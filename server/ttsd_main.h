@@ -57,7 +57,8 @@ typedef enum {
 	TTSD_ERROR_INVALID_VOICE	= -0x0100000 | 0x22,	/**< Invalid voice */
 	TTSD_ERROR_ENGINE_NOT_FOUND	= -0x0100000 | 0x23,	/**< No available engine  */
 	TTSD_ERROR_TIMED_OUT		= -0x0100000 | 0x24,	/**< No answer from the daemon */
-	TTSD_ERROR_OPERATION_FAILED	= -0x0100000 | 0x25	/**< Operation failed  */
+	TTSD_ERROR_OPERATION_FAILED	= -0x0100000 | 0x25,	/**< Operation failed  */
+	TTSD_ERROR_AUDIO_POLICY_BLOCKED	= -0x0100000 | 0x26	/**< Audio policy blocked */
 }ttsd_error_e;
 
 typedef enum {

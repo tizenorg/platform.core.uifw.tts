@@ -167,7 +167,27 @@ int __server_next_synthesis(int uid)
 	__synthesis(current_uid);
 
 	if (0 != ttsd_player_play(current_uid)) {
-		SLOG(LOG_WARN, get_tag(), "[Server WARNING] Fail ttsd_player_play() ");
+		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to play sound");
+
+		int pid;
+		int uid;
+		int uttid;
+		int reason;
+		if (0 == ttsd_data_get_error_data(&uid, &uttid, &reason)) {
+			if (current_uid == uid) {
+				/* Send error message */
+				pid = ttsd_data_get_pid(uid);
+				ttsdc_send_error_message(pid, uid, uttid, reason);
+			} else {
+				SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Not matched uid : uid(%d) uttid(%d) reason(%d)", uid, uttid, reason);
+			}
+		}
+
+		/* Change ready state */
+		ttsd_server_stop(current_uid);
+		
+		pid = ttsd_data_get_pid(current_uid);
+		ttsdc_send_set_state_message(pid, current_uid, APP_STATE_READY);
 	} else {
 		/* success playing */
 		SLOG(LOG_DEBUG, get_tag(), "[Server] Success to start player");

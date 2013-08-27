@@ -591,3 +591,40 @@ int ttsd_data_get_same_pid_client_count(int pid)
 
 	return number;
 }
+
+typedef struct 
+{
+	bool is_set;
+	int uid;
+	int uttid;
+	int error_code;
+}error_data_s;
+
+static error_data_s g_error;
+
+int ttsd_data_set_error_data(int uid, int uttid, int error_code)
+{
+	g_error.uid = uid;
+	g_error.uttid = uttid;
+	g_error.error_code = error_code;
+	g_error.is_set = true;
+	return 0;
+}
+
+int ttsd_data_get_error_data(int* uid, int* uttid, int* error_code)
+{
+	if (false == g_error.is_set) {
+		return -1;
+	}
+
+	if (NULL == uid || NULL == uttid || NULL == error_code) {
+		return -1;
+	}
+
+	*uid = g_error.uid;
+	*uttid = g_error.uttid;
+	*error_code = g_error.error_code;
+
+	g_error.is_set = false;
+	return 0;
+}

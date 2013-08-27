@@ -321,6 +321,7 @@ int ttsd_player_play(int uid)
 	ret = __set_and_start(current);
 	if (0 != ret) {
 		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] fail to set or start mm_player");
+		return ret;
 	}
 
 	SECURE_SLOG(LOG_DEBUG, get_tag(), "[Player] Started play and wait for played callback : uid(%d)", uid);
@@ -389,6 +390,7 @@ int __ttsd_player_next_play(int uid)
 	ret = __set_and_start(current);
 	if (0 != ret) {
 		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] fail to set or start mm_player");
+		return ret;
 	}
 
 	SECURE_SLOG(LOG_DEBUG, get_tag(), "[Player] Started play and wait for played callback : uid(%d)", uid);
@@ -1038,6 +1040,7 @@ int __set_and_start(player_s* player)
 	ret = mm_player_set_message_callback(player->player_handle, msg_callback, (void*)user_data);
 	if (MM_ERROR_NONE != ret) {
 		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail mm_player_set_message_callback() : %x ", ret);
+		if (NULL != user_data)	g_free(user_data);
 		return -1;
 	}
 
@@ -1046,9 +1049,10 @@ int __set_and_start(player_s* player)
 
 	if (0 != access(sound_file, R_OK)) {
 		SECURE_SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail to read sound file (%s)", sound_file);
+		if (NULL != user_data)	g_free(user_data);
 		return -1;
 	}
-	
+
 	ret = mm_player_set_attribute(player->player_handle, &err_attr_name,
 		"profile_uri", sound_file , strlen(sound_file) + 1,
 		"sound_volume_type", MM_SOUND_VOLUME_TYPE_MEDIA,
@@ -1059,6 +1063,7 @@ int __set_and_start(player_s* player)
 		if (NULL != err_attr_name) {
 			SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail mm_player_set_attribute() : msg(%s), result(%x) ", err_attr_name, ret);
 		}
+		if (NULL != user_data)	g_free(user_data);
 		return -1;
 	}
 
@@ -1073,14 +1078,28 @@ int __set_and_start(player_s* player)
 	ret = mm_player_realize(player->player_handle);
 	if (MM_ERROR_NONE != ret) {
 		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] fail mm_player_realize() : %x", ret);
+
+		if (NULL != user_data)	g_free(user_data);
 		return -2;
 	}
 
 	ret = mm_player_start(player->player_handle);
 	if (MM_ERROR_NONE != ret) {
 		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] fail mm_player_start() : %x", ret);
-
 		mm_player_unrealize(player->player_handle);
+
+		int reason;
+		if (MM_ERROR_POLICY_BLOCKED == ret) {
+			SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Blocked to start player by policy : %x", ret);
+			reason = TTSD_ERROR_AUDIO_POLICY_BLOCKED;
+		} else {
+			reason = TTSD_ERROR_OPERATION_FAILED;
+		}
+
+		if (NULL != user_data) {
+			ttsd_data_set_error_data(user_data->uid, user_data->utt_id, reason);
+			g_free(user_data);
+		}
 		return -3;
 	}
 
