@@ -3,7 +3,7 @@ Summary:    Text To Speech client library and daemon
 Version:    0.1.62
 Release:    1
 Group:      libs
-License:    Samsung
+License:    Apache-2.0
 Source0:    %{name}-%{version}.tar.gz
 Source1001:	%{name}.manifest
 Source1002:	%{name}-devel.manifest
