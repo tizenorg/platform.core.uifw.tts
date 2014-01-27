@@ -1,27 +1,27 @@
 Name:       tts
 Summary:    Text To Speech client library and daemon
 Version:    0.1.60
-Release:    1
-Group:      libs
-License:    Samsung
+Release:    0
+Group:      Graphics & UI Framework/Libraries
+License:    Apache-2.0
 Source0:    %{name}-%{version}.tar.gz
-Source1001:	%{name}.manifest
-Source1002:	%{name}-devel.manifest
-Requires(post): /sbin/ldconfig
+Source1001: %{name}.manifest
+Source1002: %{name}-devel.manifest
+Requires(post):   /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
-BuildRequires:  pkgconfig(glib-2.0)
-BuildRequires:  pkgconfig(dbus-1)
-BuildRequires:  pkgconfig(mm-player)
-BuildRequires:  pkgconfig(mm-common)
-BuildRequires:  pkgconfig(mm-session)
-BuildRequires:  pkgconfig(dlog)
-BuildRequires:  pkgconfig(vconf)
-BuildRequires:  pkgconfig(vconf-internal-keys)
-BuildRequires:  pkgconfig(ecore)
-BuildRequires:  pkgconfig(ecore-file)
-BuildRequires:  pkgconfig(capi-system-runtime-info)
-
-BuildRequires:  cmake
+BuildRequires:    pkgconfig(glib-2.0)
+BuildRequires:    pkgconfig(dbus-1)
+BuildRequires:    pkgconfig(mm-player)
+BuildRequires:    pkgconfig(mm-common)
+BuildRequires:    pkgconfig(mm-session)
+BuildRequires:    pkgconfig(dlog)
+BuildRequires:    pkgconfig(vconf)
+BuildRequires:    pkgconfig(vconf-internal-keys)
+BuildRequires:    pkgconfig(ecore)
+BuildRequires:    pkgconfig(ecore-file)
+BuildRequires:    pkgconfig(capi-system-runtime-info)
+BuildRequires:    pkgconfig(libtzplatform-config)
+BuildRequires:    cmake
 
 %description
 Text To Speech client library and daemon.
@@ -56,7 +56,7 @@ mkdir -p %{buildroot}/usr/share/license
 
 %files
 %manifest %{name}.manifest
-/etc/config/sysinfo-tts.xml
+%config %{_sysconfdir}/config/sysinfo-tts.xml
 %defattr(-,root,root,-)
 %{_libdir}/lib*.so
 %{_libdir}/voice/tts/1.0/ttsd.conf

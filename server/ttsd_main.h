@@ -24,6 +24,9 @@
 #include <dlog.h>
 #include <errno.h>
 
+/* For multi-user support */
+#include <tzplatform_config.h>
+
 #include "ttsp.h"
 #include "tts_defs.h"
 
@@ -36,13 +39,13 @@ extern "C" {
 #define ENGINE_DIRECTORY_DEFAULT		"/usr/lib/voice/tts/1.0/engine"
 #define ENGINE_DIRECTORY_DEFAULT_SETTING	"/usr/lib/voice/tts/1.0/setting"
 
-#define CONFIG_DIRECTORY			"/opt/home/app/.voice"
-	
-#define ENGINE_DIRECTORY_DOWNLOAD		"/opt/usr/voice/tts/1.0/engine"
-#define ENGINE_DIRECTORY_DOWNLOAD_SETTING	"/opt/usr/voice/tts/1.0/setting"
+#define CONFIG_DIRECTORY		tzplatform_mkpath(TZ_USER_HOME, ".voice")
+
+#define ENGINE_DIRECTORY_DOWNLOAD		tzplatform_mkpath(TZ_USER_HOME, ".voice/tts/1.0/engine")
+#define ENGINE_DIRECTORY_DOWNLOAD_SETTING	tzplatform_mkpath(TZ_USER_HOME, ".voice/tts/1.0/setting")
 
 #define CONFIG_DEFAULT				BASE_DIRECTORY_DEFAULT"/ttsd.conf"
-#define DEFAULT_CONFIG_FILE_NAME		CONFIG_DIRECTORY"/ttsd_default.conf"
+#define DEFAULT_CONFIG_FILE_NAME		tzplatform_mkpath(TZ_USER_HOME, ".voice/ttsd_default.conf")
 
 /* for debug message */
 #define DATA_DEBUG

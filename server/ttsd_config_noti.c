@@ -15,12 +15,16 @@
 #include <Ecore_File.h>
 #include <runtime_info.h>
 #include <sys/inotify.h>
+
+/* For multi-user support */
+#include <tzplatform_config.h>
+
 #include "ttsd_main.h"
 #include "ttsd_config.h"
 #include "ttsd_engine_agent.h"
 #include "ttsd_data.h"
 
-#define NOTI_ERROR_FILE_NAME		CONFIG_DIRECTORY"/ttsd_noti.err"
+#define NOTI_ERROR_FILE_NAME		tzplatform_mkpath(TZ_USER_HOME, ".voice/ttsd_noti.err")
 
 #define ENGINE_ID	"ENGINE_ID"
 #define VOICE		"VOICE"

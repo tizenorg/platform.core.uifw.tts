@@ -15,6 +15,9 @@
 #ifndef _TTS_DEFS_H__
 #define _TTS_DEFS_H__
 
+/* For multi-user support */
+#include <tzplatform_config.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -63,8 +66,8 @@ extern "C" {
 #define TTSD_METHOD_ERROR		"ttsd_method_error"
 #define TTSD_METHOD_SET_STATE		"ttsd_method_set_state"
 #define TTSD_METHOD_GET_STATE		"ttsd_method_get_state"
-	
-#define MESSAGE_FILE_PATH		"/opt/home/app/.voice/tts"
+
+#define MESSAGE_FILE_PATH		tzplatform_mkpath(TZ_USER_HOME, ".voice/tts")
 
 /******************************************************************************************
 * Message Definition for Setting
