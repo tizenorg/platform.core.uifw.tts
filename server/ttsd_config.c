@@ -15,6 +15,9 @@
 #include <runtime_info.h>
 #include <vconf.h>
 
+/* For multi-user support */
+#include <tzplatform_config.h>
+
 #include "ttsd_main.h"
 #include "ttsd_config.h"
 #include "ttsd_engine_agent.h"
@@ -22,7 +25,7 @@
 
 #define CONFIG_DEFAULT			BASE_DIRECTORY_DEFAULT"/ttsd.conf"
 
-#define DEFAULT_ERROR_FILE_NAME		CONFIG_DIRECTORY"/ttsd_default.err"
+#define DEFAULT_ERROR_FILE_NAME		tzplatform_mkpath(TZ_USER_HOME, ".voice/ttsd_default.err")
 
 #define ENGINE_ID	"ENGINE_ID"
 #define VOICE		"VOICE"
