@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2012, 2013 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -30,11 +30,11 @@ typedef enum {
 
 typedef struct 
 {
-	int			utt_id;	
-	char*			text;
-	char*			lang;
-	ttsp_voice_type_e	vctype;
-	ttsp_speed_e		speed;
+	int	utt_id;	
+	char*	text;
+	char*	lang;
+	int	vctype;
+	int	speed;
 }speak_data_s;
 
 typedef struct 
@@ -49,6 +49,8 @@ typedef struct
 	int			channels;
 }sound_data_s;
 
+typedef void (* ttsd_used_voice_cb)(const char* lang, int type);
+
 int ttsd_data_new_client(int pid, int uid);
 
 int ttsd_data_delete_client(int uid);
@@ -59,12 +61,14 @@ int ttsd_data_get_client_count();
 
 int ttsd_data_get_pid(int uid);
 
+/* speak data */
 int ttsd_data_add_speak_data(int uid, speak_data_s data);
 
 int ttsd_data_get_speak_data(int uid, speak_data_s* data);
 
 int ttsd_data_get_speak_data_size(int uid);
 
+/* sound data */
 int ttsd_data_add_sound_data(int uid, sound_data_s data);
 
 int ttsd_data_get_sound_data(int uid, sound_data_s* data);
@@ -73,9 +77,15 @@ int ttsd_data_get_sound_data_size(int uid);
 
 int ttsd_data_clear_data(int uid);
 
+
+int ttsd_data_set_used_voice(int uid, const char* lang, int type);
+
+int ttsd_data_reset_used_voice(int uid, ttsd_used_voice_cb callback);
+
 int ttsd_data_get_client_state(int pid, app_state_e* state);
 
 int ttsd_data_set_client_state(int pid, app_state_e state);
+
 
 int ttsd_data_get_current_playing();
 
@@ -89,20 +99,9 @@ int ttsd_data_is_current_playing();
 
 int ttsd_data_get_same_pid_client_count(int pid);
 
-
-int ttsd_setting_data_add(int pid);
-
-int ttsd_setting_data_delete(int pid);
-
-int ttsd_setting_data_is_setting(int pid);
-
-
-/* for error log */
+/* For error handing */
 int ttsd_data_save_error_log(int uid, FILE* fp);
 
-int ttsd_data_set_error_data(int uid, int uttid, int error_code);
-
-int ttsd_data_get_error_data(int* uid, int* uttid, int* error_code);
 
 #ifdef __cplusplus
 }

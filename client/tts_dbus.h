@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2012, 2013 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -31,14 +31,10 @@ int tts_dbus_request_initialize(int uid);
 
 int tts_dbus_request_finalize(int uid);
 
-int tts_dbus_request_get_support_voice(int uid, tts_h tts, tts_supported_voice_cb callback, void* user_data);
+int tts_dbus_set_sound_type(int uid, int type);
 
-int tts_dbus_request_get_default_voice(int uid , char** lang, tts_voice_type_e* vctype);
 
 int tts_dbus_request_add_text(int uid, const char* text, const char* lang, int vctype, int speed, int uttid); 
-
-int tts_dbus_request_remove_all_text(int uid); 
-
 
 int tts_dbus_request_play(int uid) ;
 
@@ -47,9 +43,9 @@ int tts_dbus_request_stop(int uid);
 int tts_dbus_request_pause(int uid);
 
 
-int tts_file_msg_open_connection();
+int tts_file_msg_open_connection(tts_mode_e mode);
 
-int tts_file_msg_close_connection();
+int tts_file_msg_close_connection(tts_mode_e mode);
 
 #ifdef __cplusplus
 }

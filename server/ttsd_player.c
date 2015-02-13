@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2012, 2013 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -11,120 +11,429 @@
 *  limitations under the License.
 */
 
-
-#include <mm_types.h>
-#include <mm_player.h>
-#include <mm_player_internal.h>
-#include <mm_session.h>
-#include <mm_error.h>
+#include <audio_io.h>
 #include <Ecore.h>
+#include <sound_manager.h>
 
 #include "ttsd_main.h"
 #include "ttsd_player.h"
 #include "ttsd_data.h"
 #include "ttsd_dbus.h"
 
-
 /*
 * Internal data structure
 */
 
-#define TEMP_FILE_MAX	36
+typedef enum {
+	AUDIO_STATE_NONE = 0,
+	AUDIO_STATE_READY,
+	AUDIO_STATE_PLAY
+}audio_state_e;
 
 typedef struct {
-	char	riff[4];
-	int	file_size;
-	char	wave[4];
-	char	fmt[4];
-	int	header_size;
-	short	sample_format;
-	short	n_channels;
-	int	sample_rate;
-	int	bytes_per_second;
-	short	block_align;
-	short	bits_per_sample;
-	char	data[4];
-	int	data_size;
-} WavHeader;
+	int			uid;	/** client id */
+	app_state_e		state;	/** client state */
 
-typedef struct {
-	int		uid;		/** client id */
-	MMHandleType	player_handle;	/** mm player handle */
-	int		utt_id;		/** utt_id of next file */
-	ttsp_result_event_e event;	/** event of callback */
-	bool		pause_after_complete;	/** For resume when the 'Paused' state of player after end callback */
-} player_s;
+	/* Current utterance information */
+	ttsp_result_event_e	event;	/** event of last utterance */
 
-typedef struct {
-	int  uid;
-	int  utt_id;
-	ttsp_result_event_e event;
-	char filename[TEMP_FILE_MAX];
-} user_data_s;
+	bool			is_paused_data;
+	int			idx;
+	sound_data_s		paused_data;
+}player_s;
 
-
-/*
-* static data
-*/
-
-#define TEMP_FILE_PATH  "/tmp"
-#define FILE_PATH_SIZE  256
-#define DEFAULT_FILE_SIZE 10
+#define SOUND_BUFFER_LENGTH	2048
 
 /** player init info */
 static bool g_player_init = false;
 
-/** tts engine list */
+/** Client list */
 static GList *g_player_list;
 
 /** current player information */
 static player_s* g_playing_info;
 
-/** player callback function */
-static player_result_callback_func g_result_callback;
+/* player state */
+static audio_state_e g_audio_state;
 
-/** numbering for temp file */
-static unsigned int g_index;              
+static ttsp_audio_type_e g_audio_type;
+
+static int g_sampling_rate;
+
+static audio_out_h g_audio_h;
 
 /*
 * Internal Interfaces 
 */
-player_s* __player_get_item(int uid);
 
-int __save_file(int uid, int index, sound_data_s data, char** filename);
+player_s* __player_get_item(int uid)
+{
+	GList *iter = NULL;
+	player_s *data = NULL;
 
-int __set_and_start(player_s* player);
+	if (0 < g_list_length(g_player_list)) {
+		/* Get a first item */
+		iter = g_list_first(g_player_list);
 
-int __init_wave_header(WavHeader* hdr, size_t nsamples, size_t sampling_rate, int channel);
+		while (NULL != iter) {
+			/* Get handle data from list */
+			data = (player_s*)iter->data;
 
-static int msg_callback(int message, void *data, void *user_param) ;
+			/* compare uid */
+			if (uid == data->uid)
+				return data;
 
+			/* Get next item */
+			iter = g_list_next(iter);
+		}
+	}
+
+	return NULL;
+}
+
+void __player_audio_io_interrupted_cb(audio_io_interrupted_code_e code, void *user_data)
+{
+	SLOG(LOG_DEBUG, get_tag(), "===== INTERRUPTED CALLBACK");
+
+	SLOG(LOG_WARN, get_tag(), "[Player] code : %d", (int)code);
+
+	g_audio_state = AUDIO_STATE_READY;
+
+	if (NULL == g_playing_info) {
+		SLOG(LOG_WARN, get_tag(), "[Player WARNING] No current player");
+		return;
+	}
+
+	if (APP_STATE_PLAYING == g_playing_info->state) {
+		g_playing_info->state = APP_STATE_PAUSED;
+
+		ttsd_data_set_client_state(g_playing_info->uid, APP_STATE_PAUSED);
+
+		int pid = ttsd_data_get_pid(g_playing_info->uid);
+
+		/* send message to client about changing state */
+		ttsdc_send_set_state_message (pid, g_playing_info->uid, APP_STATE_PAUSED);
+	}
+
+	SLOG(LOG_DEBUG, get_tag(), "=====");
+	SLOG(LOG_DEBUG, get_tag(), "  ");
+
+	return;
+}
+
+static int __create_audio_out(ttsp_audio_type_e type, int rate)
+{
+	int ret = -1;
+	audio_sample_type_e sample_type;
+
+	if (TTSP_AUDIO_TYPE_RAW_S16 == type) {
+		sample_type = AUDIO_SAMPLE_TYPE_S16_LE;
+	} else {
+		sample_type = AUDIO_SAMPLE_TYPE_U8;
+	}
+
+	ret = audio_out_create(rate, AUDIO_CHANNEL_MONO, sample_type, SOUND_TYPE_MEDIA, &g_audio_h);
+	if (AUDIO_IO_ERROR_NONE != ret) {
+		g_audio_state = AUDIO_STATE_NONE;
+		g_audio_h = NULL;
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail to create audio");
+		return -1;
+	} else {
+		SLOG(LOG_DEBUG, get_tag(), "[Player SUCCESS] Create audio");
+	}
+
+	if (TTSD_MODE_DEFAULT != ttsd_get_mode()) {
+		ret = audio_out_ignore_session(g_audio_h);
+		if (AUDIO_IO_ERROR_NONE != ret) {
+			g_audio_state = AUDIO_STATE_NONE;
+			g_audio_h = NULL;
+			SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail to set ignore session");
+			return -1;
+		}
+	}
+
+	ret = audio_out_set_interrupted_cb(g_audio_h, __player_audio_io_interrupted_cb, NULL);
+	if (AUDIO_IO_ERROR_NONE != ret) {
+		g_audio_state = AUDIO_STATE_NONE;
+		g_audio_h = NULL;
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail to set callback function");
+		return -1;
+	}
+
+	g_audio_type = type;
+	g_sampling_rate = rate;
+
+	g_audio_state = AUDIO_STATE_READY;
+
+	return 0;
+}
+
+static int __destroy_audio_out()
+{
+	if (NULL == g_audio_h) {
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Current handle is not valid");
+		return -1;
+	}
+
+	int ret = -1;
+	ret = audio_out_destroy(g_audio_h);
+	if (AUDIO_IO_ERROR_NONE != ret) {
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail to destroy audio");
+		return -1;
+	} else {
+		SLOG(LOG_DEBUG, get_tag(), "[Player SUCCESS] Destroy audio");
+	}
+	
+	g_audio_type = 0;
+	g_sampling_rate = 0;
+
+	g_audio_state = AUDIO_STATE_NONE;
+	g_audio_h = NULL;
+
+	return 0;
+}
+
+static void __end_play_thread(void *data, Ecore_Thread *thread)
+{
+	SLOG(LOG_DEBUG, get_tag(), "===== End thread");
+	return;
+}
+
+static void __play_thread(void *data, Ecore_Thread *thread)
+{
+	SLOG(LOG_DEBUG, get_tag(), "===== Start thread");
+
+	if (NULL == g_playing_info) {
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] No current player");
+		return;
+	}
+
+	player_s* player = g_playing_info;
+	sound_data_s wdata;
+
+	int ret = -1;
+	int len = SOUND_BUFFER_LENGTH;
+	int idx = 0;
+
+	while (1) {
+		if (true == player->is_paused_data) {
+			/* Resume player */
+			wdata.data = player->paused_data.data;
+			wdata.data_size = player->paused_data.data_size;
+			wdata.utt_id = player->paused_data.utt_id;
+			wdata.audio_type = player->paused_data.audio_type;
+			wdata.rate = player->paused_data.rate;
+			wdata.channels = player->paused_data.channels;
+			wdata.event = player->paused_data.event;
+
+			idx = player->idx;
+
+			player->is_paused_data = false;
+			player->idx = 0;
+		} else {
+			if (0 != ttsd_data_get_sound_data(player->uid, &wdata)) {
+				g_playing_info = NULL;
+				SLOG(LOG_DEBUG, get_tag(), "[Player] No sound data. Finish thread");
+
+				/* Request unprepare */
+				ret = audio_out_unprepare(g_audio_h);
+				if (AUDIO_IO_ERROR_NONE != ret) {
+					SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail to unprepare audio : %d", ret);
+				} else {
+					SLOG(LOG_DEBUG, get_tag(), "[Player SUCCESS] Unprepare audio");
+				}
+
+				g_audio_state = AUDIO_STATE_READY;
+				return;
+			}
+
+			/* If wdata's event is 'start', current wdata is first data of engine for synthesis. 
+			 * If wdata's event is 'finish', player should check previous event to know whether this wdata is first or not.
+			 * When previous wdata's event is 'finish' and current wdata's event is 'finish', 
+			 * the player should send utt started event. 
+			 */
+			if (TTSP_RESULT_EVENT_START == wdata.event ||
+			   (TTSP_RESULT_EVENT_FINISH == player->event && TTSP_RESULT_EVENT_FINISH == wdata.event)) {
+				int pid = ttsd_data_get_pid(player->uid);
+
+				if (pid <= 0) {
+					SLOG(LOG_WARN, get_tag(), "[Send WARNIING] Current player is not valid");
+					return;
+				}
+
+				if (0 != ttsdc_send_utt_start_message(pid, player->uid, wdata.utt_id)) {
+					SLOG(LOG_ERROR, get_tag(), "[Send ERROR] Fail to send Utterance Start Signal : pid(%d), uid(%d), uttid(%d)", 
+						pid, player->uid, wdata.utt_id);
+				}
+				SLOG(LOG_DEBUG, get_tag(), "[Player] Start utterance : uid(%d), uttid(%d)", player->uid, wdata.utt_id);
+			}
+
+			/* Save last event to check utterance start */
+			player->event = wdata.event;
+			idx = 0;
+
+			if (NULL == wdata.data || 0 >= wdata.data_size) {
+				if (TTSP_RESULT_EVENT_FINISH == wdata.event) {
+					SLOG(LOG_DEBUG, get_tag(), "No sound data");
+					/* send utterence finish signal */
+					int pid = ttsd_data_get_pid(player->uid);
+
+					if (pid <= 0) {
+						SLOG(LOG_WARN, get_tag(), "[Send WARNIING] Current player is not valid");
+						return;
+					}
+					if (0 != ttsdc_send_utt_finish_message(pid, player->uid, wdata.utt_id)) {
+						SECURE_SLOG(LOG_ERROR, get_tag(), "[Send ERROR] Fail to send Utterance Completed Signal : pid(%d), uid(%d), uttid(%d)", pid, player->uid, wdata.utt_id);
+					}
+				}
+				SLOG(LOG_DEBUG, get_tag(), "[Player] Finish utterance : uid(%d), uttid(%d)", player->uid, wdata.utt_id);
+				continue;
+			}
+		}
+
+		SLOG(LOG_DEBUG, get_tag(), "[Player] Sound info : id(%d) size(%d) audiotype(%d) rate(%d) event(%d)", 
+			wdata.utt_id, wdata.data_size, wdata.audio_type, wdata.rate, wdata.event);
+
+		if (g_sampling_rate != wdata.rate || g_audio_type != wdata.audio_type) {
+			SLOG(LOG_DEBUG, get_tag(), "[Player] Change audio handle : org type(%d) org rate(%d)", g_audio_type, g_sampling_rate);
+			if (NULL != g_audio_h) {
+				__destroy_audio_out();
+			}
+
+			if (0 > __create_audio_out(wdata.audio_type, wdata.rate)) {
+				SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail to create audio out");
+				return;
+			}
+		}
+
+		while (APP_STATE_PLAYING == player->state || APP_STATE_PAUSED == player->state) {
+			if ((unsigned int)idx >= wdata.data_size)
+				break;
+
+			if ((unsigned int)idx + SOUND_BUFFER_LENGTH > wdata.data_size) {
+				len = wdata.data_size - idx;
+			} else {
+				len = SOUND_BUFFER_LENGTH;
+			}
+
+			if (AUDIO_STATE_READY == g_audio_state) {
+				/* Request prepare */
+				ret = audio_out_prepare(g_audio_h);
+				if (AUDIO_IO_ERROR_NONE != ret) {
+					SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail to prepare audio : %d", ret);
+					g_playing_info = NULL;
+					return;
+				}
+				SLOG(LOG_DEBUG, get_tag(), "[Player SUCCESS] Prepare audio");
+				g_audio_state = AUDIO_STATE_PLAY;
+			}
+
+			char* temp_data = wdata.data;
+			ret = audio_out_write(g_audio_h, &temp_data[idx], len);
+			if (0 > ret) {
+				SLOG(LOG_WARN, get_tag(), "[Player WARNING] Fail to audio write - %d", ret);
+			} else {
+				idx += len;
+			}
+
+			if (APP_STATE_PAUSED == player->state) {
+				/* Save data */
+				player->paused_data.data = wdata.data;
+				player->paused_data.data_size = wdata.data_size;
+				player->paused_data.utt_id = wdata.utt_id;
+				player->paused_data.audio_type = wdata.audio_type;
+				player->paused_data.rate = wdata.rate;
+				player->paused_data.channels = wdata.channels;
+				player->paused_data.event = wdata.event;
+
+				player->is_paused_data = true;
+				player->idx = idx;
+
+				g_audio_state = AUDIO_STATE_READY;
+				SLOG(LOG_DEBUG, get_tag(), "[Player] Stop player thread by pause");
+
+				/* Request prepare */
+				ret = audio_out_unprepare(g_audio_h);
+				if (AUDIO_IO_ERROR_NONE != ret) {
+					SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail to unprepare audio : %d", ret);
+				} else {
+					SLOG(LOG_DEBUG, get_tag(), "[Player SUCCESS] Unprepare audio");
+				}
+				return;
+			}
+		}
+
+		if (NULL != wdata.data) {
+			free(wdata.data);
+			wdata.data = NULL;
+		}
+
+		if (APP_STATE_READY == player->state) {
+			g_audio_state = AUDIO_STATE_READY;
+			SLOG(LOG_DEBUG, get_tag(), "[Player] Stop player thread");
+
+			/* Request prepare */
+			ret = audio_out_unprepare(g_audio_h);
+			if (AUDIO_IO_ERROR_NONE != ret) {
+				SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail to unprepare audio : %d", ret);
+			} else {
+				SLOG(LOG_DEBUG, get_tag(), "[Player SUCCESS] Unprepare audio");
+			}
+			return;
+		}
+
+		if (TTSP_RESULT_EVENT_FINISH == wdata.event) {
+			/* send utterence finish signal */
+			int pid = ttsd_data_get_pid(player->uid);
+
+			if (pid <= 0) {
+				SLOG(LOG_WARN, get_tag(), "[Send WARNIING] Current player is not valid");
+				return;
+			}
+
+			if (0 != ttsdc_send_utt_finish_message(pid, player->uid, wdata.utt_id)) {
+				SLOG(LOG_ERROR, get_tag(), "[Send ERROR] Fail to send Utterance Completed Signal : pid(%d), uid(%d), uttid(%d)", 
+					pid, player->uid, wdata.utt_id);
+				return;
+			}
+
+			SLOG(LOG_DEBUG, get_tag(), "[Player] Finish utterance : uid(%d), uttid(%d)", player->uid, wdata.utt_id);
+		}
+	}
+}
 
 /*
 * Player Interfaces 
 */
-
-int ttsd_player_init(player_result_callback_func result_cb)
+int ttsd_player_init()
 {
-	if (NULL == result_cb) {
-		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] invalid parameter");
-		return TTSD_ERROR_INVALID_PARAMETER;
-	}
-
-	g_result_callback = result_cb;
-
 	g_playing_info = NULL;
+	g_audio_state = AUDIO_STATE_NONE;
+	g_audio_h = NULL;
 	
-	g_index = 1;
-	g_player_init = true;
+	int ret;
 
 	if (TTSD_MODE_DEFAULT == ttsd_get_mode()) {
-		if (MM_ERROR_NONE != mm_session_init(MM_SESSION_TYPE_EXCLUSIVE)) {
-			SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail mm_session_init(MM_SESSION_TYPE_EXCLUSIVE)");	
+		ret = sound_manager_set_session_type(SOUND_SESSION_TYPE_MEDIA);
+		if (0 != ret) {
+			SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail to set session type");
+		}
+		
+		ret = sound_manager_set_media_session_option(SOUND_SESSION_OPTION_PAUSE_OTHERS_WHEN_START, SOUND_SESSION_OPTION_INTERRUPTIBLE_DURING_PLAY);
+		if (0 != ret) {
+			SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail set media session option");	
 		} else {
-			SLOG(LOG_ERROR, get_tag(), "[Player SUCCESS] mm_session_init(MM_SESSION_TYPE_EXCLUSIVE)");	
+			SLOG(LOG_DEBUG, get_tag(), "[Player SUCCESS] set media session option");	
 		}
 	}
+
+	ecore_thread_max_set(1);
+		
+	ret = __create_audio_out(TTSP_AUDIO_TYPE_RAW_S16, 16000);
+	if (0 != ret)
+		return -1;
+
+	g_player_init = true;
 
 	return 0;
 }
@@ -135,6 +444,33 @@ int ttsd_player_release(void)
 		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Not Initialized");
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
+
+	int ret;
+
+	ret = __destroy_audio_out();
+	if (0 != ret)
+		return -1;
+
+	SLOG(LOG_DEBUG, get_tag(), "[Player DEBUG] ==========================");
+	SLOG(LOG_DEBUG, get_tag(), "[Player DEBUG] Active thread count : %d", ecore_thread_active_get());
+	SLOG(LOG_DEBUG, get_tag(), "[Player DEBUG] ==========================");
+
+	/* The thread should be released */
+	int thread_count = ecore_thread_active_get();
+	int count = 0;
+	while (0 < thread_count) {
+		usleep(10);
+
+		count++;
+		if (100 == count) {
+			SLOG(LOG_WARN, get_tag(), "[Player WARNING!!] Thread is blocked. Player release continue.");
+			break;
+		}
+
+		thread_count = ecore_thread_active_get();
+	}
+
+	SLOG(LOG_DEBUG, get_tag(), "[Player DEBUG] Thread is released");
 
 	/* clear g_player_list */
 	g_playing_info = NULL;
@@ -156,24 +492,16 @@ int ttsd_player_create_instance(int uid)
 		return -1;
 	}
 
-	int ret = MM_ERROR_NONE; 
-	MMHandleType player_handle;
-	
-	ret = mm_player_create(&player_handle);
-	if (ret != MM_ERROR_NONE || 0 == player_handle) {
-		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] fail mm_player_create() : %x", ret);
-		return -2;
-	}
-
-	player_s* new_client = (player_s*)g_malloc0( sizeof(player_s) * 1);
+	player_s* new_client = (player_s*)calloc(1, sizeof(player_s));
 
 	new_client->uid = uid;
-	new_client->player_handle = player_handle;
-	new_client->utt_id = -1;
 	new_client->event = TTSP_RESULT_EVENT_FINISH;
-	new_client->pause_after_complete = false;
+	new_client->state = APP_STATE_READY;
+	new_client->is_paused_data = false;
+	new_client->idx = 0;
+	new_client->paused_data.data = NULL;
 	
-	SECURE_SLOG(LOG_DEBUG, get_tag(), "[Player] Create player : uid(%d), handle(%d)", uid, player_handle );
+	SECURE_SLOG(LOG_DEBUG, get_tag(), "[Player] Create player : uid(%d)", uid);
 
 	g_player_list = g_list_append(g_player_list, new_client);
 
@@ -200,34 +528,6 @@ int ttsd_player_destroy_instance(int uid)
 		}
 	}
 
-	MMPlayerStateType player_state;
-	mm_player_get_state(current->player_handle, &player_state);
-
-	SLOG(LOG_DEBUG, get_tag(), "[PLAYER] State changed : state(%d)", player_state);
-
-	int ret = -1;
-	/* destroy player */
-	switch (player_state) {
-		case MM_PLAYER_STATE_PLAYING:
-		case MM_PLAYER_STATE_PAUSED:
-		case MM_PLAYER_STATE_READY:
-			ret = mm_player_unrealize(current->player_handle);
-			if (MM_ERROR_NONE != ret) {
-				SLOG(LOG_ERROR, get_tag(), "[Player ERROR] fail mm_player_unrealize() : %x", ret);
-			} 
-			/* NO break for destroy */
-
-		case MM_PLAYER_STATE_NULL:
-			ret = mm_player_destroy(current->player_handle);
-			if (MM_ERROR_NONE != ret) {
-				SLOG(LOG_ERROR, get_tag(), "[Player ERROR] fail mm_player_destroy() : %x", ret);
-			} 
-			break;
-
-		default:
-			break;
-	}
-		
 	GList *iter = NULL;
 	player_s *data = NULL;
 
@@ -243,7 +543,7 @@ int ttsd_player_destroy_instance(int uid)
 				/* compare uid */
 				if (uid == data->uid) {
 					g_player_list = g_list_remove_link(g_player_list, iter);				
-					g_free(data);
+					free(data);
 					break;
 				}
 			}
@@ -260,8 +560,6 @@ int ttsd_player_destroy_instance(int uid)
 
 int ttsd_player_play(int uid)
 {
-	SECURE_SLOG(LOG_DEBUG, get_tag(), "[Player] start play : uid(%d)", uid );
-
 	if (false == g_player_init) {
 		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Not Initialized" );
 		return -1;
@@ -269,10 +567,12 @@ int ttsd_player_play(int uid)
 
 	if (NULL != g_playing_info) {
 		if (uid == g_playing_info->uid) {
-			SECURE_SLOG(LOG_WARN, get_tag(), "[Player WARNING] uid(%d) has already played", g_playing_info->uid); 
+			SECURE_SLOG(LOG_DEBUG, get_tag(), "[Player] uid(%d) has already played", g_playing_info->uid);
 			return 0;
 		}
 	}
+
+	SECURE_SLOG(LOG_DEBUG, get_tag(), "[Player] start play : uid(%d)", uid );
 
 	/* Check sound queue size */
 	if (0 == ttsd_data_get_sound_data_size(uid)) {
@@ -288,123 +588,24 @@ int ttsd_player_play(int uid)
 		return -1;
 	}
 
-	MMPlayerStateType player_state;
-	mm_player_get_state(current->player_handle, &player_state);
+	current->state = APP_STATE_PLAYING;
+	
+	g_playing_info = current;
 
-	SLOG(LOG_DEBUG, get_tag(), "[PLAYER] State changed : state(%d)", player_state);
+	SLOG(LOG_DEBUG, get_tag(), "[Player DEBUG] Active thread count : %d", ecore_thread_active_get());
 
-	switch (player_state) {
-		case MM_PLAYER_STATE_PLAYING:
-			SLOG(LOG_WARN, get_tag(), "[Player] Current player is playing. Do not start new sound.");
-			return 0;
-
-		case MM_PLAYER_STATE_PAUSED:
-			SLOG(LOG_WARN, get_tag(), "[Player] Player is paused. Do not start new sound.");
-			return -1;
-
-		case MM_PLAYER_STATE_READY:
-			SLOG(LOG_WARN, get_tag(), "[Player] Player is ready for next play. Do not start new sound.");
-			return -1;
-
-		case MM_PLAYER_STATE_NULL:
-			break;
-
-		case MM_PLAYER_STATE_NONE:
-			SLOG(LOG_WARN, get_tag(), "[Player] Player is created. Do not start new sound.");
-			return -1;
-
-		default:
-			return -1;
+	if (0 < ttsd_data_get_sound_data_size(current->uid)) {
+		SLOG(LOG_DEBUG, get_tag(), "[Player] Run thread");
+		ecore_thread_run(__play_thread, __end_play_thread, NULL, NULL);
 	}
-
-	int ret;
-	ret = __set_and_start(current);
-	if (0 != ret) {
-		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] fail to set or start mm_player");
-		return ret;
-	}
-
-	SECURE_SLOG(LOG_DEBUG, get_tag(), "[Player] Started play and wait for played callback : uid(%d)", uid);
 
 	return 0;
 }
-
-int __ttsd_player_next_play(int uid)
-{
-	if (false == g_player_init) {
-		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Not Initialized" );
-		return -1;
-	}
-
-	/* Check uid */
-	player_s* current;
-	current = __player_get_item(uid);
-	if (NULL == current) {
-		SECURE_SLOG(LOG_ERROR, get_tag(), "[Player ERROR] uid(%d) is not valid", uid); 
-		g_playing_info = NULL;
-		return -1;
-	}
-
-	if (NULL != g_playing_info) {
-		if (uid != g_playing_info->uid) {
-			SECURE_SLOG(LOG_WARN, get_tag(), "[Player WARNING] Current player(%d) is NOT uid(%d)", g_playing_info->uid, uid); 
-			return 0;
-		}
-	} else {
-		SLOG(LOG_WARN, get_tag(), "[Player WARNING] Current player do NOT exist"); 
-		return -1;
-	}
-
-	MMPlayerStateType player_state;
-	mm_player_get_state(current->player_handle, &player_state);
-
-	SLOG(LOG_DEBUG, get_tag(), "[PLAYER] State changed : state(%d)", player_state);
-
-	int ret = -1;
-	/* stop player */
-	switch (player_state) {
-		case MM_PLAYER_STATE_PLAYING:
-		case MM_PLAYER_STATE_PAUSED:
-		case MM_PLAYER_STATE_READY:
-			ret = mm_player_unrealize(current->player_handle);
-			if (MM_ERROR_NONE != ret) {
-				SLOG(LOG_ERROR, get_tag(), "[Player ERROR] fail mm_player_unrealize() : %x", ret);
-				return -1;
-			} 
-			break;
-
-		case MM_PLAYER_STATE_NULL:
-			break;
-
-		default:
-			break;
-	}
-
-	/* Check sound queue size */
-	if (0 == ttsd_data_get_sound_data_size(uid)) {
-		SECURE_SLOG(LOG_WARN, get_tag(), "[Player WARNING] A sound queue of current player(%d) is empty", uid); 
-		g_playing_info = NULL;
-		return -1;
-	}
-
-	ret = __set_and_start(current);
-	if (0 != ret) {
-		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] fail to set or start mm_player");
-		return ret;
-	}
-
-	SECURE_SLOG(LOG_DEBUG, get_tag(), "[Player] Started play and wait for played callback : uid(%d)", uid);
-
-	return 0;
-}
-
 
 int ttsd_player_stop(int uid)
 {
-	SECURE_SLOG(LOG_DEBUG, get_tag(), "[Player] stop player : uid(%d)", uid );
-
 	if (false == g_player_init) {
-		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Not Initialized" );
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Not Initialized");
 		return -1;
 	}
 
@@ -426,32 +627,17 @@ int ttsd_player_stop(int uid)
 		SLOG(LOG_DEBUG, get_tag(), "[Player] No current playing"); 
 	}
 
-	current->utt_id = -1;
-	current->pause_after_complete = false;
-
-	MMPlayerStateType player_state;
-	mm_player_get_state(current->player_handle, &player_state);
-
-	SLOG(LOG_DEBUG, get_tag(), "[PLAYER] Current state(%d)", player_state);
-
-	int ret = -1;
-	switch (player_state) {
-		case MM_PLAYER_STATE_PLAYING:
-		case MM_PLAYER_STATE_PAUSED:
-		case MM_PLAYER_STATE_READY:
-			ret = mm_player_unrealize(current->player_handle);
-			if (MM_ERROR_NONE != ret) {
-				SLOG(LOG_ERROR, get_tag(), "[Player ERROR] fail mm_player_unrealize() : %x", ret);
-				return -1;
-			} 
-			break;
-
-		case MM_PLAYER_STATE_NULL:
-			break;
-		
-		default:
-			break;
+	if (true == current->is_paused_data) {
+		if (NULL != current->paused_data.data) {
+			free(current->paused_data.data);
+			current->paused_data.data = NULL;
+		}
 	}
+
+	current->event = TTSP_RESULT_EVENT_FINISH;
+	current->state = APP_STATE_READY;
+	current->is_paused_data = false;
+	current->idx = 0;
 
 	SECURE_SLOG(LOG_DEBUG, get_tag(), "[Player SUCCESS] Stop player : uid(%d)", uid);
 
@@ -485,21 +671,7 @@ int ttsd_player_pause(int uid)
 		}
 	}
 
-	MMPlayerStateType player_state;
-	mm_player_get_state(current->player_handle, &player_state);
-
-	SLOG(LOG_DEBUG, get_tag(), "[PLAYER] Current state(%d)", player_state);
-
-	int ret = 0;
-	if (MM_PLAYER_STATE_PLAYING == player_state) {
-		ret = mm_player_pause(current->player_handle);
-		if (MM_ERROR_NONE != ret) {
-			SLOG(LOG_ERROR, get_tag(), "[Player ERROR] fail mm_player_pause : %x ", ret);
-		}
-	} else {
-		SLOG(LOG_WARN, get_tag(), "[Player WARNING] Current player is NOT 'playing'");
-	}
-	
+	current->state = APP_STATE_PAUSED;
 
 	return 0;
 }
@@ -525,118 +697,13 @@ int ttsd_player_resume(int uid)
 	if (NULL != g_playing_info)
 		g_playing_info = NULL;
 
-	
-	MMPlayerStateType player_state;
-	mm_player_get_state(current->player_handle, &player_state);
+	current->state = APP_STATE_PLAYING;
+	g_playing_info = current;
 
-	SLOG(LOG_DEBUG, get_tag(), "[PLAYER] Current state(%d)", player_state);
-
-	int ret = -1;
-	if (MM_PLAYER_STATE_PAUSED == player_state) {
-		/* When the 'Paused' state of player after end of play */
-		if (true == current->pause_after_complete) {
-			g_playing_info = current;
-
-			current->pause_after_complete = false;
-			
-			/* Current state need load and play */
-			ret = __ttsd_player_next_play(uid);
-			if (0 != ret) {
-				SLOG(LOG_ERROR, get_tag(), "[player] Fail to next play in resume function");
-			}
-		} else {
-			ret = mm_player_resume(current->player_handle);
-			if (MM_ERROR_NONE != ret) {
-				SLOG(LOG_ERROR, get_tag(), "[Player ERROR] fail mm_player_resume() : %d", ret);
-				return -1;
-			} else {
-				SLOG(LOG_DEBUG, get_tag(), "[Player] Resume player");
-			}
-
-			g_playing_info = current;
-		}
-	} else {
-		SLOG(LOG_WARN, get_tag(), "[Player WARNING] Current uid is NOT paused state.");
-	}
+	SLOG(LOG_DEBUG, get_tag(), "[Player] Run thread");
+	ecore_thread_run(__play_thread, __end_play_thread, NULL, NULL);
 
 	return 0;
-}
-
-int ttsd_player_get_state(int uid, ttsd_player_state_e* state)
-{
-	if (false == g_player_init) {
-		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Not Initialized" );
-		return -1;
-	}
-
-	player_s* current;
-	current = __player_get_item(uid);
-	if (NULL == current) {
-		SECURE_SLOG(LOG_ERROR, get_tag(), "[Player ERROR] uid(%d) is not valid", uid); 
-		return -1;
-	}
-
-	MMPlayerStateType player_state;
-	mm_player_get_state(current->player_handle, &player_state);
-
-	SLOG(LOG_DEBUG, get_tag(), "[PLAYER] State changed : state(%d)", player_state);
-
-	/* destroy player */
-	switch (player_state) {
-		case MM_PLAYER_STATE_PLAYING:
-			*state = TTSD_PLAYER_STATE_PLAYING;
-			break;
-		case MM_PLAYER_STATE_PAUSED:
-			*state = TTSD_PLAYER_STATE_PAUSED;
-			break;
-		
-		case MM_PLAYER_STATE_NULL:
-			*state = TTSD_PLAYER_STATE_NULL;
-			break;
-
-		case MM_PLAYER_STATE_READY:
-		default:
-			SECURE_SLOG(LOG_ERROR, get_tag(), "[Player ERROR] player state of uid(%d) is not valid", uid); 
-			return -1;
-			break;
-	}
-
-	return 0;
-}
-
-int ttsd_player_get_current_client()
-{
-	if (false == g_player_init) {
-		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Not Initialized" );
-		return -1;
-	}
-
-	if (NULL != g_playing_info) 
-		return g_playing_info->uid;
-
-	SLOG(LOG_WARN, get_tag(), "[Player WARNING] No current player"); 
-
-	return 0;
-}
-
-int ttsd_player_get_current_utterance_id(int uid)
-{
-	SECURE_SLOG(LOG_DEBUG, get_tag(), "[Player] get current utt id : uid(%d)", uid );
-
-	if (false == g_player_init) {
-		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Not Initialized" );
-		return -1;
-	}
-
-	/* Check uid */
-	player_s* current;
-	current = __player_get_item(uid);
-	if (NULL == current) {
-		SECURE_SLOG(LOG_ERROR, get_tag(), "[Player ERROR] uid(%d) is not valid", uid); 
-		return -1;
-	}
-
-	return current->utt_id;
 }
 
 int ttsd_player_all_stop()
@@ -648,7 +715,6 @@ int ttsd_player_all_stop()
 
 	g_playing_info = NULL;
 
-	int ret = -1;
 	GList *iter = NULL;
 	player_s *data = NULL;
 
@@ -662,473 +728,33 @@ int ttsd_player_all_stop()
 
 			app_state_e state;
 			if (0 > ttsd_data_get_client_state(data->uid, &state)) {
-				SLOG(LOG_ERROR, get_tag(), "[player ERROR] ttsd_player_all_stop : uid is not valid ");
+				SLOG(LOG_ERROR, get_tag(), "[player ERROR] uid(%d) is not valid", data->uid);
 				ttsd_player_destroy_instance(data->uid);
 				iter = g_list_next(iter);
 				continue;
 			}
 
 			if (APP_STATE_PLAYING == state || APP_STATE_PAUSED == state) {
-				/* unrealize player */
-				ret = mm_player_unrealize(data->player_handle);
-				if (MM_ERROR_NONE != ret) {
-					SLOG(LOG_ERROR, get_tag(), "[Player ERROR] fail mm_player_unrealize() : %x", ret);
-				} 
-
-				data->utt_id = -1;
 				data->event = TTSP_RESULT_EVENT_FINISH;
-			}
-			
-			/* Get next item */
-			iter = g_list_next(iter);
-		}
-	}
+				data->state = APP_STATE_READY;
 
-	SLOG(LOG_DEBUG, get_tag(), "[Player SUCCESS] player all stop!! ");
-
-	return 0;
-}
-
-static Eina_Bool __player_next_play(void *data)
-{
-	SLOG(LOG_DEBUG, get_tag(), "===== PLAYER NEXT PLAY");
-
-	int* uid = (int*)data;
-
-	if (NULL == uid) {
-		SLOG(LOG_ERROR, get_tag(), "[PLAYER ERROR] uid is NULL");
-		SLOG(LOG_DEBUG, get_tag(), "=====");
-		SLOG(LOG_DEBUG, get_tag(), "  ");
-		return EINA_FALSE;
-	}
-
-	SECURE_SLOG(LOG_DEBUG, get_tag(), "[PLAYER] uid = %d", *uid);
-	
-	if (0 != __ttsd_player_next_play(*uid)) {
-		SLOG(LOG_WARN, get_tag(), "[PLAYER WARNING] Fail to play next");
-	}
-
-	free(uid);
-
-	SLOG(LOG_DEBUG, get_tag(), "=====");
-	SLOG(LOG_DEBUG, get_tag(), "  ");
-
-	return EINA_FALSE;
-}
-
-static int msg_callback(int message, void *data, void *user_param) 
-{
-	user_data_s* user_data = NULL;
-
-	user_data = (user_data_s*)user_param;
-
-	if (NULL == user_data) {
-		SLOG(LOG_ERROR, get_tag(), "[PLAYER ERROR] user_param is NULL");
-		return -1;
-	}
-
-	int uid = user_data->uid;
-	int utt_id = user_data->utt_id;
-
-	MMMessageParamType *msg = (MMMessageParamType*)data;
-
-	switch (message) {
-	case MM_MESSAGE_ERROR:
-		{
-			SLOG(LOG_DEBUG, get_tag(), "===== PLAYER ERROR CALLBACK");
-			SECURE_SLOG(LOG_ERROR, get_tag(), "[PLAYER ERROR] Info : uid(%d), utt id(%d), error file(%s)", uid, utt_id, user_data->filename);
-
-			/* send error info */
-			g_result_callback(PLAYER_ERROR, uid, utt_id);
-
-			player_s* current;
-			current = __player_get_item(uid);
-			if (NULL == current) {
-				SECURE_SLOG(LOG_ERROR, get_tag(), "[PLAYER ERROR] uid(%d) is NOT valid ", uid); 
-			} else {
-				current->event = TTSP_RESULT_EVENT_FINISH;
-			}
-
-			if (NULL != user_data) 
-				g_free(user_data);
-
-			/* check current player */
-			if (NULL != g_playing_info) {
-				if (uid == g_playing_info->uid) {
-					g_playing_info = NULL;
-					SECURE_SLOG(LOG_WARN, get_tag(), "[PLAYER] Current Player is NOT uid(%d)", uid);
-				}
-			}
-
-			SLOG(LOG_DEBUG, get_tag(), "=====");
-			SLOG(LOG_DEBUG, get_tag(), "  ");
-		}
-		break;	/*MM_MESSAGE_ERROR*/
-
-	case MM_MESSAGE_BEGIN_OF_STREAM:
-
-		break;
-
-	case MM_MESSAGE_END_OF_STREAM:
-		{
-			SLOG(LOG_DEBUG, get_tag(), "===== END OF STREAM CALLBACK");
-
-			if (-1 == remove(user_data->filename)) {
-				SECURE_SLOG(LOG_WARN, get_tag(), "[PLAYER WARNING] Fail to remove temp file", user_data->filename); 
-			}
-
-			/* Check uid */
-			player_s* current;
-			current = __player_get_item(uid);
-			if (NULL == current) {
-				SECURE_SLOG(LOG_ERROR, get_tag(), "[PLAYER ERROR] uid(%d) is NOT valid", uid); 
-				if (NULL != g_playing_info) {
-					if (uid == g_playing_info->uid) {
-						g_playing_info = NULL;
-						SECURE_SLOG(LOG_WARN, get_tag(), "[PLAYER] Current Player is NOT uid(%d)", uid);
+				if (true == data->is_paused_data) {
+					if (NULL != data->paused_data.data) {
+						free(data->paused_data.data);
+						data->paused_data.data = NULL;
 					}
 				}
-				SLOG(LOG_DEBUG, get_tag(), "=====");
-				SLOG(LOG_DEBUG, get_tag(), "  ");
-				return -1;
+				
+				data->is_paused_data = false;
+				data->idx = 0;
 			}
-
-			g_free(user_data);
-
-			int pid = ttsd_data_get_pid(uid);
-
-			/* send utterence finish signal */
-			if (TTSP_RESULT_EVENT_FINISH == current->event) {
-				if (0 == ttsdc_send_utt_finish_message(pid, uid, utt_id))
-					SECURE_SLOG(LOG_DEBUG, get_tag(), "[Send SUCCESS] Send Utterance Completed Signal : pid(%d), uid(%d), uttid(%d)", pid, uid, utt_id);
-				else 
-					SECURE_SLOG(LOG_ERROR, get_tag(), "[Send ERROR] Fail to send Utterance Completed Signal : pid(%d), uid(%d), uttid(%d)", pid, uid, utt_id);
-			}
-
-			/* for sync problem */
-			MMPlayerStateType player_state;
-			mm_player_get_state(current->player_handle, &player_state);
 			
-			if (MM_PLAYER_STATE_PAUSED == player_state) {
-				/* The current state of player is 'Paused' */
-				current->pause_after_complete = true;
-			} else {
-				/* play state */
-				int* uid_data = (int*) g_malloc0(sizeof(int));
-				*uid_data = uid;
-
-				SECURE_SLOG(LOG_DEBUG, get_tag(), "[PLAYER] uid = %d", *uid_data);
-
-				ecore_timer_add(0, __player_next_play, (void*)uid_data);
-			}
-
-			SLOG(LOG_DEBUG, get_tag(), "=====");
-			SLOG(LOG_DEBUG, get_tag(), "  ");
-		}
-		break;	/*MM_MESSAGE_END_OF_STREAM*/
-
-	case MM_MESSAGE_STATE_CHANGED:
-		break;
-
-	case MM_MESSAGE_STATE_INTERRUPTED:
-		if (MM_PLAYER_STATE_PAUSED == msg->state.current) {
-
-			SLOG(LOG_DEBUG, get_tag(), "===== INTERRUPTED CALLBACK");
-
-			ttsd_data_set_client_state(uid, APP_STATE_PAUSED);
-
-			int pid = ttsd_data_get_pid(uid);
-			/* send message to client about changing state */
-			ttsdc_send_set_state_message (pid, uid, APP_STATE_PAUSED);
-
-			SLOG(LOG_DEBUG, get_tag(), "=====");
-			SLOG(LOG_DEBUG, get_tag(), "  ");
-		}
-		break;
-
-	default:
-		break;
-	}
-
-	return TRUE;
-}
-
-player_s* __player_get_item(int uid)
-{
-	GList *iter = NULL;
-	player_s *data = NULL;
-
-	if (0 < g_list_length(g_player_list)) {
-		/* Get a first item */
-		iter = g_list_first(g_player_list);
-
-		while (NULL != iter) {
-			/* Get handle data from list */
-			data = (player_s*)iter->data;
-
-			/* compare uid */
-			if (uid == data->uid)	
-				return data;
-
 			/* Get next item */
 			iter = g_list_next(iter);
 		}
 	}
 
-	return NULL;
-}
-
-int __save_file(int uid, int index, sound_data_s data, char** filename)
-{
-	char postfix[5];
-	memset(postfix, '\0', 5);
-
-	switch (data.audio_type) {
-	case TTSP_AUDIO_TYPE_RAW:
-	case TTSP_AUDIO_TYPE_WAV:
-		strcpy(postfix, "wav");
-		break;
-	case TTSP_AUDIO_TYPE_MP3:
-		strcpy(postfix, "mp3");
-		break;
-	case TTSP_AUDIO_TYPE_AMR:
-		strcpy(postfix, "amr");
-		break;
-	default:
-		SECURE_SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Audio type(%d) is NOT valid", data.audio_type); 
-		return -1;
-	}
-
-	/* make filename to save */
-	char* temp;
-	temp = (char*)g_malloc0(sizeof(char) * FILE_PATH_SIZE);
-	if (NULL == temp) {
-		SLOG(LOG_ERROR, get_tag(), "[Player Error] make buf is failed");
-		return -1;
-	}
-
-	int ret = snprintf(temp, FILE_PATH_SIZE, "%s/ttstemp%d_%d.%s", TEMP_FILE_PATH, uid, index, postfix);
-
-	if (0 >= ret) {
-		if (NULL != temp)
-			g_free(temp);
-		return -1;
-	}
-
-	FILE* fp;
-	fp = fopen(temp, "wb");
-
-	if (fp == NULL) {
-		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] temp file open error");
-		if (NULL != temp)
-			g_free(temp);
-		return -1;
-	}
-
-	if (data.audio_type == TTSP_AUDIO_TYPE_RAW) {
-		WavHeader header;
-		if (0 != __init_wave_header(&header, data.data_size, data.rate, data.channels)) {
-			fclose(fp);
-			if (NULL != temp)
-				g_free(temp);
-			return -1;
-		}
-
-		if (0 >= fwrite(&header, sizeof(WavHeader), 1, fp)) {
-			SLOG(LOG_ERROR, get_tag(), "[Player ERROR] fail to write wav header to file");
-			fclose(fp);
-			if (NULL != temp)
-				g_free(temp);
-			return -1;
-		}
-	}
-
-	int size = fwrite(data.data, data.data_size, 1,  fp);
-	if (size <= 0) {
-		size = fwrite("0000000000", DEFAULT_FILE_SIZE, 1,  fp);
-		if (size <= 0) {
-			SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail to write date");
-			fclose(fp);
-			if (NULL != temp)
-				g_free(temp);
-			return -1;
-		}	
-	} 
-
-	fclose(fp);
-	*filename = temp;
-	
-	SLOG(LOG_DEBUG, get_tag(), " ");
-	SECURE_SLOG(LOG_DEBUG, get_tag(), "Filepath : %s ", *filename);
-	SECURE_SLOG(LOG_DEBUG, get_tag(), "Header : Data size(%d), Sample rate(%d), Channel(%d) ", data.data_size, data.rate, data.channels);
+	SLOG(LOG_DEBUG, get_tag(), "[Player SUCCESS] player all stop!!");
 
 	return 0;
 }
-
-int __init_wave_header (WavHeader* hdr, size_t nsamples, size_t sampling_rate, int channel)
-{
-	if (hdr == NULL || sampling_rate <= 0 || channel <= 0) {
-		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] __init_wave_header : input parameter invalid");
-		SECURE_SLOG(LOG_ERROR, get_tag(), "[Player ERROR] hdr : %p", hdr);
-		SECURE_SLOG(LOG_ERROR, get_tag(), "[Player ERROR] nsample : %d", nsamples);
-		SECURE_SLOG(LOG_ERROR, get_tag(), "[Player ERROR] sampling_rate : %", sampling_rate);
-		SECURE_SLOG(LOG_ERROR, get_tag(), "[Player ERROR] channel : %", channel);
-		return TTSD_ERROR_INVALID_PARAMETER;
-	}
-
-	size_t bytesize = DEFAULT_FILE_SIZE;
-
-	if (0 < nsamples) {
-		bytesize = nsamples;	
-	} 
-
-	/* NOT include \0(NULL) */
-	strncpy(hdr->riff, "RIFF", 4);	
-	hdr->file_size = (int)(bytesize  + 36);
-	strncpy(hdr->wave, "WAVE", 4);
-	strncpy(hdr->fmt, "fmt ", 4);	/* fmt + space */
-	hdr->header_size = 16;
-	hdr->sample_format = 1;		/* WAVE_FORMAT_PCM */
-	hdr->n_channels = channel;
-	hdr->sample_rate = (int)(sampling_rate);
-	hdr->bytes_per_second = (int)sampling_rate * sizeof(short);
-	hdr->block_align =  sizeof(short);
-	hdr->bits_per_sample = sizeof(short)*8;
-	strncpy(hdr->data, "data", 4);	
-	hdr->data_size = (int)bytesize;
-
-	return 0;
-}
-
-int __set_and_start(player_s* player)
-{
-	/* get sound data */
-	sound_data_s wdata;
-	if (0 != ttsd_data_get_sound_data(player->uid, &wdata)) {
-		SECURE_SLOG(LOG_WARN, get_tag(), "[Player WARNING] A sound queue of current player(%d) is empty", player->uid); 
-		return -1;
-	}
-
-	g_index++;
-	if (10000 <= g_index)	{
-		g_index = 1;
-	}
-
-	int ret;
-
-	/* make sound file for mmplayer */
-	char* sound_file = NULL;
-	ret = __save_file(player->uid, g_index, wdata, &sound_file);
-	if (0 != ret || NULL == sound_file) {
-		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] fail to make sound file");
-		return -1;
-	}
-	
-	user_data_s* user_data = (user_data_s*)g_malloc0(sizeof(user_data_s));
-	user_data->uid = player->uid;
-	user_data->utt_id = wdata.utt_id;
-	user_data->event = wdata.event;
-	memset(user_data->filename, 0, TEMP_FILE_MAX); 
-	strncpy( user_data->filename, sound_file, strlen(sound_file) );
-
-	SECURE_SLOG(LOG_DEBUG, get_tag(), "Info : uid(%d), utt(%d), filename(%s) , event(%d)", 
-		user_data->uid, user_data->utt_id, user_data->filename, user_data->event);
-	SLOG(LOG_DEBUG, get_tag(), " ");
-
-	
-	/* set callback func */
-	ret = mm_player_set_message_callback(player->player_handle, msg_callback, (void*)user_data);
-	if (MM_ERROR_NONE != ret) {
-		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail mm_player_set_message_callback() : %x ", ret);
-		if (NULL != user_data)	g_free(user_data);
-		return -1;
-	}
-
-	/* set playing info to mm player */
-	char* err_attr_name = NULL;
-
-	if (0 != access(sound_file, R_OK)) {
-		SECURE_SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail to read sound file (%s)", sound_file);
-		if (NULL != user_data)	g_free(user_data);
-		return -1;
-	}
-
-	ret = mm_player_set_attribute(player->player_handle, &err_attr_name,
-		"profile_uri", sound_file , strlen(sound_file) + 1,
-		"sound_volume_type", MM_SOUND_VOLUME_TYPE_MEDIA,
-		"sound_route", MM_AUDIOROUTE_PLAYBACK_NORMAL,
-		NULL );
-
-	if (MM_ERROR_NONE != ret) {
-		if (NULL != err_attr_name) {
-			SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail mm_player_set_attribute() : msg(%s), result(%x) ", err_attr_name, ret);
-		}
-		if (NULL != user_data)	g_free(user_data);
-		return -1;
-	}
-
-	if (TTSD_MODE_DEFAULT != ttsd_get_mode()) {
-		ret = mm_player_ignore_session(player->player_handle);
-		if (MM_ERROR_NONE != ret) {
-			SLOG(LOG_WARN, get_tag(), "[Player WARNING] fail mm_player_ignore_session() : %x", ret);
-		}
-	}
-	
-	/* realize and start mm player */ 
-	ret = mm_player_realize(player->player_handle);
-	if (MM_ERROR_NONE != ret) {
-		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] fail mm_player_realize() : %x", ret);
-
-		if (NULL != user_data)	g_free(user_data);
-		return -2;
-	}
-
-	ret = mm_player_start(player->player_handle);
-	if (MM_ERROR_NONE != ret) {
-		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] fail mm_player_start() : %x", ret);
-		mm_player_unrealize(player->player_handle);
-
-		int reason;
-		if (MM_ERROR_POLICY_BLOCKED == ret) {
-			SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Blocked to start player by policy : %x", ret);
-			reason = TTSD_ERROR_AUDIO_POLICY_BLOCKED;
-		} else {
-			reason = TTSD_ERROR_OPERATION_FAILED;
-		}
-
-		if (NULL != user_data) {
-			ttsd_data_set_error_data(user_data->uid, user_data->utt_id, reason);
-			g_free(user_data);
-		}
-		return -3;
-	}
-
-	/* If wdata's event is 'start', current wdata is first data of engine for synthesis. 
-	 * If wdata's event is 'finish', player should check previous event to know whether this wdata is first or not.
-	 * When previous wdata's event is 'finish' and current wdata's event is 'finish', 
-	 * the player should send utt started event. 
-	 */
-	if (TTSP_RESULT_EVENT_START == wdata.event ||
-	    (TTSP_RESULT_EVENT_FINISH == player->event && TTSP_RESULT_EVENT_FINISH == wdata.event)) {
-		int pid;
-		pid = ttsd_data_get_pid(player->uid);
-
-		/* send utterance start message */
-		if (0 != ttsdc_send_utt_start_message(pid, player->uid, wdata.utt_id)) {
-			SECURE_SLOG(LOG_ERROR, get_tag(), "[Send ERROR] Fail to send Utterance Start Signal : pid(%d), uid(%d), uttid(%d)", pid, player->uid, wdata.utt_id);
-		}
-	} else {
-		SLOG(LOG_DEBUG, get_tag(), "[PLAYER] Don't need to send Utterance Start Signal");
-	}
-
-	g_playing_info = player;
-
-	if (NULL != sound_file)	
-		g_free(sound_file);
-	if (NULL != wdata.data)	
-		g_free(wdata.data);
-
-	return 0;
-}
-
-

@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2012, 2013 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -11,78 +11,100 @@
 *  limitations under the License.
 */
 
-
-#include <sys/wait.h>
+#include <dirent.h>
 #include <Ecore.h>
+#include <sys/wait.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <dirent.h>
 
+#include "tts_config_mgr.h"
 #include "tts_main.h"
 #include "tts_setting.h"
-#include "tts_setting_dbus.h"
 
-static bool g_is_daemon_started = false;
+/** 
+* @brief Enumerations of setting state.
+*/
+typedef enum {
+	TTS_SETTING_STATE_NONE = 0,
+	TTS_SETTING_STATE_READY
+}tts_setting_state_e;
 
-static Ecore_Timer* g_setting_connect_timer = NULL;
-
-static int __check_setting_tts_daemon();
 
 static tts_setting_state_e g_state = TTS_SETTING_STATE_NONE;
 
-static tts_setting_initialized_cb g_initialized_cb;
-static void* g_user_data;
+static tts_setting_supported_engine_cb g_engine_cb;
 
-static int g_reason;
+static tts_setting_engine_changed_cb g_engine_changed_cb;
+static void* g_engine_changed_user_data;
 
-/* API Implementation */
-static Eina_Bool __tts_setting_initialized(void *data)
+static tts_setting_voice_changed_cb g_voice_changed_cb;
+static void* g_voice_changed_user_data;
+
+static tts_setting_speed_changed_cb g_speed_changed_cb;
+static void* g_speed_changed_user_data;
+
+static tts_setting_pitch_changed_cb g_pitch_changed_cb;
+static void* g_pitch_changed_user_data;
+
+
+
+const char* tts_tag()
 {
-	g_initialized_cb(g_state, g_reason, g_user_data);
-
-	return EINA_FALSE;
+	return "ttsc";
 }
 
-static Eina_Bool __tts_setting_connect_daemon(void *data)
+static int __setting_convert_config_error_code(tts_config_error_e code)
 {
-	/* Send hello */
-	if (0 != tts_setting_dbus_request_hello()) {
-		if (false == g_is_daemon_started) {
-			g_is_daemon_started = true;
-			__check_setting_tts_daemon();
-		}
-		return EINA_TRUE;
-	}
+	if (code == TTS_CONFIG_ERROR_NONE)			return TTS_SETTING_ERROR_NONE;
+	if (code == TTS_CONFIG_ERROR_OUT_OF_MEMORY)		return TTS_SETTING_ERROR_OUT_OF_MEMORY;
+	if (code == TTS_CONFIG_ERROR_IO_ERROR)			return TTS_SETTING_ERROR_IO_ERROR;
+	if (code == TTS_CONFIG_ERROR_INVALID_PARAMETER)		return TTS_SETTING_ERROR_INVALID_PARAMETER;
+	if (code == TTS_CONFIG_ERROR_INVALID_STATE)		return TTS_SETTING_ERROR_INVALID_STATE;
+	if (code == TTS_CONFIG_ERROR_INVALID_VOICE)		return TTS_SETTING_ERROR_INVALID_VOICE;
+	if (code == TTS_CONFIG_ERROR_ENGINE_NOT_FOUND)		return TTS_SETTING_ERROR_ENGINE_NOT_FOUND;
+	if (code == TTS_CONFIG_ERROR_OPERATION_FAILED)		return TTS_SETTING_ERROR_OPERATION_FAILED;
+	if (code == TTS_CONFIG_ERROR_NOT_SUPPORTED_FEATURE)	return TTS_SETTING_ERROR_NOT_SUPPORTED_FEATURE;
 
-	SLOG(LOG_DEBUG, TAG_TTSC, "===== Connect daemon");
-
-	/* do request initialize */
-	int ret = -1;
-
-	ret = tts_setting_dbus_request_initialize();
-
-	if (TTS_SETTING_ERROR_ENGINE_NOT_FOUND == ret) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Engine not found");
-	} else if (TTS_SETTING_ERROR_NONE != ret) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to connection : %d", ret);
-	} else {
-		/* success to connect tts-daemon */
-		g_state = TTS_SETTING_STATE_READY;
-	}
-
-	g_reason = ret;
-
-	ecore_timer_add(0, __tts_setting_initialized, NULL);
-
-	g_setting_connect_timer = NULL;
-
-	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-	SLOG(LOG_DEBUG, TAG_TTSC, " ");
-
-	return EINA_FALSE;
+	return TTS_SETTING_ERROR_NONE;
 }
 
-int tts_setting_initialize(tts_setting_initialized_cb callback, void* user_data)
+void __setting_config_engine_changed_cb(const char* engine_id, const char* setting, const char* language, int voice_type, bool auto_voice, void* user_data)
+{
+	SLOG(LOG_DEBUG, TAG_TTSC, "Engine chagned : engine(%s) setting(%s) lang(%s) type(%d)", 
+		engine_id, setting, language, language, voice_type);
+
+	if (NULL != g_engine_changed_cb)
+		g_engine_changed_cb(engine_id, g_engine_changed_user_data);
+
+	if (NULL != g_voice_changed_cb)
+		g_voice_changed_cb(language, voice_type, auto_voice, g_voice_changed_user_data);
+}
+
+void __setting_config_voice_changed_cb(const char* before_language, int before_type, const char* language, int voice_type, bool auto_voice, void* user_data)
+{
+	SLOG(LOG_DEBUG, TAG_TTSC, "Voice changed : lang(%s) type(%d) auto(%s)", language, voice_type, auto_voice ? "on" : "off");
+
+	if (NULL != g_voice_changed_cb)
+		g_voice_changed_cb(language, voice_type, auto_voice, g_voice_changed_user_data);
+}
+
+void __setting_config_speech_rate_changed_cb(int value, void* user_data)
+{
+	SLOG(LOG_DEBUG, TAG_TTSC, "Speech rate : %d", value);
+
+	if (NULL != g_speed_changed_cb)
+		g_speed_changed_cb(value, g_speed_changed_user_data);
+}
+
+void __setting_config_pitch_changed_cb(int value, void* user_data)
+{
+	SLOG(LOG_DEBUG, TAG_TTSC, "Pitch : %d", value);
+
+	if (NULL != g_pitch_changed_cb)
+		g_pitch_changed_cb(value, g_pitch_changed_user_data);
+}
+
+int tts_setting_initialize()
 {
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Initialize TTS Setting");
 
@@ -93,17 +115,32 @@ int tts_setting_initialize(tts_setting_initialized_cb callback, void* user_data)
 		return TTS_SETTING_ERROR_NONE;
 	}
 
-	if( 0 != tts_setting_dbus_open_connection() ) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to open connection");
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
-		return TTS_SETTING_ERROR_OPERATION_FAILED;
+	int ret = tts_config_mgr_initialize(getpid());
+	if (0 != ret) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to initialize config manager : %d", ret);
+		return __setting_convert_config_error_code(ret);
 	}
 
-	g_initialized_cb = callback;
-	g_user_data = user_data;
+	ret = tts_config_mgr_set_callback(getpid(), __setting_config_engine_changed_cb, __setting_config_voice_changed_cb, 
+		__setting_config_speech_rate_changed_cb, __setting_config_pitch_changed_cb, NULL);
+	if (0 != ret) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to set config changed : %d", ret);
+		return __setting_convert_config_error_code(ret);
+	}
 
-	g_setting_connect_timer = ecore_timer_add(0, __tts_setting_connect_daemon, NULL);
+	g_state = TTS_SETTING_STATE_READY;
+
+	g_engine_changed_cb = NULL;
+	g_engine_changed_user_data = NULL;
+
+	g_voice_changed_cb = NULL;
+	g_voice_changed_user_data = NULL;
+
+	g_speed_changed_cb = NULL;
+	g_speed_changed_user_data = NULL;
+
+	g_pitch_changed_cb = NULL;
+	g_pitch_changed_user_data = NULL;
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
@@ -115,34 +152,23 @@ int tts_setting_finalize()
 {
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Finalize TTS Setting");
 
-	int ret = 0;
-
-	if (TTS_SETTING_STATE_READY == g_state) {
-		ret = tts_setting_dbus_request_finalilze(); 
-		if (0 != ret) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] result : %d", ret);
-		}
-	}
-
-	if (NULL != g_setting_connect_timer) {
-		SLOG(LOG_DEBUG, TAG_TTSC, "Setting Connect Timer is remained");
-		ecore_timer_del(g_setting_connect_timer);
-	}
-
-	g_is_daemon_started = false;
-	
-	if (0 != tts_setting_dbus_close_connection()) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to close connection");
-	} else {
-		SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Finalize");
-	}
+	tts_config_mgr_finalize(getpid());
 
 	g_state = TTS_SETTING_STATE_NONE;
-	
+
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
 
 	return TTS_SETTING_ERROR_NONE;
+}
+
+bool __tts_config_mgr_get_engine_list(const char* engine_id, const char* engine_name, const char* setting, void* user_data)
+{
+	if (NULL != g_engine_cb) {
+		return g_engine_cb(engine_id, engine_name, setting, user_data);
+	}
+
+	return false;
 }
 
 int tts_setting_foreach_supported_engines(tts_setting_supported_engine_cb callback, void* user_data)
@@ -151,29 +177,27 @@ int tts_setting_foreach_supported_engines(tts_setting_supported_engine_cb callba
 
 	if (TTS_SETTING_STATE_NONE == g_state) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Not initialized");
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_SETTING_ERROR_INVALID_STATE;
 	}
 
 	if (NULL == callback) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Callback is NULL");
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_SETTING_ERROR_INVALID_PARAMETER;
 	}
 
-	int ret = tts_setting_dbus_request_get_engine_list(callback, user_data);
+	g_engine_cb = callback;
+
+	int ret = tts_config_mgr_get_engine_list(__tts_config_mgr_get_engine_list, user_data);
 	if (0 != ret) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Result : %d", ret);
-	} else {
-		SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Foreach supported engines");
 	}
-	
+
+	g_engine_cb = NULL;
+
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
-		
-	return ret;
+
+	return __setting_convert_config_error_code(ret);
 }
 
 int tts_setting_get_engine(char** engine_id)
@@ -194,7 +218,7 @@ int tts_setting_get_engine(char** engine_id)
 		return TTS_SETTING_ERROR_INVALID_PARAMETER;
 	}
 
-	int ret = tts_setting_dbus_request_get_engine(engine_id);
+	int ret = tts_config_mgr_get_engine(engine_id);
 	if (0 != ret) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Result : %d", ret);
 	} else {
@@ -204,7 +228,7 @@ int tts_setting_get_engine(char** engine_id)
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
 
-	return ret;
+	return __setting_convert_config_error_code(ret);
 }
 
 int tts_setting_set_engine(const char* engine_id)
@@ -225,17 +249,17 @@ int tts_setting_set_engine(const char* engine_id)
 		return TTS_SETTING_ERROR_INVALID_PARAMETER;
 	}
 
-	int ret = tts_setting_dbus_request_set_engine(engine_id);
+	int ret = tts_config_mgr_set_engine(engine_id);
 	if (0 != ret) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Result : %d", ret);
 	} else {
-		SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Set current engine");
+		SECURE_SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Set current engine : %s", engine_id);
 	}
 	
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
     
-	return ret;
+	return __setting_convert_config_error_code(ret);
 }
 
 int tts_setting_foreach_surpported_voices(tts_setting_supported_voice_cb callback, void* user_data)
@@ -244,19 +268,25 @@ int tts_setting_foreach_surpported_voices(tts_setting_supported_voice_cb callbac
 
 	if (TTS_SETTING_STATE_NONE == g_state) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Not initialized");
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_SETTING_ERROR_INVALID_STATE;
 	}
 
 	if (NULL == callback) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Param is NULL");
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_SETTING_ERROR_INVALID_PARAMETER;
 	}
 
-	int ret = tts_setting_dbus_request_get_voice_list(callback, user_data);
+	char* current_engine = NULL;
+	int ret = tts_config_mgr_get_engine(&current_engine);
+	if (0 != ret) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to get current engine : %d", ret);
+		return TTS_SETTING_ERROR_OPERATION_FAILED;
+	}
+
+	ret = tts_config_mgr_get_voice_list(current_engine, (tts_config_supported_voice_cb)callback, user_data);
+
+	if (NULL != current_engine)
+		free(current_engine);
 
 	if (0 != ret) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Result : %d", ret);
@@ -267,303 +297,364 @@ int tts_setting_foreach_surpported_voices(tts_setting_supported_voice_cb callbac
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
 
-	return ret;
+	return __setting_convert_config_error_code(ret);
 }
 
-int tts_setting_get_default_voice(char** language, tts_setting_voice_type_e* voice_type)
+int tts_setting_get_voice(char** language, int* voice_type)
 {
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Get default voice");
 
 	if (TTS_SETTING_STATE_NONE == g_state) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Not initialized");
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_SETTING_ERROR_INVALID_STATE;
 	}
 
 	if (NULL == language || NULL == voice_type) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input parameter is NULL");
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_SETTING_ERROR_INVALID_PARAMETER;
 	}
 
-	int ret = tts_setting_dbus_request_get_default_voice(language, voice_type);
+	int ret = tts_config_mgr_get_voice(language, (int*)voice_type);
 	if (0 != ret) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Result : %d", ret);
 	} else {
-		SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Foreach supported voices");
+		SECURE_SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Get default voices : lang(%s) type(%d)", *language, *voice_type);
 	}
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
 
-	return ret;
+	return __setting_convert_config_error_code(ret);
 }
 
-int tts_setting_set_default_voice(const char* language, tts_setting_voice_type_e voice_type)
+int tts_setting_set_voice(const char* language, int voice_type)
 {
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Set default voice");
 
 	if (TTS_SETTING_STATE_NONE == g_state) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Not initialized");
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_SETTING_ERROR_INVALID_STATE;
 	}
 
 	if (NULL == language) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input parameter is NULL");
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_SETTING_ERROR_INVALID_PARAMETER;
 	}
 
-	if (voice_type < TTS_SETTING_VOICE_TYPE_MALE || TTS_SETTING_VOICE_TYPE_USER3 < voice_type ) {
+	if (voice_type < TTS_SETTING_VOICE_TYPE_MALE || TTS_SETTING_VOICE_TYPE_CHILD < voice_type) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Invalid voice type");
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_SETTING_ERROR_INVALID_PARAMETER;
 	}
 
-	int ret = tts_setting_dbus_request_set_default_voice(language, voice_type);
+	int ret = tts_config_mgr_set_voice(language, (int)voice_type);
 	if (0 != ret) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Result : %d", ret);
 	} else {
-		SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Set default voice");
+		SECURE_SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Set default voice : lang(%s) type(%d)",language, voice_type);
 	}
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
     
-	return ret;
+	return __setting_convert_config_error_code(ret);
 }
 
+int tts_setting_set_auto_voice(bool value)
+{
+	SLOG(LOG_DEBUG, TAG_TTSC, "===== Set auto voice");
 
-int tts_setting_get_default_speed(tts_setting_speed_e* speed)
+	if (TTS_SETTING_STATE_NONE == g_state) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Not initialized");
+		return TTS_SETTING_ERROR_INVALID_STATE;
+	}
+
+	if (value != true && value != false) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Invalid value");
+		return TTS_SETTING_ERROR_INVALID_PARAMETER;
+	}
+
+	int ret = tts_config_mgr_set_auto_voice(value);
+	if (0 != ret) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Result : %d", ret);
+	} else {
+		SECURE_SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Set auto voice %s", value ? "on" : "off");
+	}
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+	SLOG(LOG_DEBUG, TAG_TTSC, " ");
+
+	return __setting_convert_config_error_code(ret);
+}
+
+int tts_setting_get_auto_voice(bool* value)
+{
+	SLOG(LOG_DEBUG, TAG_TTSC, "===== Get auto voice");
+
+	if (TTS_SETTING_STATE_NONE == g_state) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Not initialized");
+		return TTS_SETTING_ERROR_INVALID_STATE;
+	}
+
+	if (NULL == value) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Param is NULL");
+		return TTS_SETTING_ERROR_INVALID_PARAMETER;
+	}
+
+	int ret = tts_config_mgr_get_auto_voice(value);
+	if (0 != ret) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Result : %d", ret);
+	} else {
+		SECURE_SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Get auto voice : %d ", (int)*value);
+	}
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+	SLOG(LOG_DEBUG, TAG_TTSC, " ");
+
+	return __setting_convert_config_error_code(ret);
+}
+
+int tts_setting_get_speed_range(int* min, int* normal, int* max)
+{
+	SLOG(LOG_DEBUG, TAG_TTSC, "===== Get speed range");
+
+	if (TTS_SETTING_STATE_NONE == g_state) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Not initialized");
+		return TTS_SETTING_ERROR_INVALID_STATE;
+	}
+
+	if (NULL == min || NULL == normal || NULL == max) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input parameter is null");
+		return TTS_SETTING_ERROR_INVALID_PARAMETER;
+	}
+
+	*min = TTS_SPEED_MIN;
+	*normal = TTS_SPEED_NORMAL;
+	*max = TTS_SPEED_MAX;
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Get speed range : min(%d) normal(%d) max(%d)", *min, *normal, *max);
+
+	return TTS_SETTING_ERROR_NONE;
+}
+
+int tts_setting_get_speed(int* speed)
 {
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Get default speed");
 
 	if (TTS_SETTING_STATE_NONE == g_state) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Not initialized");
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_SETTING_ERROR_INVALID_STATE;
 	}
 
 	if (NULL == speed) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Param is NULL");
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_SETTING_ERROR_INVALID_PARAMETER;
 	}
 
 	int temp;
 	temp = 0;
 
-	int ret = tts_setting_dbus_request_get_default_speed(&temp);
+	int ret = tts_config_mgr_get_speech_rate(&temp);
 	if (0 != ret) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Result : %d", ret);
 	} else {
 		/* Copy value */
-		*speed = (tts_setting_speed_e)temp;
-		SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Get default speed : %d ", (int)*speed);
+		*speed = temp;
+		SECURE_SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Get default speed : %d ", *speed);
 	}
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
 
-	return ret;
+	return __setting_convert_config_error_code(ret);
 }
 
-
-int tts_setting_set_default_speed(tts_setting_speed_e speed)
+int tts_setting_set_speed(int speed)
 {
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Set default speed");
 
 	if (TTS_SETTING_STATE_NONE == g_state) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Not initialized");
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_SETTING_ERROR_INVALID_STATE;
 	}
 
-	if (speed < TTS_SETTING_SPEED_VERY_SLOW || TTS_SETTING_SPEED_VERY_FAST < speed) {
+	if (TTS_SPEED_MIN > speed || speed > TTS_SPEED_MAX) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Invalid speed");
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_SETTING_ERROR_INVALID_PARAMETER;
 	}
 
-	int ret = tts_setting_dbus_request_set_default_speed((int)speed);
+	int ret = tts_config_mgr_set_speech_rate(speed);
 	if (0 != ret) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Result : %d", ret);
 	} else {
-		SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Set default speed");
+		SECURE_SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Set default speed, %d", speed);
 	}
 	
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
 
-	return ret;
+	return __setting_convert_config_error_code(ret);
 }
 
-int tts_setting_foreach_engine_settings(tts_setting_engine_setting_cb callback, void* user_data)
+int tts_setting_get_pitch_range(int* min, int* normal, int* max)
 {
-	SLOG(LOG_DEBUG, TAG_TTSC, "===== Foreach engine setting");
+	SLOG(LOG_DEBUG, TAG_TTSC, "===== Get speed range");
 
 	if (TTS_SETTING_STATE_NONE == g_state) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Not initialized");
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_SETTING_ERROR_INVALID_STATE;
 	}
 
-	if (NULL == callback) {
+	if (NULL == min || NULL == normal || NULL == max) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input parameter is null");
+		return TTS_SETTING_ERROR_INVALID_PARAMETER;
+	}
+
+	*min = TTS_PITCH_MIN;
+	*normal = TTS_PITCH_NORMAL;
+	*max = TTS_PITCH_MAX;
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Get pitch range : min(%d) normal(%d) max(%d)", *min, *normal, *max);
+
+	return TTS_SETTING_ERROR_NONE;
+}
+
+int tts_setting_set_pitch(int pitch)
+{
+	SLOG(LOG_DEBUG, TAG_TTSC, "===== Set default pitch");
+
+	if (TTS_SETTING_STATE_NONE == g_state) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Not initialized");
+		return TTS_SETTING_ERROR_INVALID_STATE;
+	}
+
+	if (TTS_PITCH_MIN > pitch || pitch > TTS_PITCH_MAX) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Invalid pitch");
+		return TTS_SETTING_ERROR_INVALID_PARAMETER;
+	}
+
+	int ret = tts_config_mgr_set_pitch(pitch);
+	if (0 != ret) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Result : %d", ret);
+	} else {
+		SECURE_SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Set default pitch, %d", pitch);
+	}
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+	SLOG(LOG_DEBUG, TAG_TTSC, " ");
+
+	return __setting_convert_config_error_code(ret);
+}
+
+int tts_setting_get_pitch(int* pitch)
+{
+	SLOG(LOG_DEBUG, TAG_TTSC, "===== Get default pitch");
+
+	if (TTS_SETTING_STATE_NONE == g_state) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Not initialized");
+		return TTS_SETTING_ERROR_INVALID_STATE;
+	}
+
+	if (NULL == pitch) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input parameter is NULL");
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_SETTING_ERROR_INVALID_PARAMETER;
 	}
 
-	int ret = tts_setting_dbus_request_get_engine_setting(callback, user_data);
+	int temp;
+	temp = 0;
+
+	int ret = tts_config_mgr_get_pitch(&temp);
 	if (0 != ret) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Result : %d", ret);
 	} else {
-		SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Foreach engine setting");
+		/* Copy value */
+		*pitch = temp;
+		SECURE_SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Get default pitch : %d ", *pitch);
 	}
 
-	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-	SLOG(LOG_DEBUG, TAG_TTSC, " ");
-
-	return ret;
+	return __setting_convert_config_error_code(ret);
 }
 
-int tts_setting_set_engine_setting(const char* key, const char* value)
+int tts_setting_set_engine_changed_cb(tts_setting_engine_changed_cb callback, void* user_data)
 {
-	SLOG(LOG_DEBUG, TAG_TTSC, "===== Set engine setting");
-
-	if (TTS_SETTING_STATE_NONE == g_state) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Not initialized");
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
-		return TTS_SETTING_ERROR_INVALID_STATE;
-	}
-
-	if(NULL == key || NULL == value) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Param is NULL");
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
+	if (NULL == callback) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input param is NULL");
 		return TTS_SETTING_ERROR_INVALID_PARAMETER;
 	}
 
-	int ret = tts_setting_dbus_request_set_engine_setting(key, value);
-	if (0 != ret) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Result : %d", ret);
-	} else {
-		SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Foreach engine setting");
-	}
+	g_engine_changed_cb = callback;
+	g_engine_changed_user_data = user_data;
 
-	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-	SLOG(LOG_DEBUG, TAG_TTSC, " ");
-
-	return ret;
+	return TTS_SETTING_ERROR_NONE;
 }
 
-int __setting_get_cmd_line(char *file, char *buf) 
+int tts_setting_unset_engine_changed_cb()
 {
-	FILE *fp = NULL;
+	g_engine_changed_cb = NULL;
+	g_engine_changed_user_data = NULL;
 
-	fp = fopen(file, "r");
-	if (fp == NULL) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Get command line");
-		return -1;
-	}
-
-	memset(buf, 0, 256);
-	if (NULL == fgets(buf, 256, fp)) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail fgets command line");
-		fclose(fp);
-		return -1;
-	}
-	fclose(fp);
-
-	return 0;
+	return TTS_SETTING_ERROR_NONE;
 }
 
-/* Functions for tts-daemon fork */
-static bool __tts_setting_is_alive()
+int tts_setting_set_voice_changed_cb(tts_setting_voice_changed_cb callback, void* user_data)
 {
-	DIR *dir;
-	struct dirent *entry;
-	struct stat filestat;
-	
-	int pid;
-	char cmdLine[256];
-	char tempPath[256];
-
-	dir  = opendir("/proc");
-	if (NULL == dir) {
-		SLOG(LOG_ERROR, TAG_TTSC, "process checking is FAILED");
-		return FALSE;
+	if (NULL == callback) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input param is NULL");
+		return TTS_SETTING_ERROR_INVALID_PARAMETER;
 	}
 
-	while ((entry = readdir(dir)) != NULL) {
-		if (0 != lstat(entry->d_name, &filestat))
-			continue;
+	g_voice_changed_cb = callback;
+	g_voice_changed_user_data = user_data;
 
-		if (!S_ISDIR(filestat.st_mode))
-			continue;
-
-		pid = atoi(entry->d_name);
-		if (pid <= 0) continue;
-
-		sprintf(tempPath, "/proc/%d/cmdline", pid);
-		if (0 != __setting_get_cmd_line(tempPath, cmdLine)) {
-			continue;
-		}
-
-		if (0 == strncmp(cmdLine, "[tts-daemon]", strlen("[tts-daemon]")) ||
-			0 == strncmp(cmdLine, "tts-daemon", strlen("tts-daemon")) ||
-			0 == strncmp(cmdLine, "/usr/bin/tts-daemon", strlen("/usr/bin/tts-daemon"))) {
-				SLOG(LOG_DEBUG, TAG_TTSC, "tts-daemon is ALIVE !!");
-				closedir(dir);
-				return TRUE;
-		}
-	}
-	SLOG(LOG_DEBUG, TAG_TTSC, "THERE IS NO tts-daemon !!");
-
-	closedir(dir);
-	return FALSE;
-
+	return TTS_SETTING_ERROR_NONE;
 }
 
-static int __check_setting_tts_daemon()
+int tts_setting_unset_voice_changed_cb()
 {
-	if( TRUE == __tts_setting_is_alive() )
-		return 0;
+	g_voice_changed_cb = NULL;
+	g_voice_changed_user_data = NULL;
 
-	/* fork-exec tts-daemom */
-	int pid, i;
+	return TTS_SETTING_ERROR_NONE;
+}
 
-	pid = fork();
-
-	switch(pid) {
-	case -1:
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to create tts-daemon ");
-		break;
-
-	case 0:
-		setsid();
-		for( i = 0 ; i < _NSIG ; i++ )
-			signal(i, SIG_DFL);
-
-		execl("/usr/bin/tts-daemon", "/usr/bin/tts-daemon", NULL);
-		break;
-
-	default:
-		break;
+int tts_setting_set_speed_changed_cb(tts_setting_speed_changed_cb callback, void* user_data)
+{
+	if (NULL == callback) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input param is NULL");
+		return TTS_SETTING_ERROR_INVALID_PARAMETER;
 	}
 
-	return 0;
+	g_speed_changed_cb = callback;
+	g_speed_changed_user_data = user_data;
+
+	return TTS_SETTING_ERROR_NONE;
+}
+
+int tts_setting_unset_speed_changed_cb()
+{
+	g_speed_changed_cb = NULL;
+	g_speed_changed_user_data = NULL;
+
+	return TTS_SETTING_ERROR_NONE;
+}
+
+
+int tts_setting_set_pitch_changed_cb(tts_setting_pitch_changed_cb callback, void* user_data)
+{
+	if (NULL == callback) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input param is NULL");
+		return TTS_SETTING_ERROR_INVALID_PARAMETER;
+	}
+
+	g_pitch_changed_cb = callback;
+	g_pitch_changed_user_data = user_data;
+
+	return TTS_SETTING_ERROR_NONE;
+}
+
+int tts_setting_unset_pitch_changed_cb()
+{
+	g_pitch_changed_cb = NULL;
+	g_pitch_changed_user_data = NULL;
+
+	return TTS_SETTING_ERROR_NONE;
 }

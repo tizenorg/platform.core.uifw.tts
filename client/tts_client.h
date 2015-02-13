@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2012, 2013 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -15,8 +15,8 @@
 #ifndef __TTS_CLIENT_H_
 #define __TTS_CLIENT_H_
 
-#include <pthread.h>
 #include "tts.h"
+#include "tts_config_mgr.h"
 #include "tts_main.h"
 
 #ifdef __cplusplus
@@ -39,8 +39,12 @@ typedef struct {
 	void*				utt_completed_user_data;
 	tts_error_cb			error_cb;
 	void*				error_user_data;
+	tts_default_voice_changed_cb	default_voice_changed_cb;
+	void*				default_voice_changed_user_data;
+	tts_supported_voice_cb		supported_voice_cb;
+	void*				supported_voice_user_data;
 
-	/* mode & state */
+	/* mode / state */
 	tts_mode_e	mode;
 	tts_state_e	before_state;
 	tts_state_e	current_state;
@@ -70,6 +74,10 @@ int tts_client_not_use_callback(tts_client_s* client);
 int tts_client_get_use_callback(tts_client_s* client);
 
 int tts_client_get_connected_client_count();
+
+int tts_client_get_mode_client_count(tts_mode_e mode);
+
+GList* tts_client_get_client_list();
 
 #ifdef __cplusplus
 }

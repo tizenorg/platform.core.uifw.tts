@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2012, 2013 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -42,41 +42,6 @@ int ttsd_dbus_server_play(DBusConnection* conn, DBusMessage* msg);
 int ttsd_dbus_server_stop(DBusConnection* conn, DBusMessage* msg);
 
 int ttsd_dbus_server_pause(DBusConnection* conn, DBusMessage* msg);
-
-#if 0
-/*
-* Dbus Server functions for tts daemon internal
-*/ 
-int ttsd_dbus_server_start_next_synthesis();
-#endif
-
-/*
-* Dbus Server functions for Setting
-*/ 
-
-int ttsd_dbus_server_setting_initialize(DBusConnection* conn, DBusMessage* msg);
-
-int ttsd_dbus_server_setting_finalize(DBusConnection* conn, DBusMessage* msg);
-
-int ttsd_dbus_server_setting_get_engine_list(DBusConnection* conn, DBusMessage* msg);
-
-int ttsd_dbus_server_setting_get_engine(DBusConnection* conn, DBusMessage* msg);
-
-int ttsd_dbus_server_setting_set_engine(DBusConnection* conn, DBusMessage* msg);
-
-int ttsd_dbus_server_setting_get_voice_list(DBusConnection* conn, DBusMessage* msg);
-
-int ttsd_dbus_server_setting_get_default_voice(DBusConnection* conn, DBusMessage* msg);
-
-int ttsd_dbus_server_setting_set_default_voice(DBusConnection* conn, DBusMessage* msg);
-
-int ttsd_dbus_server_setting_get_speed(DBusConnection* conn, DBusMessage* msg);
-
-int ttsd_dbus_server_setting_set_speed(DBusConnection* conn, DBusMessage* msg);
-
-int ttsd_dbus_server_setting_get_engine_setting(DBusConnection* conn, DBusMessage* msg);
-
-int ttsd_dbus_server_setting_set_engine_setting(DBusConnection* conn, DBusMessage* msg);
 
 
 #ifdef __cplusplus

@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<tts-config>
+        <engine>27F277E9-BBC4-4dca-B553-D9884A3CDAA0</engine>
+        <engine-setting/>
+        <auto>on</auto>
+        <language>en_US</language>
+        <voice-type>female</voice-type>
+        <speech-rate>8</speech-rate>
+        <pitch>8</pitch>
+</tts-config>

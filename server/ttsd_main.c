@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2012, 2013 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -18,12 +18,18 @@
 #include "ttsd_network.h"
 
 #include <Ecore.h>
+#include <privilege-control.h>
 
 #define CLIENT_CLEAN_UP_TIME 500
 
 static Ecore_Timer* g_check_client_timer = NULL;
 
-char* get_tag()
+const char* get_tag()
+{
+	return "ttsd";
+}
+
+const char* tts_tag()
 {
 	return "ttsd";
 }
@@ -39,24 +45,29 @@ int main()
 	SLOG(LOG_DEBUG, get_tag(), "  ");
 	SLOG(LOG_DEBUG, get_tag(), "  ");
 	SLOG(LOG_DEBUG, get_tag(), "===== TTS DAEMON DEFAULT INITIALIZE");
+
 	if (!ecore_init()) {
 		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] Fail ecore_init()");
 		return -1;
+	}
+
+	if (0 == setuid(0)) {
+		/* daemon has root previlege */
+		perm_app_set_privilege("tts", NULL, NULL);
+	}
+
+	if (0 != ttsd_dbus_open_connection()) {
+		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] Fail to open dbus connection");
+		return EXIT_FAILURE;
 	}
 
 	if (0 != ttsd_initialize()) {
 		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] Fail to initialize tts-daemon"); 
 		return EXIT_FAILURE;
 	}
-	
-	if (0 != ttsd_dbus_open_connection()) {
-		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] Fail to open dbus connection");
-		return EXIT_FAILURE;
-	}
 
 	if (0 != ttsd_network_initialize()) {
-		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] Fail to initialize network");
-		return EXIT_FAILURE;
+		SLOG(LOG_WARN, get_tag(), "[Main WARNING] Fail to initialize network");
 	}
 
 	g_check_client_timer = ecore_timer_add(CLIENT_CLEAN_UP_TIME, ttsd_cleanup_client, NULL);
@@ -64,7 +75,7 @@ int main()
 		SLOG(LOG_WARN, get_tag(), "[Main Warning] Fail to create timer of client check");
 	}
 
-	SLOG(LOG_DEBUG, get_tag(), "[Main] tts-daemon start...\n"); 
+	SLOG(LOG_DEBUG, get_tag(), "[Main] tts-daemon start..."); 
 	SLOG(LOG_DEBUG, get_tag(), "=====");
 	SLOG(LOG_DEBUG, get_tag(), "  ");
 	SLOG(LOG_DEBUG, get_tag(), "  ");
@@ -72,14 +83,14 @@ int main()
 	ecore_main_loop_begin();
 
 	SLOG(LOG_DEBUG, get_tag(), "===== TTS DAEMON DEFAULT FINALIZE");
-	
+
 	if (NULL != g_check_client_timer) {
 		ecore_timer_del(g_check_client_timer);
 	}
 
-	ttsd_network_finalize();
-
 	ttsd_dbus_close_connection();
+
+	ttsd_network_finalize();
 
 	ttsd_finalize();
 

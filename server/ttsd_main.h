@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2012, 2013 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -18,14 +18,12 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <tizen.h>
 #include <unistd.h>
 #include <string.h>
 #include <glib.h>
 #include <dlog.h>
 #include <errno.h>
-
-/* For multi-user support */
-#include <tzplatform_config.h>
 
 #include "ttsp.h"
 #include "tts_defs.h"
@@ -34,34 +32,24 @@
 extern "C" {
 #endif
 
-/* TTS Daemon Define */ 
-#define BASE_DIRECTORY_DEFAULT			"/usr/lib/voice/tts/1.0"
-#define ENGINE_DIRECTORY_DEFAULT		"/usr/lib/voice/tts/1.0/engine"
-#define ENGINE_DIRECTORY_DEFAULT_SETTING	"/usr/lib/voice/tts/1.0/setting"
-
-#define CONFIG_DIRECTORY		tzplatform_mkpath(TZ_USER_HOME, ".voice")
-
-#define ENGINE_DIRECTORY_DOWNLOAD		tzplatform_mkpath(TZ_USER_HOME, ".voice/tts/1.0/engine")
-#define ENGINE_DIRECTORY_DOWNLOAD_SETTING	tzplatform_mkpath(TZ_USER_HOME, ".voice/tts/1.0/setting")
-
-#define CONFIG_DEFAULT				BASE_DIRECTORY_DEFAULT"/ttsd.conf"
-#define DEFAULT_CONFIG_FILE_NAME		tzplatform_mkpath(TZ_USER_HOME, ".voice/ttsd_default.conf")
-
 /* for debug message */
 #define DATA_DEBUG
+#define ENGINE_AGENT_DEBUG
 
 typedef enum {
-	TTSD_ERROR_NONE			= 0,			/**< Successful */
-	TTSD_ERROR_OUT_OF_MEMORY	= -ENOMEM,		/**< Out of Memory */
-	TTSD_ERROR_IO_ERROR		= -EIO,			/**< I/O error */
-	TTSD_ERROR_INVALID_PARAMETER	= -EINVAL,		/**< Invalid parameter */
-	TTSD_ERROR_OUT_OF_NETWORK	= -ENETDOWN,		/**< Out of network */
-	TTSD_ERROR_INVALID_STATE	= -0x0100000 | 0x21,	/**< Invalid state */
-	TTSD_ERROR_INVALID_VOICE	= -0x0100000 | 0x22,	/**< Invalid voice */
-	TTSD_ERROR_ENGINE_NOT_FOUND	= -0x0100000 | 0x23,	/**< No available engine  */
-	TTSD_ERROR_TIMED_OUT		= -0x0100000 | 0x24,	/**< No answer from the daemon */
-	TTSD_ERROR_OPERATION_FAILED	= -0x0100000 | 0x25,	/**< Operation failed  */
-	TTSD_ERROR_AUDIO_POLICY_BLOCKED	= -0x0100000 | 0x26	/**< Audio policy blocked */
+	TTSD_ERROR_NONE			= TIZEN_ERROR_NONE,		/**< Successful */
+	TTSD_ERROR_OUT_OF_MEMORY	= TIZEN_ERROR_OUT_OF_MEMORY,	/**< Out of Memory */
+	TTSD_ERROR_IO_ERROR		= TIZEN_ERROR_IO_ERROR,		/**< I/O error */
+	TTSD_ERROR_INVALID_PARAMETER	= TIZEN_ERROR_INVALID_PARAMETER,/**< Invalid parameter */
+	TTSD_ERROR_OUT_OF_NETWORK	= TIZEN_ERROR_NETWORK_DOWN,	/**< Out of network */
+	TTSD_ERROR_TIMED_OUT		= TIZEN_ERROR_TIMED_OUT,	/**< No answer from the daemon */
+	TTSD_ERROR_PERMISSION_DENIED	= TIZEN_ERROR_PERMISSION_DENIED,/**< Permission denied */
+	TTSD_ERROR_NOT_SUPPORTED	= TIZEN_ERROR_NOT_SUPPORTED,	/**< TTS NOT supported */
+	TTSD_ERROR_INVALID_STATE	= TIZEN_ERROR_TTS | 0x01,	/**< Invalid state */
+	TTSD_ERROR_INVALID_VOICE	= TIZEN_ERROR_TTS | 0x02,	/**< Invalid voice */
+	TTSD_ERROR_ENGINE_NOT_FOUND	= TIZEN_ERROR_TTS | 0x03,	/**< No available engine */
+	TTSD_ERROR_OPERATION_FAILED	= TIZEN_ERROR_TTS | 0x04,	/**< Operation failed */
+	TTSD_ERROR_AUDIO_POLICY_BLOCKED	= TIZEN_ERROR_TTS | 0x05	/**< Audio policy blocked */
 }ttsd_error_e;
 
 typedef enum {
@@ -75,7 +63,6 @@ typedef enum {
 	TTSD_INTERRUPTED_STOPPED	/**< Current state change 'Ready' */
 }ttsd_interrupted_code_e;
 
-
 typedef struct {
 	char* engine_id;
 	char* engine_name;
@@ -84,19 +71,14 @@ typedef struct {
 
 typedef struct {
 	char* language;
-	ttsp_voice_type_e type;
+	int type;
 }voice_s;
-
-typedef struct {
-	char* key;
-	char* value;
-}engine_setting_s;
 
 /* get daemon mode : default, notification or screen reader */
 ttsd_mode_e ttsd_get_mode();
 
 /* Get log tag : default, notification, screen reader */
-char* get_tag();
+const char* get_tag();
 
 #ifdef __cplusplus
 }
