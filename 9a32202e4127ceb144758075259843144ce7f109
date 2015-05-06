@@ -17,6 +17,14 @@ Branch: refs/heads/tizen
 Code-Review+2: Dongyeol Lee <dy3.lee@samsung.com>
 Verified+1: Dongyeol Lee <dy3.lee@samsung.com>
 Submitted-by: Dongyeol Lee <dy3.lee@samsung.com>
+Submitted-at: Thu, 12 Feb 2015 19:28:34 -0700
+Reviewed-on: https://review.tizen.org/gerrit/35382
+Project: platform/core/uifw/tts
+Branch: refs/heads/tizen
+
+Code-Review+2: Dongyeol Lee <dy3.lee@samsung.com>
+Verified+1: Dongyeol Lee <dy3.lee@samsung.com>
+Submitted-by: Dongyeol Lee <dy3.lee@samsung.com>
 Submitted-at: Thu, 12 Feb 2015 18:28:34 -0800
 Reviewed-on: https://review.tizen.org/gerrit/35382
 Project: platform/core/uifw/tts
