@@ -35,7 +35,7 @@ extern "C" {
 
 /** 
  * @brief Enumeration for error code.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
 */
 typedef enum {
 	TTS_ERROR_NONE			= TIZEN_ERROR_NONE,		/**< Successful */
@@ -55,7 +55,7 @@ typedef enum {
 
 /** 
  * @brief Enumeration for TTS mode.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
 */
 typedef enum {
 	TTS_MODE_DEFAULT	= 0,	/**< Default mode for normal application */
@@ -65,7 +65,7 @@ typedef enum {
 
 /** 
  * @brief Enumerations for state.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
 */
 typedef enum {
 	TTS_STATE_CREATED	= 0,	/**< 'CREATED' state */
@@ -76,44 +76,44 @@ typedef enum {
 
 /** 
  * @brief Definitions for automatic speaking speed.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
 */
 #define TTS_SPEED_AUTO		0
 
 /** 
  * @brief Definitions for automatic voice type.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
 */
 #define TTS_VOICE_TYPE_AUTO	0
 
 /** 
  * @brief Definitions for male voice type.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
 */
 #define TTS_VOICE_TYPE_MALE	1
 
 /** 
  * @brief Definitions for female voice type.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
 */
 #define TTS_VOICE_TYPE_FEMALE	2
 
 /** 
  * @brief Definitions for child voice type.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
 */
 #define TTS_VOICE_TYPE_CHILD	3
 
 /** 
  * @brief The TTS handle.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
 */
 typedef struct tts_s *tts_h;
 
 
 /**
  * @brief Called when the state of TTS is changed.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @details If the daemon must stop player because of changing engine and
  *	the daemon must pause player because of other requests, this callback function is called.
@@ -132,7 +132,7 @@ typedef void (*tts_state_changed_cb)(tts_h tts, tts_state_e previous, tts_state_
 
 /**
  * @brief Called when utterance has started.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @param[in] tts The TTS handle
  * @param[in] utt_id The utterance ID passed from the add text function
@@ -148,7 +148,7 @@ typedef void (*tts_utterance_started_cb)(tts_h tts, int utt_id, void* user_data)
 
 /**
  * @brief Called when utterance is finished.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @param[in] tts The TTS handle
  * @param[in] utt_id The utterance ID passed from the add text function
@@ -164,7 +164,7 @@ typedef void (*tts_utterance_completed_cb)(tts_h tts, int utt_id, void *user_dat
 
 /**
  * @brief Called when an error occurs.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @param[in] tts The TTS handle
  * @param[in] utt_id The utterance ID passed from the add text function
@@ -183,7 +183,7 @@ typedef void (*tts_error_cb)(tts_h tts, int utt_id, tts_error_e reason, void* us
 
 /**
  * @brief Called to retrieve the supported voice.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @param[in] tts The TTS handle
  * @param[in] language Language specified as an ISO 3166 alpha-2 two letter country-code followed by ISO 639-1 for the two-letter language code (for example, "ko_KR" for Korean, "en_US" for American English)
@@ -199,7 +199,7 @@ typedef bool(*tts_supported_voice_cb)(tts_h tts, const char* language, int voice
 
 /**
  * @brief Called when the default voice is changed.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @param[in] tts The TTS handle
  * @param[in] previous_language The previous language
@@ -216,7 +216,7 @@ typedef void (*tts_default_voice_changed_cb)(tts_h tts, const char* previous_lan
 
 /**
  * @brief Creates a handle for TTS.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @remarks If the function succeeds, @a tts handle must be released with tts_destroy().
  *
@@ -238,7 +238,7 @@ int tts_create(tts_h* tts);
 
 /**
  * @brief Destroys the handle and disconnects the daemon.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @param[in] tts The TTS handle
  *
@@ -254,7 +254,7 @@ int tts_destroy(tts_h tts);
 
 /**
  * @brief Sets the TTS mode.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @param[in] tts The TTS handle
  * @param[in] mode The mode
@@ -274,7 +274,7 @@ int tts_set_mode(tts_h tts, tts_mode_e mode);
 
 /**
  * @brief Gets the TTS mode.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @param[in] tts The TTS handle
  * @param[out] mode The mode
@@ -293,7 +293,7 @@ int tts_get_mode(tts_h tts, tts_mode_e* mode);
 
 /**
  * @brief Connects the daemon asynchronously.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @param[in] tts The TTS handle
  *
@@ -313,7 +313,7 @@ int tts_prepare(tts_h tts);
 
 /**
  * @brief Disconnects the daemon.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @param[in] tts The TTS handle
  *
@@ -332,7 +332,7 @@ int tts_unprepare(tts_h tts);
 
 /**
  * @brief Retrieves all supported voices of the current engine using callback function.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @param[in] tts The TTS handle
  * @param[in] callback The callback function to invoke
@@ -353,7 +353,7 @@ int tts_foreach_supported_voices(tts_h tts, tts_supported_voice_cb callback, voi
 
 /**
  * @brief Gets the default voice set by the user.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @remarks If the function succeeds, @a language must be released with free().
  *
@@ -374,7 +374,7 @@ int tts_get_default_voice(tts_h tts, char** language, int* voice_type);
 
 /**
  * @brief Gets the maximum byte size for text.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @param[in] tts The TTS handle
  * @param[out] size The maximum byte size for text
@@ -393,7 +393,7 @@ int tts_get_max_text_size(tts_h tts, unsigned int* size);
 
 /**
  * @brief Gets the current state of TTS.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @param[in] tts The TTS handle
  * @param[out] state The current state of TTS
@@ -411,7 +411,7 @@ int tts_get_state(tts_h tts, tts_state_e* state);
 
 /**
  * @brief Gets the speed range.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @param[in] tts The TTS handle
  * @param[out] min The minimun speed value
@@ -433,7 +433,7 @@ int tts_get_speed_range(tts_h tts, int* min, int* normal, int* max);
 
 /**
  * @brief Adds a text to the queue.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @remarks Locale(e.g. setlocale()) MUST be set for utf8 text validation check.
  *
@@ -459,7 +459,7 @@ int tts_add_text(tts_h tts, const char* text, const char* language, int voice_ty
 
 /**
  * @brief Starts synthesizing voice from the text and plays the synthesized audio data.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @param[in] tts The TTS handle
  *
@@ -485,7 +485,7 @@ int tts_play(tts_h tts);
 
 /**
  * @brief Stops playing the utterance and clears the queue.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @param[in] tts The TTS handle
  *
@@ -507,7 +507,7 @@ int tts_stop(tts_h tts);
 
 /**
  * @brief Pauses the currently playing utterance.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @param[in] tts The TTS handle
  *
@@ -530,7 +530,7 @@ int tts_pause(tts_h tts);
 
 /**
  * @brief Registers a callback function to be called when the TTS state changes.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @param[in] tts The TTS handle
  * @param[in] callback The callback function to register
@@ -551,7 +551,7 @@ int tts_set_state_changed_cb(tts_h tts, tts_state_changed_cb callback, void* use
 
 /**
  * @brief Unregisters the callback function.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @param[in] tts The TTS handle
  *
@@ -569,7 +569,7 @@ int tts_unset_state_changed_cb(tts_h tts);
 
 /**
  * @brief Registers a callback function to detect utterance start.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @param[in] tts The TTS handle
  * @param[in] callback The callback function to register
@@ -590,7 +590,7 @@ int tts_set_utterance_started_cb(tts_h tts, tts_utterance_started_cb callback, v
 
 /**
  * @brief Unregisters the callback function.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @param[in] tts The TTS handle
  *
@@ -608,7 +608,7 @@ int tts_unset_utterance_started_cb(tts_h tts);
 
 /**
  * @brief Registers a callback function to detect utterance completion.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @param[in] tts The TTS handle
  * @param[in] callback The callback function to register
@@ -629,7 +629,7 @@ int tts_set_utterance_completed_cb(tts_h tts, tts_utterance_completed_cb callbac
 
 /**
  * @brief Unregisters the callback function.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @param[in] tts The TTS handle
  *
@@ -647,7 +647,7 @@ int tts_unset_utterance_completed_cb(tts_h tts);
 
 /**
  * @brief Registers a callback function to detect errors.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @param[in] tts The TTS handle
  * @param[in] callback The callback function to register
@@ -668,7 +668,7 @@ int tts_set_error_cb(tts_h tts, tts_error_cb callback, void* user_data);
 
 /**
  * @brief Unregisters the callback function.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @param[in] tts The TTS handle
  *
@@ -686,7 +686,7 @@ int tts_unset_error_cb(tts_h tts);
 
 /**
  * @brief Registers a callback function to detect default voice change.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @param[in] tts The TTS handle
  * @param[in] callback The callback function to register
@@ -707,7 +707,7 @@ int tts_set_default_voice_changed_cb(tts_h tts, tts_default_voice_changed_cb cal
 
 /**
  * @brief Unregisters the callback function.
- * @since_tizen 2.3
+ * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
  * @param[in] tts The TTS handle
  *
