@@ -87,6 +87,11 @@ int tts_parser_get_engine_info(const char* path, tts_engine_info_s** engine_info
 	/* alloc engine info */
 	tts_engine_info_s* temp;
 	temp = (tts_engine_info_s*)calloc(1, sizeof(tts_engine_info_s));
+	if (NULL == temp) {
+		SLOG(LOG_ERROR, tts_tag(), "[ERROR] Out of memory");
+		xmlFreeDoc(doc);
+		return -1;
+	}
 
 	temp->name = NULL;
 	temp->uuid = NULL;
@@ -130,6 +135,10 @@ int tts_parser_get_engine_info(const char* path, tts_engine_info_s** engine_info
 				if (0 == xmlStrcmp(voice_node->name, (const xmlChar *)TTS_TAG_ENGINE_VOICE)) {
 
 					tts_config_voice_s* temp_voice = (tts_config_voice_s*)calloc(1, sizeof(tts_config_voice_s));
+					if (NULL == temp_voice) {
+						SLOG(LOG_ERROR, tts_tag(), "[ERROR] Out of memory");
+						break;
+					}
 
 					attr = xmlGetProp(voice_node, (const xmlChar*)TTS_TAG_ENGINE_VOICE_TYPE);
 					if (NULL != attr) {
@@ -152,11 +161,13 @@ int tts_parser_get_engine_info(const char* path, tts_engine_info_s** engine_info
 						if (NULL != temp_voice->language)	free(temp_voice->language);
 						temp_voice->language = strdup((char*)key);
 						xmlFree(key);
+						temp->voices = g_slist_append(temp->voices, temp_voice);
 					} else {
 						SLOG(LOG_ERROR, tts_tag(), "[ERROR] <%s> has no content", TTS_TAG_ENGINE_VOICE);
+						if (NULL != temp_voice) {
+							free(temp_voice);
+						}
 					}
-
-					temp->voices = g_slist_append(temp->voices, temp_voice);
 				}
 				voice_node = voice_node->next;
 			}
@@ -287,9 +298,9 @@ int tts_parser_load_config(tts_config_s** config_info)
 				break;
 			}
 			retry_count++;
-			usleep(1000);
+			usleep(10000);
 
-			if (100 == retry_count) {
+			if (TTS_RETRY_COUNT == retry_count) {
 				SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to parse file error : %s", TTS_CONFIG);
 				return -1;
 			}
@@ -319,6 +330,11 @@ int tts_parser_load_config(tts_config_s** config_info)
 	/* alloc engine info */
 	tts_config_s* temp;
 	temp = (tts_config_s*)calloc(1, sizeof(tts_config_s));
+	if (NULL == temp) {
+		SLOG(LOG_ERROR, tts_tag(), "[ERROR] Out of memory");
+		xmlFreeDoc(doc);
+		return -1;
+	}
 
 	temp->engine_id = NULL;
 	temp->setting = NULL;
@@ -707,9 +723,9 @@ int tts_parser_find_config_changed(char** engine, char**setting, bool* auto_voic
 			break;
 		}
 		retry_count++;
-		usleep(1000);
+		usleep(10000);
 
-		if (100 == retry_count) {
+		if (TTS_RETRY_COUNT == retry_count) {
 			SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to parse file error : %s", TTS_CONFIG);
 			return -1;
 		}

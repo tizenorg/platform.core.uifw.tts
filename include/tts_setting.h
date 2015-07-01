@@ -247,7 +247,7 @@ int tts_setting_set_engine(const char* engine_id);
 *
 * @see tts_setting_supported_voice_cb()
 */
-int tts_setting_foreach_surpported_voices(tts_setting_supported_voice_cb callback, void* user_data);
+int tts_setting_foreach_supported_voices(tts_setting_supported_voice_cb callback, void* user_data);
 
 /**
 * @brief Get a default voice of current engine.

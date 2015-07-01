@@ -48,10 +48,17 @@ ADD_SUBDIRECTORY(client)
 ## Server daemon ##
 ADD_SUBDIRECTORY(server)
 
-INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.APLv2 RENAME tts DESTINATION /usr/share/license)
+INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE RENAME tts DESTINATION /usr/share/license)
 
 ## Config ##
 INSTALL(FILES ${CMAKE_SOURCE_DIR}/tts-config.xml DESTINATION /usr/lib/voice/tts/1.0)
+
+INSTALL(FILES ${CMAKE_SOURCE_DIR}/tts-server.conf DESTINATION /etc/dbus-1/system.d)
+
+## Dbus service ##
+INSTALL(FILES ${CMAKE_SOURCE_DIR}/org.tizen.voice.ttsserver.service DESTINATION /usr/share/dbus-1/system-services)
+INSTALL(FILES ${CMAKE_SOURCE_DIR}/org.tizen.voice.ttsnotiserver.service DESTINATION /usr/share/dbus-1/system-services)
+INSTALL(FILES ${CMAKE_SOURCE_DIR}/org.tizen.voice.ttssrserver.service DESTINATION /usr/share/dbus-1/system-services)
 
 ## Sample application ##
 ADD_SUBDIRECTORY(test)

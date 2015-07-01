@@ -27,19 +27,19 @@ extern "C" {
 * Definition for IPC
 *******************************************************************************************/
 
-#define TTS_CLIENT_SERVICE_NAME         "org.tizen.voice.ttsclient"
-#define TTS_CLIENT_SERVICE_OBJECT_PATH	"/org/tizen/voice/ttsclient"
-#define TTS_CLIENT_SERVICE_INTERFACE	"org.tizen.voice.ttsclient"
+#define TTS_CLIENT_SERVICE_NAME         "org.tizen.tts"
+#define TTS_CLIENT_SERVICE_OBJECT_PATH	"/org/tizen/tts"
+#define TTS_CLIENT_SERVICE_INTERFACE	"org.tizen.tts"
 
-#define TTS_SERVER_SERVICE_NAME		"service.connect.ttsserver"
+#define TTS_SERVER_SERVICE_NAME		"org.tizen.voice.ttsserver"
 #define TTS_SERVER_SERVICE_OBJECT_PATH	"/org/tizen/voice/ttsserver"
 #define TTS_SERVER_SERVICE_INTERFACE	"org.tizen.voice.ttsserver"
 
-#define TTS_NOTI_SERVER_SERVICE_NAME		"service.connect.ttsnotiserver"
+#define TTS_NOTI_SERVER_SERVICE_NAME		"org.tizen.voice.ttsnotiserver"
 #define TTS_NOTI_SERVER_SERVICE_OBJECT_PATH	"/org/tizen/voice/ttsnotiserver"
 #define TTS_NOTI_SERVER_SERVICE_INTERFACE	"org.tizen.voice.ttsnotiserver"
 
-#define TTS_SR_SERVER_SERVICE_NAME		"service.connect.ttssrserver"
+#define TTS_SR_SERVER_SERVICE_NAME		"org.tizen.voice.ttssrserver"
 #define TTS_SR_SERVER_SERVICE_OBJECT_PATH	"/org/tizen/voice/ttssrserver"
 #define TTS_SR_SERVER_SERVICE_INTERFACE		"org.tizen.voice.ttssrserver"
 
@@ -77,10 +77,6 @@ extern "C" {
 
 #define MESSAGE_FILE_PATH_ROOT		tzplatform_mkpath(TZ_USER_HOME, ".voice/")
 
-#define MESSAGE_FILE_PREFIX_DEFAULT		"ttsd_msg"
-#define MESSAGE_FILE_PREFIX_NOTIFICATION	"ttsdnoti_msg"
-#define MESSAGE_FILE_PREFIX_SCREEN_READER	"ttsdsr_msg"
-
 #define TTS_DEFAULT_ENGINE		TTS_USR_BASE"/engine"
 #define TTS_DOWNLOAD_ENGINE		TTS_OPT_BASE"/engine"
 
@@ -91,6 +87,8 @@ extern "C" {
 #define TTS_DOWNLOAD_ENGINE_SETTING	TTS_OPT_BASE"/engine-setting"
 
 #define TTS_BASE_LANGUAGE		"en_US"
+
+#define TTS_RETRY_COUNT		5
 
 #define TTS_SPEED_MIN		1
 #define TTS_SPEED_NORMAL	8
@@ -109,8 +107,6 @@ extern "C" {
 *******************************************************************************************/
 
 #define TTS_ACCESSIBILITY_KEY		VCONFKEY_SETAPPL_ACCESSIBILITY_TTS
-
-#define TTS_ACCESSIBILITY_SPEED_KEY	VCONFKEY_SETAPPL_ACCESSIBILITY_SPEECH_RATE
 
 #define TTS_LANGSET_KEY			VCONFKEY_LANGSET
 

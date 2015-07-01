@@ -107,9 +107,9 @@ static int __synthesis(int uid)
 		g_utt.uttid = sdata.utt_id;
 
 		SLOG(LOG_DEBUG, get_tag(), "-----------------------------------------------------------");
-		SECURE_SLOG(LOG_DEBUG, get_tag(), "ID : uid (%d), uttid(%d) ", g_utt.uid, g_utt.uttid);
-		SECURE_SLOG(LOG_DEBUG, get_tag(), "Voice : langauge(%s), type(%d), speed(%d)", sdata.lang, sdata.vctype, sdata.speed);
-		SECURE_SLOG(LOG_DEBUG, get_tag(), "Text : %s", sdata.text);
+		SLOG(LOG_DEBUG, get_tag(), "ID : uid (%d), uttid(%d) ", g_utt.uid, g_utt.uttid);
+		SLOG(LOG_DEBUG, get_tag(), "Voice : langauge(%s), type(%d), speed(%d)", sdata.lang, sdata.vctype, sdata.speed);
+		SLOG(LOG_DEBUG, get_tag(), "Text : %s", sdata.text);
 		SLOG(LOG_DEBUG, get_tag(), "-----------------------------------------------------------");
 
 		int ret = 0;
@@ -158,18 +158,18 @@ int __synthesis_result_callback(ttsp_result_event_e event, const void* data, uns
 
 		if (false == ttsd_data_is_uttid_valid(uid, uttid)) {
 			__server_set_synth_control(TTSD_SYNTHESIS_CONTROL_DONE);
-			SECURE_SLOG(LOG_ERROR, get_tag(), "[SERVER ERROR] uttid is NOT valid !!!! - uid(%d), uttid(%d)", uid, uttid);
+			SLOG(LOG_ERROR, get_tag(), "[SERVER ERROR] uttid is NOT valid !!!! - uid(%d), uttid(%d)", uid, uttid);
 			SLOG(LOG_DEBUG, get_tag(), "=====");
 			SLOG(LOG_DEBUG, get_tag(), "  ");
 			return 0;
 		}
 
-		SECURE_SLOG(LOG_DEBUG, get_tag(), "[SERVER] Result Info : uid(%d), utt(%d), data(%p), data size(%d) audiotype(%d) rate(%d)", 
+		SLOG(LOG_DEBUG, get_tag(), "[SERVER] Result Info : uid(%d), utt(%d), data(%p), data size(%d) audiotype(%d) rate(%d)", 
 			uid, uttid, data, data_size, audio_type, rate);
 
 		if (rate <= 0 || audio_type < 0 || audio_type > TTSP_AUDIO_TYPE_MAX) {
 			__server_set_synth_control(TTSD_SYNTHESIS_CONTROL_DONE);
-			SECURE_SLOG(LOG_ERROR, get_tag(), "[SERVER ERROR] audio data is invalid");
+			SLOG(LOG_ERROR, get_tag(), "[SERVER ERROR] audio data is invalid");
 			SLOG(LOG_DEBUG, get_tag(), "=====");
 			SLOG(LOG_DEBUG, get_tag(), "  ");
 			return 0;
@@ -195,7 +195,7 @@ int __synthesis_result_callback(ttsp_result_event_e event, const void* data, uns
 		temp_data.rate = rate;
 		
 		if (0 != ttsd_data_add_sound_data(uid, temp_data)) {
-			SECURE_SLOG(LOG_ERROR, get_tag(), "[SERVER ERROR] Fail to add sound data : uid(%d)", uid);
+			SLOG(LOG_ERROR, get_tag(), "[SERVER ERROR] Fail to add sound data : uid(%d)", uid);
 		}
 
 		if (event == TTSP_RESULT_EVENT_FINISH) {
@@ -293,13 +293,13 @@ void __config_changed_cb(tts_config_type_e type, const char* str_param, int int_
 		int ret = -1;
 
 		if (true == ttsd_engine_select_valid_voice(str_param, int_param, &out_lang, &out_type)) {
-			SECURE_SLOG(LOG_ERROR, get_tag(), "[Server] valid language : lang(%s), type(%d)", out_lang, out_type);
+			SLOG(LOG_ERROR, get_tag(), "[Server] valid language : lang(%s), type(%d)", out_lang, out_type);
 			ret = ttsd_engine_agent_set_default_voice(out_lang, out_type);
 			if (0 != ret)
-				SECURE_SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to set valid language : lang(%s), type(%d)", out_lang, out_type);
+				SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to set valid language : lang(%s), type(%d)", out_lang, out_type);
 		} else {
 			/* Current language is not available */
-			SECURE_SLOG(LOG_WARN, get_tag(), "[Server WARNING] Fail to set voice : lang(%s), type(%d)", str_param, int_param);
+			SLOG(LOG_WARN, get_tag(), "[Server WARNING] Fail to set voice : lang(%s), type(%d)", str_param, int_param);
 		}
 		if (NULL != out_lang)	free(out_lang);
 		break;
@@ -397,8 +397,6 @@ int ttsd_initialize()
 		ttsd_config_set_screen_reader_callback(__screen_reader_changed_cb);
 	}
 
-	ttsd_file_clean_up();
-
 	return TTSD_ERROR_NONE;
 }
 
@@ -421,15 +419,15 @@ bool __get_client_for_clean_up(int pid, int uid, app_state_e state, void* user_d
 	}
 
 	if (0 < strlen(appid)) {
-		SECURE_SLOG(LOG_DEBUG, get_tag(), "[%d] is running app - %s", pid, appid);
+		SLOG(LOG_DEBUG, get_tag(), "[%d] is running app - %s", pid, appid);
 	} else {
-		SECURE_SLOG(LOG_DEBUG, get_tag(), "[%d] is daemon or no_running app", pid);
+		SLOG(LOG_DEBUG, get_tag(), "[%d] is daemon or no_running app", pid);
 
 		int result = 1;
 		result = ttsdc_send_hello(pid, uid);
 
 		if (0 == result) {
-			SECURE_SLOG(LOG_DEBUG, get_tag(), "[Server] uid(%d) should be removed.", uid); 
+			SLOG(LOG_DEBUG, get_tag(), "[Server] uid(%d) should be removed.", uid); 
 			ttsd_server_finalize(uid);
 		} else if (-1 == result) {
 			SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Hello result has error"); 
@@ -478,13 +476,6 @@ int ttsd_server_initialize(int pid, int uid)
 		}
 	}
 
-	if (0 == ttsd_data_get_same_pid_client_count(pid)) {
-		if (0 != ttsd_file_msg_open_connection(pid)) {
-			SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to open file message connection");
-			return TTSD_ERROR_OPERATION_FAILED;
-		}
-	}
-
 	if (0 != ttsd_data_new_client(pid, uid)) {
 		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to add client info");
 		return TTSD_ERROR_OPERATION_FAILED;
@@ -529,13 +520,7 @@ int ttsd_server_finalize(int uid)
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
-	int pid = ttsd_data_get_pid(uid);
-
 	ttsd_data_delete_client(uid);
-
-	if (0 == ttsd_data_get_same_pid_client_count(pid)) {
-		ttsd_file_msg_close_connection(pid);
-	}
 
 	/* unload engine, if ref count of client is 0 */
 	if (0 == ttsd_data_get_client_count()) {
@@ -635,12 +620,12 @@ int ttsd_server_play(int uid)
 {
 	app_state_e state;
 	if (0 > ttsd_data_get_client_state(uid, &state)) {
-		SECURE_SLOG(LOG_ERROR, get_tag(), "[Server ERROR] uid(%d) is NOT valid  ", uid);
+		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] uid(%d) is NOT valid  ", uid);
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 	
 	if (APP_STATE_PLAYING == state) {
-		SECURE_SLOG(LOG_WARN, get_tag(), "[Server WARNING] Current state(%d) is 'play' ", uid);
+		SLOG(LOG_WARN, get_tag(), "[Server WARNING] Current state(%d) is 'play' ", uid);
 		return TTSD_ERROR_NONE;
 	}
 
@@ -657,11 +642,11 @@ int ttsd_server_play(int uid)
 	if (uid != current_uid && -1 != current_uid) {
 		if (TTSD_MODE_DEFAULT != ttsd_get_mode()) {
 			/* Send interrupt message */
-			SECURE_SLOG(LOG_DEBUG, get_tag(), "[Server] Old uid(%d) will be interrupted into 'Stop' state ", current_uid);
+			SLOG(LOG_DEBUG, get_tag(), "[Server] Old uid(%d) will be interrupted into 'Stop' state ", current_uid);
 
 			/* pause player */
 			if (0 != ttsd_server_stop(current_uid)) {
-				SECURE_SLOG(LOG_WARN, get_tag(), "[Server ERROR] Fail to stop : uid (%d)", current_uid);
+				SLOG(LOG_WARN, get_tag(), "[Server ERROR] Fail to stop : uid (%d)", current_uid);
 			} 
 			
 			ecore_timer_add(0, __send_interrupt_client, (void*)current_uid);
@@ -669,11 +654,11 @@ int ttsd_server_play(int uid)
 			/* Default mode policy of interrupt is "Pause" */
 
 			/* Send interrupt message */
-			SECURE_SLOG(LOG_DEBUG, get_tag(), "[Server] Old uid(%d) will be interrupted into 'Pause' state ", current_uid);
+			SLOG(LOG_DEBUG, get_tag(), "[Server] Old uid(%d) will be interrupted into 'Pause' state ", current_uid);
 
 			/* pause player */
 			if (0 != ttsd_player_pause(current_uid)) {
-				SECURE_SLOG(LOG_WARN, get_tag(), "[Server ERROR] Fail to ttsd_player_pause() : uid (%d)", current_uid);
+				SLOG(LOG_WARN, get_tag(), "[Server ERROR] Fail to ttsd_player_pause() : uid (%d)", current_uid);
 			}
 
 			/* change state */
@@ -685,12 +670,12 @@ int ttsd_server_play(int uid)
 
 	/* Change current play */
 	if (0 != ttsd_data_set_client_state(uid, APP_STATE_PLAYING)) {
-		SECURE_SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to set state : uid(%d)", uid);
+		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to set state : uid(%d)", uid);
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
 	if (APP_STATE_PAUSED == state) {
-		SECURE_SLOG(LOG_DEBUG, get_tag(), "[Server] uid(%d) is 'Pause' state : resume player", uid);
+		SLOG(LOG_DEBUG, get_tag(), "[Server] uid(%d) is 'Pause' state : resume player", uid);
 
 		/* Resume player */
 		if (0 != ttsd_player_resume(uid)) {
@@ -800,7 +785,7 @@ int ttsd_server_get_current_voice(int uid, char** language, int* voice_type)
 		return ret;
 	}
 
-	SECURE_SLOG(LOG_DEBUG, get_tag(), "[Server] Get default language (%s), voice type(%d) ", *language, *voice_type); 
+	SLOG(LOG_DEBUG, get_tag(), "[Server] Get default language (%s), voice type(%d) ", *language, *voice_type); 
 
 	return TTSD_ERROR_NONE;
 }

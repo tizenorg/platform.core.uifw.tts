@@ -27,12 +27,6 @@
 #include "tts_main.h"
 
 
-static bool g_is_daemon_started = false;
-
-static bool g_is_noti_daemon_started = false;
-
-static bool g_is_sr_daemon_started = false;
-
 static Ecore_Timer* g_connect_timer = NULL;
 
 static bool g_screen_reader;
@@ -85,7 +79,7 @@ static int __tts_convert_config_error_code(tts_config_error_e code)
 
 void __tts_config_voice_changed_cb(const char* before_lang, int before_voice_type, const char* language, int voice_type, bool auto_voice, void* user_data)
 {
-	SECURE_SLOG(LOG_DEBUG, TAG_TTSC, "Voice changed : Before lang(%s) type(%d) , Current lang(%s), type(%d)", 
+	SLOG(LOG_DEBUG, TAG_TTSC, "Voice changed : Before lang(%s) type(%d) , Current lang(%s), type(%d)", 
 		before_lang, before_voice_type, language, voice_type);
 
 	GList* client_list = NULL;
@@ -101,7 +95,7 @@ void __tts_config_voice_changed_cb(const char* before_lang, int before_voice_typ
 		while (NULL != iter) {
 			data = iter->data;
 			if (NULL != data->default_voice_changed_cb) {
-				SECURE_SLOG(LOG_DEBUG, TAG_TTSC, "Call default voice changed callback : uid(%d)", data->uid);
+				SLOG(LOG_DEBUG, TAG_TTSC, "Call default voice changed callback : uid(%d)", data->uid);
 				data->default_voice_changed_cb(data->tts, before_lang, before_voice_type, 
 					language, voice_type, data->default_voice_changed_user_data);
 			}
@@ -137,16 +131,12 @@ int tts_create(tts_h* tts)
 	if (0 == tts_client_get_size()) {
 		if (0 != tts_dbus_open_connection()) {
 			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to open dbus connection");
-			SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-			SLOG(LOG_DEBUG, TAG_TTSC, " ");
 			return TTS_ERROR_OPERATION_FAILED;
 		}
 	}
 
 	if (0 != tts_client_new(tts)) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to create client!!!!!");
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_ERROR_OUT_OF_MEMORY;
 	}
 
@@ -170,10 +160,6 @@ int tts_create(tts_h* tts)
 		return __tts_convert_config_error_code(ret);
 	}
 
-	g_is_daemon_started = false;
-	g_is_noti_daemon_started = false;
-	g_is_sr_daemon_started = false;
-
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
 
@@ -194,8 +180,6 @@ int tts_destroy(tts_h tts)
 
 	if (NULL == tts) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input handle is null");
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
 
@@ -204,8 +188,6 @@ int tts_destroy(tts_h tts)
 	/* check handle */
 	if (NULL == client) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] A handle is not valid");
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
 
@@ -234,9 +216,9 @@ int tts_destroy(tts_h tts)
 						break;
 					} else {
 						SLOG(LOG_WARN, TAG_TTSC, "[WARNING] retry finalize");
-						usleep(10);
+						usleep(10000);
 						count++;
-						if (10 == count) {
+						if (TTS_RETRY_COUNT == count) {
 							SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to request");
 							break;
 						}
@@ -245,20 +227,6 @@ int tts_destroy(tts_h tts)
 			}
 		} else {
 			SLOG(LOG_WARN, TAG_TTSC, "[WARNING] Do not request finalize : g_sr(%d) mode(%d)", g_screen_reader, client->mode);
-		}
-
-		if (TTS_MODE_SCREEN_READER == client->mode)
-			g_is_sr_daemon_started = false;
-		else if (TTS_MODE_NOTIFICATION == client->mode)
-			g_is_noti_daemon_started = false;
-		else
-			g_is_daemon_started = false;
-
-		if (0 == tts_client_get_mode_client_count(client->mode)) {
-			SLOG(LOG_DEBUG, TAG_TTSC, "Close file msg connection : mode(%d)", client->mode);
-			ret = tts_file_msg_close_connection(client->mode);
-			if (0 != ret)
-				SLOG(LOG_WARN, TAG_TTSC, "[ERROR] Fail to close file message connection");
 		}
 
 		client->before_state = client->current_state;
@@ -282,6 +250,8 @@ int tts_destroy(tts_h tts)
 			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to close connection");
 		}
 	}
+
+	tts = NULL;
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
@@ -385,8 +355,6 @@ int tts_get_mode(tts_h tts, tts_mode_e* mode)
 
 	if (NULL == mode) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input parameter(mode) is NULL");
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_ERROR_INVALID_PARAMETER;
 	} 
 
@@ -396,48 +364,6 @@ int tts_get_mode(tts_h tts, tts_mode_e* mode)
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
 
 	return TTS_ERROR_NONE;
-}
-
-static void* __fork_tts_daemon(void* data)
-{
-	char daemon_path[64] = {'\0',};
-	int pid, i;
-	tts_mode_e mode;
-
-	mode = (tts_mode_e)data;
-
-	if (TTS_MODE_DEFAULT == mode) {
-		snprintf(daemon_path, 64, "%s", "/usr/bin/tts-daemon");
-	} else if (TTS_MODE_NOTIFICATION == mode) {
-		snprintf(daemon_path, 64, "%s", "/usr/bin/tts-daemon-noti");
-	} else if (TTS_MODE_SCREEN_READER == mode) {
-		snprintf(daemon_path, 64, "%s", "/usr/bin/tts-daemon-sr");
-	} else {
-		SLOG(LOG_ERROR, TAG_TTSC, "mode is not valid");
-		return (void*)-1;
-	}
-	
-	/* fork-exec daemom */
-	pid = fork();
-
-	switch(pid) {
-	case -1:
-		SLOG(LOG_ERROR, TAG_TTSC, "Fail to create daemon");
-		break;
-
-	case 0:
-		setsid();
-		for (i = 0;i < _NSIG;i++)
-			signal(i, SIG_DFL);
-
-		execl(daemon_path, daemon_path, NULL);
-		break;
-
-	default:
-		break;
-	}
-
-	return (void*) 1;
 }
 
 static Eina_Bool __tts_connect_daemon(void *data)
@@ -454,44 +380,6 @@ static Eina_Bool __tts_connect_daemon(void *data)
 
 	/* Send hello */
 	if (0 != tts_dbus_request_hello(client->uid)) {
-		pthread_t thread;
-		int thread_id;
-
-		if (TTS_MODE_SCREEN_READER == client->mode) {
-			if (false == g_is_sr_daemon_started) {
-				g_is_sr_daemon_started = true;
-				thread_id = pthread_create(&thread, NULL, __fork_tts_daemon, (void*)TTS_MODE_SCREEN_READER);
-				if (thread_id < 0) {
-					SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to make thread");
-					g_connect_timer = NULL;
-					return EINA_FALSE;
-				}
-				pthread_detach(thread);
-			}
-		} else if (TTS_MODE_NOTIFICATION == client->mode) {
-			if (false == g_is_noti_daemon_started) {
-				g_is_noti_daemon_started = true;
-				thread_id = pthread_create(&thread, NULL, __fork_tts_daemon, (void*)TTS_MODE_NOTIFICATION);
-				if (thread_id < 0) {
-					SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to make thread");
-					g_connect_timer = NULL;
-					return EINA_FALSE;
-				}
-				pthread_detach(thread);
-			}
-		} else {
-			if (false == g_is_daemon_started) {
-				g_is_daemon_started = true;
-				thread_id = pthread_create(&thread, NULL, __fork_tts_daemon, (void*)TTS_MODE_DEFAULT);
-				if (thread_id < 0) {
-					SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to make thread");
-					g_connect_timer = NULL;
-					return EINA_FALSE;
-				}
-				pthread_detach(thread);
-			}
-		}
-		
 		return EINA_TRUE;
 	}
 
@@ -520,16 +408,6 @@ static Eina_Bool __tts_connect_daemon(void *data)
 	}
 
 	g_connect_timer = NULL;
-
-	if (0 == tts_client_get_mode_client_count(client->mode)) {
-		SLOG(LOG_DEBUG, TAG_TTSC, "Open file msg connection : mode(%d)", client->mode);
-		ret = tts_file_msg_open_connection(client->mode);
-		if (0 != ret) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to open file message connection");
-			ecore_timer_add(0, __tts_notify_error, (void*)client->tts);
-			return EINA_FALSE;
-		}
-	}
 
 	client = tts_client_get(tts);
 	/* check handle */
@@ -616,8 +494,6 @@ int tts_unprepare(tts_h tts)
 	/* check state */
 	if (client->current_state != TTS_STATE_READY) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Invalid State: Current state is not 'READY'"); 
-		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_ERROR_INVALID_STATE;
 	}
 
@@ -632,9 +508,9 @@ int tts_unprepare(tts_h tts)
 					break;
 				} else {
 					SLOG(LOG_WARN, TAG_TTSC, "[WARNING] retry finalize : %s", __tts_get_error_code(ret));
-					usleep(10);
+					usleep(10000);
 					count++;
-					if (10 == count) {
+					if (TTS_RETRY_COUNT == count) {
 						SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to request");
 						break;
 					}
@@ -645,13 +521,6 @@ int tts_unprepare(tts_h tts)
 		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] Do not request finalize : g_sr(%d) mode(%d)", g_screen_reader, client->mode);
 	}
 
-	if (TTS_MODE_SCREEN_READER == client->mode) 
-		g_is_sr_daemon_started = false;
-	else if (TTS_MODE_NOTIFICATION == client->mode) 
-		g_is_noti_daemon_started = false;
-	else 
-		g_is_daemon_started = false;
-
 	client->before_state = client->current_state;
 	client->current_state = TTS_STATE_CREATED;
 
@@ -660,14 +529,6 @@ int tts_unprepare(tts_h tts)
 		client->state_changed_cb(client->tts, client->before_state, client->current_state, client->state_changed_user_data); 
 		tts_client_not_use_callback(client);
 		SLOG(LOG_DEBUG, TAG_TTSC, "State changed callback is called");
-	}
-
-	/* Close file message connection */
-	if (0 == tts_client_get_mode_client_count(client->mode)) {
-		SLOG(LOG_DEBUG, TAG_TTSC, "Close file msg connection : mode(%d)", client->mode);
-		ret = tts_file_msg_close_connection(client->mode);
-		if (0 != ret)
-			SLOG(LOG_WARN, TAG_TTSC, "[ERROR] Fail to close file message connection");
 	}
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
@@ -790,7 +651,7 @@ int tts_get_default_voice(tts_h tts, char** lang, int* vctype)
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] result : %d", ret);
 		return __tts_convert_config_error_code(ret);
 	} else {
-		SECURE_SLOG(LOG_DEBUG, TAG_TTSC, "[DEBUG] Default language(%s), type(%d)", *lang, *vctype);
+		SLOG(LOG_DEBUG, TAG_TTSC, "[DEBUG] Default language(%s), type(%d)", *lang, *vctype);
 	}
 	
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
@@ -929,8 +790,15 @@ int tts_add_text(tts_h tts, const char* text, const char* language, int voice_ty
 		return TTS_ERROR_INVALID_STATE;
 	}
 
-	if (TTS_MAX_TEXT_SIZE < strlen(text)) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input text size is too big.");
+	if (TTS_MAX_TEXT_SIZE < strlen(text) || strlen(text) <= 0) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input text size is invalid.");
+		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+		SLOG(LOG_DEBUG, TAG_TTSC, " ");
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+
+	if (TTS_SPEED_AUTO > speed || TTS_SPEED_MAX < speed) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] speed value(%d) is invalid.", speed);
 		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_ERROR_INVALID_PARAMETER;
@@ -971,7 +839,7 @@ int tts_add_text(tts_h tts, const char* text, const char* language, int voice_ty
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
 	iconv_close(ict);
-	SECURE_SLOG(LOG_DEBUG, TAG_TTSC, "Text is valid - Converted text is '%s'", out_buf);
+	SLOG(LOG_DEBUG, TAG_TTSC, "Text is valid - Converted text is '%s'", out_buf);
 
 	/* change default language value */
 	char* temp = NULL;
@@ -997,9 +865,9 @@ int tts_add_text(tts_h tts, const char* text, const char* language, int voice_ty
 				break;
 			} else {
 				SLOG(LOG_WARN, TAG_TTSC, "[WARNING] retry add text : %s", __tts_get_error_code(ret));
-				usleep(10);
+				usleep(10000);
 				count++;
-				if (10 == count) {
+				if (TTS_RETRY_COUNT == count) {
 					SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to request");
 					break;
 				}
@@ -1065,9 +933,9 @@ int tts_play(tts_h tts)
 				return ret;
 			} else {
 				SLOG(LOG_WARN, TAG_TTSC, "[WARNING] retry play : %s", __tts_get_error_code(ret));
-				usleep(10);
+				usleep(10000);
 				count++;
-				if (10 == count) {
+				if (TTS_RETRY_COUNT == count) {
 					SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to request");
 					return ret;
 				}
@@ -1140,9 +1008,9 @@ int tts_stop(tts_h tts)
 				return ret;
 			} else {
 				SLOG(LOG_WARN, TAG_TTSC, "[WARNING] retry stop : %s", __tts_get_error_code(ret));
-				usleep(10);
+				usleep(10000);
 				count++;
-				if (10 == count) {
+				if (TTS_RETRY_COUNT == count) {
 					SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to request");
 					return ret;
 				}
@@ -1217,9 +1085,9 @@ int tts_pause(tts_h tts)
 				return ret;
 			} else {
 				SLOG(LOG_WARN, TAG_TTSC, "[WARNING] retry pause : %s", __tts_get_error_code(ret));
-				usleep(10);
+				usleep(10000);
 				count++;
-				if (10 == count) {
+				if (TTS_RETRY_COUNT == count) {
 					SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to request");
 					return ret;
 				}
@@ -1375,7 +1243,7 @@ int __tts_cb_utt_started(int uid, int utt_id)
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
 
-	SECURE_SLOG(LOG_DEBUG, TAG_TTSC, "utterance started : utt id(%d) ", utt_id);
+	SLOG(LOG_DEBUG, TAG_TTSC, "utterance started : utt id(%d) ", utt_id);
 
 	client->utt_id = utt_id;
 
@@ -1422,7 +1290,7 @@ int __tts_cb_utt_completed(int uid, int utt_id)
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
 
-	SECURE_SLOG(LOG_DEBUG, TAG_TTSC, "utterance completed : uttid(%d) ", utt_id);
+	SLOG(LOG_DEBUG, TAG_TTSC, "utterance completed : uttid(%d) ", utt_id);
 
 	client->utt_id = utt_id;
 

@@ -38,8 +38,16 @@ int tts_client_new(tts_h* tts)
 {
 	tts_client_s* client = NULL;
 	client = (tts_client_s*)calloc(1, sizeof(tts_client_s));
-
+	if (NULL == client) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to allocate memory");
+		return TTS_ERROR_OUT_OF_MEMORY;
+	}
 	tts_h temp = (tts_h)calloc(1, sizeof(struct tts_s));
+	if (NULL == temp) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to allocate memory");
+		free(client);
+		return TTS_ERROR_OUT_OF_MEMORY;
+	}
 	temp->handle = __client_generate_uid(getpid()); 
 
 	/* initialize client data */
@@ -50,7 +58,7 @@ int tts_client_new(tts_h* tts)
 
 	client->state_changed_cb = NULL;
 	client->state_changed_user_data = NULL;
-	
+
 	client->utt_started_cb = NULL;
 	client->utt_started_user_data = NULL;
 	client->utt_completeted_cb = NULL;
@@ -73,16 +81,16 @@ int tts_client_new(tts_h* tts)
 
 	*tts = temp;
 
-	SECURE_SLOG(LOG_DEBUG, TAG_TTSC, "[Success] Create client object : uid(%d)", client->uid); 
+	SLOG(LOG_DEBUG, TAG_TTSC, "[Success] Create client object : uid(%d)", client->uid); 
 
-	return 0;
+	return TTS_ERROR_NONE;
 }
 
 int tts_client_destroy(tts_h tts)
 {
 	if (tts == NULL) {
 		SLOG(LOG_ERROR, TAG_TTSC, "Input parameter is NULL");
-		return 0;
+		return TTS_ERROR_INVALID_PARAMETER;
 	}	
 
 	GList *iter = NULL;
@@ -105,7 +113,7 @@ int tts_client_destroy(tts_h tts)
 				free(data);
 				free(tts);
 
-				return 0;
+				return TTS_ERROR_NONE;
 			}
 
 			/* Next item */
@@ -114,7 +122,7 @@ int tts_client_destroy(tts_h tts)
 	}
 	SLOG(LOG_ERROR, TAG_TTSC, "Fail to destroy client : handle is not valid");
 
-	return -1;
+	return TTS_ERROR_INVALID_PARAMETER;
 }
 
 tts_client_s* tts_client_get(tts_h tts)

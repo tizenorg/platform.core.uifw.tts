@@ -1,0 +1,6 @@
+[D-BUS Service]
+Name=org.tizen.voice.ttssrserver
+Exec=/usr/bin/tts-daemon-sr
+User=root
+Group=root
+

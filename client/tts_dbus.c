@@ -26,21 +26,11 @@
 #define HELLO_WAITING_TIME 500
 #define WAITING_TIME 5000
 
-static DBusConnection* g_conn = NULL;
+static DBusConnection* g_conn_sender = NULL;
+static DBusConnection* g_conn_listener = NULL;
 
 static Ecore_Fd_Handler* g_dbus_fd_handler = NULL;
 
-static Ecore_Fd_Handler* g_file_fd_handler = NULL;
-static Ecore_Fd_Handler* g_file_fd_handler_sr = NULL;
-static Ecore_Fd_Handler* g_file_fd_handler_noti = NULL;
-
-static int g_file_fd;
-static int g_file_fd_sr;
-static int g_file_fd_noti;
-
-static int g_file_wd;
-static int g_file_wd_sr;
-static int g_file_wd_noti;
 
 extern int __tts_cb_error(int uid, tts_error_e reason, int utt_id);
 
@@ -53,16 +43,14 @@ extern int __tts_cb_utt_completed(int uid, int utt_id);
 
 static Eina_Bool listener_event_callback(void* data, Ecore_Fd_Handler *fd_handler)
 {
-	DBusConnection* conn = (DBusConnection*)data;
+	if (NULL == g_conn_listener)	return ECORE_CALLBACK_RENEW;
 
-	if (NULL == conn)	return ECORE_CALLBACK_RENEW;
-
-	dbus_connection_read_write_dispatch(conn, 50);
+	dbus_connection_read_write_dispatch(g_conn_listener, 50);
 
 	DBusMessage* msg = NULL;
-	msg = dbus_connection_pop_message(conn);
+	msg = dbus_connection_pop_message(g_conn_listener);
 
-	if (true != dbus_connection_get_is_connected(conn)) {
+	if (true != dbus_connection_get_is_connected(g_conn_listener)) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Connection is disconnected");
 		return ECORE_CALLBACK_RENEW;
 	}
@@ -78,7 +66,8 @@ static Eina_Bool listener_event_callback(void* data, Ecore_Fd_Handler *fd_handle
 	DBusMessage *reply = NULL; 
 	
 	char if_name[64];
-	snprintf(if_name, 64, "%s%d", TTS_CLIENT_SERVICE_INTERFACE, getpid());
+	//snprintf(if_name, 64, "%s%d", TTS_CLIENT_SERVICE_INTERFACE, getpid());
+	snprintf(if_name, 64, "%s", TTS_CLIENT_SERVICE_INTERFACE);
 
 	/* check if the message is a signal from the correct interface and with the correct name */
 	if (dbus_message_is_method_call(msg, if_name, TTSD_METHOD_HELLO)) {
@@ -93,7 +82,7 @@ static Eina_Bool listener_event_callback(void* data, Ecore_Fd_Handler *fd_handle
 		}
 
 		if (uid > 0) {
-			SECURE_SLOG(LOG_DEBUG, TAG_TTSC, "<<<< tts get hello : uid(%d)", uid);
+			SLOG(LOG_DEBUG, TAG_TTSC, "<<<< tts get hello : uid(%d)", uid);
 
 			/* check uid */
 			tts_client_s* client = tts_client_get_by_uid(uid);
@@ -110,12 +99,12 @@ static Eina_Bool listener_event_callback(void* data, Ecore_Fd_Handler *fd_handle
 		if (NULL != reply) {
 			dbus_message_append_args(reply, DBUS_TYPE_INT32, &response, DBUS_TYPE_INVALID);
 
-			if (!dbus_connection_send(conn, reply, NULL))
+			if (!dbus_connection_send(g_conn_listener, reply, NULL))
 				SLOG(LOG_ERROR, TAG_TTSC, ">>>> tts get hello : fail to send reply");
 			else 
 				SLOG(LOG_DEBUG, TAG_TTSC, ">>>> tts get hello : result(%d)", response);
 
-			dbus_connection_flush(conn);
+			dbus_connection_flush(g_conn_listener);
 			dbus_message_unref(reply); 
 		} else {
 			SLOG(LOG_ERROR, TAG_TTSC, ">>>> tts get hello : fail to create reply message");
@@ -125,8 +114,74 @@ static Eina_Bool listener_event_callback(void* data, Ecore_Fd_Handler *fd_handle
 		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 	} /* TTSD_METHOD_HELLO */
 
+	else if (dbus_message_is_method_call(msg, if_name, TTSD_METHOD_UTTERANCE_STARTED)) {
+		SLOG(LOG_DEBUG, TAG_TTSC, "===== Get utterance started");
+		int uid = 0;
+		int uttid = 0;
+
+		dbus_message_get_args(msg, &err, DBUS_TYPE_INT32, &uid, DBUS_TYPE_INT32, &uttid, DBUS_TYPE_INVALID);
+		if (dbus_error_is_set(&err)) {
+			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Get arguments error (%s)", err.message);
+			dbus_error_free(&err);
+		}
+
+		if (uid > 0) {
+			SLOG(LOG_DEBUG, TAG_TTSC, "<<<< tts utterance started : uid(%d) uttid(%d)", uid, uttid);
+			__tts_cb_utt_started(uid, uttid);
+		} else {
+			SLOG(LOG_ERROR, TAG_TTSC, "<<<< tts utterance started : invalid uid");
+		}
+
+		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+		SLOG(LOG_DEBUG, TAG_TTSC, " ");
+	} /* TTSD_METHOD_UTTERANCE_STARTED */
+
+	else if (dbus_message_is_method_call(msg, if_name, TTSD_METHOD_UTTERANCE_COMPLETED)) {
+		SLOG(LOG_DEBUG, TAG_TTSC, "===== Get utterance completed");
+		int uid = 0;
+		int uttid = 0;
+
+		dbus_message_get_args(msg, &err, DBUS_TYPE_INT32, &uid, DBUS_TYPE_INT32, &uttid, DBUS_TYPE_INVALID);
+		if (dbus_error_is_set(&err)) {
+			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Get arguments error (%s)", err.message);
+			dbus_error_free(&err);
+		}
+
+		if (uid > 0) {
+			SLOG(LOG_DEBUG, TAG_TTSC, "<<<< tts utterance completed : uid(%d) uttid(%d)", uid, uttid);
+			__tts_cb_utt_completed(uid, uttid);
+		} else {
+			SLOG(LOG_ERROR, TAG_TTSC, "<<<< tts utterance completed : invalid uid");
+		}
+
+		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+		SLOG(LOG_DEBUG, TAG_TTSC, " ");
+	} /* TTSD_METHOD_UTTERANCE_COMPLETED */
+
+	else if (dbus_message_is_method_call(msg, if_name, TTSD_METHOD_SET_STATE)) {
+		SLOG(LOG_DEBUG, TAG_TTSC, "===== Set state changed");
+		int uid = 0;
+		int state = 0;
+
+		dbus_message_get_args(msg, &err, DBUS_TYPE_INT32, &uid, DBUS_TYPE_INT32, &state, DBUS_TYPE_INVALID);
+		if (dbus_error_is_set(&err)) {
+			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Get arguments error (%s)", err.message);
+			dbus_error_free(&err);
+		}
+
+		if (uid > 0) {
+			SLOG(LOG_DEBUG, TAG_TTSC, "<<<< tts state changed : uid(%d) state(%d)", uid, state);
+			__tts_cb_set_state(uid, state);
+		} else {
+			SLOG(LOG_ERROR, TAG_TTSC, "<<<< tts state changed : invalid uid");
+		}
+
+		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+		SLOG(LOG_DEBUG, TAG_TTSC, " ");
+	} /* TTSD_METHOD_SET_STATE */
+
 	else if (dbus_message_is_method_call(msg, if_name, TTSD_METHOD_ERROR)) {
-		SLOG(LOG_DEBUG, TAG_TTSC, "===== Get error callback");
+		SLOG(LOG_DEBUG, TAG_TTSC, "===== Get error message");
 
 		int uid;
 		int uttid;
@@ -139,10 +194,10 @@ static Eina_Bool listener_event_callback(void* data, Ecore_Fd_Handler *fd_handle
 			DBUS_TYPE_INVALID);
 
 		if (dbus_error_is_set(&err)) { 
-			SLOG(LOG_ERROR, TAG_TTSC, "<<<< Get Error signal - Get arguments error (%s)", err.message);
+			SLOG(LOG_ERROR, TAG_TTSC, "<<<< Get Error message - Get arguments error (%s)", err.message);
 			dbus_error_free(&err); 
 		} else {
-			SECURE_SLOG(LOG_DEBUG, TAG_TTSC, "<<<< Get Error signal : uid(%d), error(%d), uttid(%d)", uid, reason, uttid);
+			SLOG(LOG_ERROR, TAG_TTSC, "<<<< Get Error message : uid(%d), error(%d), uttid(%d)", uid, reason, uttid);
 			__tts_cb_error(uid, reason, uttid);
 		}
 
@@ -158,69 +213,76 @@ static Eina_Bool listener_event_callback(void* data, Ecore_Fd_Handler *fd_handle
 
 int tts_dbus_open_connection()
 {
-	if (NULL != g_conn) {
+	if (NULL != g_conn_sender && NULL != g_conn_listener) {
 		SLOG(LOG_WARN, TAG_TTSC, "already existed connection ");
 		return 0;
 	}
 
 	DBusError err;
-	int ret;
 
 	/* initialise the error value */
 	dbus_error_init(&err);
 
 	/* connect to the DBUS system bus, and check for errors */
-	g_conn = dbus_bus_get_private(DBUS_BUS_SYSTEM, &err);
-
+	g_conn_sender = dbus_bus_get_private(DBUS_BUS_SYSTEM, &err);
 	if (dbus_error_is_set(&err)) { 
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Dbus Connection Error (%s)", err.message); 
 		dbus_error_free(&err); 
 	}
 
-	if (NULL == g_conn) {
+	if (NULL == g_conn_sender) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] fail to get dbus connection");
 		return TTS_ERROR_OPERATION_FAILED; 
 	}
 
-	dbus_connection_set_exit_on_disconnect(g_conn, false);
+	dbus_connection_set_exit_on_disconnect(g_conn_sender, false);
+
+	g_conn_listener = dbus_bus_get_private(DBUS_BUS_SYSTEM, &err);
+	if (dbus_error_is_set(&err)) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Dbus Connection Error (%s)", err.message);
+		dbus_error_free(&err);
+	}
+
+	if (NULL == g_conn_listener) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] fail to get dbus connection for listener");
+		return TTS_ERROR_OPERATION_FAILED;
+	}
 
 	int pid = getpid();
 
 	char service_name[64];
 	memset(service_name, 0, 64);
-	snprintf(service_name, 64, "%s%d", TTS_CLIENT_SERVICE_NAME, pid);
+	//snprintf(service_name, 64, "%s%d", TTS_CLIENT_SERVICE_NAME, pid);
+	snprintf(service_name, 64, "%s", TTS_CLIENT_SERVICE_NAME);
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "Service name is %s", service_name);
 
 	/* register our name on the bus, and check for errors */
-	ret = dbus_bus_request_name(g_conn, service_name, DBUS_NAME_FLAG_REPLACE_EXISTING , &err);
-
+	dbus_bus_request_name(g_conn_listener, service_name, DBUS_NAME_FLAG_REPLACE_EXISTING, &err);
 	if (dbus_error_is_set(&err)) {
-		SLOG(LOG_DEBUG, TAG_TTSC, "Service name is %s", service_name);
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Name Error (%s)", err.message); 
-		dbus_error_free(&err); 
-	}
-
-	if (DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER != ret) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to open connection : Service name has already been existed.");
-		return TTS_ERROR_OPERATION_FAILED;
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Name Error (%s)", err.message);
+		dbus_error_free(&err);
 	}
 
 	char rule[128];
-	snprintf(rule, 128, "type='signal',interface='%s%d'", TTS_CLIENT_SERVICE_INTERFACE, pid);
+	//snprintf(rule, 128, "type='method_call',interface='%s%d'", TTS_CLIENT_SERVICE_INTERFACE, pid);
+	snprintf(rule, 128, "type='method_call',interface='%s'", TTS_CLIENT_SERVICE_INTERFACE);
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "rule is %s", rule);
 
 	/* add a rule for which messages we want to see */
-	dbus_bus_add_match(g_conn, rule, &err); 
-	dbus_connection_flush(g_conn);
-
-	if (dbus_error_is_set(&err)) { 
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Match Error (%s)", err.message);
-		return TTS_ERROR_OPERATION_FAILED; 
-	}
+	dbus_bus_add_match(g_conn_listener, rule, &err);
+	dbus_connection_flush(g_conn_listener);
 
 	int fd = 0;
-	dbus_connection_get_unix_fd(g_conn, &fd);
+	if (true != dbus_connection_get_unix_fd(g_conn_listener, &fd)) {
+		SLOG(LOG_ERROR, TAG_TTSC, "Fail to get fd from dbus");
+		return TTS_ERROR_OPERATION_FAILED;
+	} else {
+		SLOG(LOG_DEBUG, TAG_TTSC, "Get fd from dbus : %d", fd);
+	}
 
-	g_dbus_fd_handler = ecore_main_fd_handler_add(fd, ECORE_FD_READ, (Ecore_Fd_Cb)listener_event_callback, g_conn, NULL, NULL);
-
+	g_dbus_fd_handler = ecore_main_fd_handler_add(fd, ECORE_FD_READ, (Ecore_Fd_Cb)listener_event_callback, NULL, NULL, NULL);
 	if (NULL == g_dbus_fd_handler) { 
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to get fd handler from ecore");
 		return TTS_ERROR_OPERATION_FAILED;
@@ -229,41 +291,43 @@ int tts_dbus_open_connection()
 	return 0;
 }
 
-
 int tts_dbus_close_connection()
 {
 	DBusError err;
 	dbus_error_init(&err);
 
-	ecore_main_fd_handler_del(g_dbus_fd_handler);
+	if (NULL != g_dbus_fd_handler) {
+		ecore_main_fd_handler_del(g_dbus_fd_handler);
+		g_dbus_fd_handler = NULL;
+	}
 
 	int pid = getpid();
 
 	char service_name[64];
 	memset(service_name, 0, 64);
-	snprintf(service_name, 64, "%s%d", TTS_CLIENT_SERVICE_NAME, pid);
+	//snprintf(service_name, 64, "%s%d", TTS_CLIENT_SERVICE_NAME, pid);
+	snprintf(service_name, 64, "%s", TTS_CLIENT_SERVICE_NAME);
 
-	dbus_bus_release_name (g_conn, service_name, &err);
+	dbus_bus_release_name(g_conn_listener, service_name, &err);
 	if (dbus_error_is_set(&err)) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Release name error (%s)", err.message);
 		dbus_error_free(&err);
 	}
 
-	dbus_connection_close(g_conn);
-	
-	g_dbus_fd_handler = NULL;
-	g_conn = NULL;
+	g_conn_sender = NULL;
+	g_conn_listener = NULL;
 
 	return 0;
 }
 
-
 int tts_dbus_reconnect()
 {
-	bool connected = dbus_connection_get_is_connected(g_conn);
-	SECURE_SLOG(LOG_DEBUG, TAG_TTSC, "[DBUS] %s", connected ? "Connected" : "Not connected");
+	bool sender_connected = dbus_connection_get_is_connected(g_conn_sender);
+	bool listener_connected = dbus_connection_get_is_connected(g_conn_listener);
+	SLOG(LOG_DEBUG, TAG_TTSC, "[DBUS] Sender(%s) Listener(%s)", 
+		sender_connected ? "Connected" : "Not connected", listener_connected ? "Connected" : "Not connected");
 
-	if (false == connected) {
+	if (false == sender_connected || false == listener_connected) {
 		tts_dbus_close_connection();
 
 		if(0 != tts_dbus_open_connection()) {
@@ -300,6 +364,8 @@ DBusMessage* __tts_dbus_make_message(int uid, const char* method)
 			TTS_SERVER_SERVICE_OBJECT_PATH, 
 			TTS_SERVER_SERVICE_INTERFACE, 
 			method);
+
+		SLOG(LOG_DEBUG, TAG_TTSC, ">>>> Service name : %s, method : %s", TTS_SERVER_SERVICE_NAME, method);
 	} else if (TTS_MODE_NOTIFICATION == client->mode) {
 		msg = dbus_message_new_method_call(
 			TTS_NOTI_SERVER_SERVICE_NAME, 
@@ -325,7 +391,6 @@ int tts_dbus_request_hello(int uid)
 	DBusMessage* msg;
 
 	msg = __tts_dbus_make_message(uid, TTS_METHOD_HELLO);
-
 	if (NULL == msg) { 
 		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts hello : Fail to make message");
 		return TTS_ERROR_OPERATION_FAILED;
@@ -337,9 +402,10 @@ int tts_dbus_request_hello(int uid)
 	DBusMessage* result_msg = NULL;
 	int result = 0;
 
-	result_msg = dbus_connection_send_with_reply_and_block(g_conn, msg, HELLO_WAITING_TIME, &err);
+	result_msg = dbus_connection_send_with_reply_and_block(g_conn_sender, msg, HELLO_WAITING_TIME, &err);
 	dbus_message_unref(msg);
 	if (dbus_error_is_set(&err)) {
+		SLOG(LOG_DEBUG, TAG_TTSC, ">>>> error : %s", err);
 		dbus_error_free(&err);
 	}
 
@@ -367,7 +433,7 @@ int tts_dbus_request_initialize(int uid)
 		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts initialize : Fail to make message");
 		return TTS_ERROR_OPERATION_FAILED;
 	} else {
-		SECURE_SLOG(LOG_DEBUG, TAG_TTSC, ">>>> Request tts initialize : uid(%d)", uid);
+		SLOG(LOG_DEBUG, TAG_TTSC, ">>>> Request tts initialize : uid(%d)", uid);
 	}
 
 	int pid = getpid();
@@ -381,7 +447,7 @@ int tts_dbus_request_initialize(int uid)
 	DBusMessage* result_msg;
 	int result = TTS_ERROR_OPERATION_FAILED;
 
-	result_msg = dbus_connection_send_with_reply_and_block(g_conn, msg, WAITING_TIME, &err);
+	result_msg = dbus_connection_send_with_reply_and_block(g_conn_sender, msg, WAITING_TIME, &err);
 	dbus_message_unref(msg);
 	if (dbus_error_is_set(&err)) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Send error (%s)", err.message);
@@ -428,7 +494,7 @@ int tts_dbus_request_finalize(int uid)
 		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts finalize : Fail to make message"); 
 		return TTS_ERROR_OPERATION_FAILED;
 	} else {
-		SECURE_SLOG(LOG_DEBUG, TAG_TTSC, ">>>> Request tts finalize : uid(%d)", uid);
+		SLOG(LOG_DEBUG, TAG_TTSC, ">>>> Request tts finalize : uid(%d)", uid);
 	}
 
 	if (true != dbus_message_append_args(msg, DBUS_TYPE_INT32, &uid, DBUS_TYPE_INVALID)) {
@@ -441,7 +507,7 @@ int tts_dbus_request_finalize(int uid)
 	DBusMessage* result_msg;
 	int result = TTS_ERROR_OPERATION_FAILED;
 
-	result_msg = dbus_connection_send_with_reply_and_block(g_conn, msg, WAITING_TIME, &err);
+	result_msg = dbus_connection_send_with_reply_and_block(g_conn_sender, msg, WAITING_TIME, &err);
 	dbus_message_unref(msg);
 	if (dbus_error_is_set(&err)) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Send error %s", err.message);
@@ -490,7 +556,7 @@ int tts_dbus_request_add_text(int uid, const char* text, const char* lang, int v
 		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts add text : Fail to make message"); 
 		return TTS_ERROR_OPERATION_FAILED;
 	} else {
-		SECURE_SLOG(LOG_DEBUG, TAG_TTSC, ">>>> Request tts add text : uid(%d), text(%s), lang(%s), type(%d), speed(%d), id(%d)", 
+		SLOG(LOG_DEBUG, TAG_TTSC, ">>>> Request tts add text : uid(%d), text(%s), lang(%s), type(%d), speed(%d), id(%d)", 
 			uid, text, lang, vctype, speed, uttid);
 	}
 
@@ -511,7 +577,7 @@ int tts_dbus_request_add_text(int uid, const char* text, const char* lang, int v
 	DBusMessage* result_msg;
 	int result = TTS_ERROR_OPERATION_FAILED;
 
-	result_msg = dbus_connection_send_with_reply_and_block(g_conn, msg, WAITING_TIME, &err);
+	result_msg = dbus_connection_send_with_reply_and_block(g_conn_sender, msg, WAITING_TIME, &err);
 	dbus_message_unref(msg);
 	if (dbus_error_is_set(&err)) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Send error (%s)", err.message);
@@ -556,7 +622,7 @@ int tts_dbus_request_play(int uid)
 		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts play : Fail to make message"); 
 		return TTS_ERROR_OPERATION_FAILED;
 	} else {
-		SECURE_SLOG(LOG_DEBUG, TAG_TTSC, ">>>> Request tts play : uid(%d)", uid);
+		SLOG(LOG_DEBUG, TAG_TTSC, ">>>> Request tts play : uid(%d)", uid);
 	}
 	
 	if (true != dbus_message_append_args(msg, DBUS_TYPE_INT32, &uid, DBUS_TYPE_INVALID)) {
@@ -569,7 +635,7 @@ int tts_dbus_request_play(int uid)
 	DBusMessage* result_msg;
 	int result = TTS_ERROR_OPERATION_FAILED;
 
-	result_msg = dbus_connection_send_with_reply_and_block(g_conn, msg, WAITING_TIME, &err);
+	result_msg = dbus_connection_send_with_reply_and_block(g_conn_sender, msg, WAITING_TIME, &err);
 	dbus_message_unref(msg);
 	if (dbus_error_is_set(&err)) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Send error (%s)", err.message);
@@ -614,7 +680,7 @@ int tts_dbus_request_stop(int uid)
 		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts stop : Fail to make message"); 
 		return TTS_ERROR_OPERATION_FAILED;
 	} else {
-		SECURE_SLOG(LOG_DEBUG, TAG_TTSC, ">>>> Request tts stop : uid(%d)", uid);
+		SLOG(LOG_DEBUG, TAG_TTSC, ">>>> Request tts stop : uid(%d)", uid);
 	}
 
 	DBusMessage* result_msg;
@@ -627,7 +693,7 @@ int tts_dbus_request_stop(int uid)
 		return TTS_ERROR_OPERATION_FAILED;
 	}
 
-	result_msg = dbus_connection_send_with_reply_and_block(g_conn, msg, WAITING_TIME, &err);
+	result_msg = dbus_connection_send_with_reply_and_block(g_conn_sender, msg, WAITING_TIME, &err);
 	dbus_message_unref(msg);
 	if (dbus_error_is_set(&err)) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Send error (%s)", err.message);
@@ -672,7 +738,7 @@ int tts_dbus_request_pause(int uid)
 		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts pause : Fail to make message"); 
 		return TTS_ERROR_OPERATION_FAILED;
 	} else {
-		SECURE_SLOG(LOG_DEBUG, TAG_TTSC, ">>>> Request tts pause : uid(%d)", uid);
+		SLOG(LOG_DEBUG, TAG_TTSC, ">>>> Request tts pause : uid(%d)", uid);
 	}
 
 	DBusMessage* result_msg;
@@ -685,7 +751,7 @@ int tts_dbus_request_pause(int uid)
 		return TTS_ERROR_OPERATION_FAILED;
 	}
 
-	result_msg = dbus_connection_send_with_reply_and_block(g_conn, msg, WAITING_TIME, &err);
+	result_msg = dbus_connection_send_with_reply_and_block(g_conn_sender, msg, WAITING_TIME, &err);
 	dbus_message_unref(msg);
 	if (dbus_error_is_set(&err)) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Send error (%s)", err.message);
@@ -716,244 +782,4 @@ int tts_dbus_request_pause(int uid)
 	}
 
 	return result;
-}
-
-
-static int __check_file(int mode)
-{
-	int length = 0;
-	int temp_fd;
-
-	switch(mode) {
-	case TTS_MODE_DEFAULT:		temp_fd = g_file_fd;		break;
-	case TTS_MODE_NOTIFICATION:	temp_fd = g_file_fd_noti;	break;
-	case TTS_MODE_SCREEN_READER:	temp_fd = g_file_fd_sr;		break;
-	default:
-		SLOG(LOG_ERROR, TAG_TTSC, "[File message ERROR] Mode is NOT valid : %d", mode);
-		return -1;
-	}
-
-	struct inotify_event event;
-	memset(&event, '\0', sizeof(struct inotify_event));
-
-	length = read(temp_fd, &event, sizeof(struct inotify_event));
-	if (0 > length) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[File message] Empty Inotify event");
-		return ECORE_CALLBACK_DONE;
-	}
-
-	if (IN_MODIFY != event.mask) {
-		SLOG(LOG_WARN, TAG_TTSC, "[File message] Undefined event");
-		return ECORE_CALLBACK_PASS_ON;
-	}
-
-	char* filename;
-	filename = tts_config_get_message_path(mode, getpid());
-
-	if (NULL == filename) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[Message ERROR] Fail to get message file path");
-		return ECORE_CALLBACK_PASS_ON;
-	}
-
-	FILE *fp;
-	bool is_empty_file = true;
-	char text[256] = {0, };
-	char msg[256];
-	int uid = -1;
-	int send_data = -1;
-
-	fp = fopen(filename, "r");
-	if (NULL == fp) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[File message ERROR] Fail to open file");
-		if (NULL != filename)	free(filename);
-		return ECORE_CALLBACK_RENEW;
-	}
-
-	SLOG(LOG_DEBUG, TAG_TTSC, "Opened message file : path (%s)", filename);
-
-	while (NULL != fgets(text, 256, fp)) {
-		if (0 > sscanf(text, "%s %d %d", msg, &uid, &send_data)) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[File message ERROR] Fail to sscanf");
-			continue;
-		}
-		is_empty_file = false;
-
-		int uttid;
-		if (!strcmp(TTSD_METHOD_UTTERANCE_STARTED, msg)) {
-			uttid = send_data;
-			SECURE_SLOG(LOG_DEBUG, TAG_TTSC, "<<<< Get Utterance started message : uid(%d), uttid(%d)", uid, uttid);
-			__tts_cb_utt_started(uid, uttid);
-		} else if (!strcmp(TTSD_METHOD_UTTERANCE_COMPLETED, msg)) {
-			uttid = send_data;
-			SECURE_SLOG(LOG_DEBUG, TAG_TTSC, "<<<< Get Utterance completed message : uid(%d), uttid(%d)", uid, uttid);
-			__tts_cb_utt_completed(uid, uttid);
-
-		} else if (!strcmp(TTSD_METHOD_SET_STATE, msg)) {
-			int state = send_data;
-			SECURE_SLOG(LOG_DEBUG, TAG_TTSC, "<<<< Get state change : uid(%d) , state(%d)", uid, state);
-			__tts_cb_set_state(uid, state);
-		} else {
-			SLOG(LOG_WARN, TAG_TTSC, "<<<< Get undefined message : uid(%d), data(%d)", uid, send_data);
-		}
-
-		memset(text, 0, 256);
-	}
-
-	fclose(fp);
-
-	struct stat stbuf;
-	if (-1 != stat(filename, &stbuf)) {	
-		if (false == is_empty_file) {
-			fp = fopen(filename, "w+");
-			if (NULL == fp) {
-				SLOG(LOG_ERROR, TAG_TTSC, "[File message ERROR] Fail to make new file");
-			} else {
-				fclose(fp);
-			}
-		}
-	} else {
-		SLOG(LOG_ERROR, TAG_TTSC, "[File message ERROR] Fail to access file");
-	}
-
-	if (NULL != filename)	free(filename);
-
-	return ECORE_CALLBACK_PASS_ON;
-}
-
-static Eina_Bool __noti_inotify_event_callback(void* data, Ecore_Fd_Handler *fd_handler)
-{
-	SLOG(LOG_DEBUG, TAG_TTSC, "===== [File message] Notification inotify event call");
-
-	int ret = __check_file(TTS_MODE_NOTIFICATION);
-
-	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-	SLOG(LOG_DEBUG, TAG_TTSC, " ");
-
-	return ret;
-}
-
-static Eina_Bool __sr_inotify_event_callback(void* data, Ecore_Fd_Handler *fd_handler)
-{
-	SLOG(LOG_DEBUG, TAG_TTSC, "===== [File message] Screen reader inotify event call");
-
-	int ret = __check_file(TTS_MODE_SCREEN_READER);
-
-	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-	SLOG(LOG_DEBUG, TAG_TTSC, " ");
-
-	return ret;
-}
-
-static Eina_Bool __inotify_event_callback(void* data, Ecore_Fd_Handler *fd_handler)
-{
-	SLOG(LOG_DEBUG, TAG_TTSC, "===== [File message] Noraml inotify event call");
-
-	int ret = __check_file(TTS_MODE_DEFAULT);
-
-	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
-	SLOG(LOG_DEBUG, TAG_TTSC, " ");
-
-	return ret;
-}
-
-int tts_file_msg_open_connection(tts_mode_e mode)
-{
-	int temp_fd;
-	int temp_wd;
-
-	temp_fd = inotify_init();
-	if (temp_fd < 0) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[File message ERROR] Fail get inotify_fd");
-		return -1;
-	}
-
-	char* path;
-	path = tts_config_get_message_path((int)mode, getpid());
-	if (NULL == path) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[Message ERROR] Fail to get message file path");
-		return -1;
-	}
-
-	temp_wd = inotify_add_watch(temp_fd, path, IN_MODIFY);
-	
-	if (NULL != path)	free(path);
-
-	switch(mode) {
-	case TTS_MODE_DEFAULT:
-		g_file_fd = temp_fd;
-		g_file_wd = temp_wd;
-		g_file_fd_handler = ecore_main_fd_handler_add(g_file_fd, ECORE_FD_READ, 
-			(Ecore_Fd_Cb)__inotify_event_callback, NULL, NULL, NULL);
-
-		if (NULL == g_file_fd_handler) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[File message ERROR] Fail to get handler");
-			return -1;
-		}
-		break;
-	case TTS_MODE_NOTIFICATION:
-		g_file_fd_noti = temp_fd;
-		g_file_wd_noti = temp_wd;
-		g_file_fd_handler_noti = ecore_main_fd_handler_add(g_file_fd_noti, ECORE_FD_READ, 
-			(Ecore_Fd_Cb)__noti_inotify_event_callback, NULL, NULL, NULL);
-
-		if (NULL == g_file_fd_handler_noti) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[File message ERROR] Fail to get handler");
-			return -1;
-		}
-		break;
-	case TTS_MODE_SCREEN_READER:
-		g_file_fd_sr = temp_fd;
-		g_file_wd_sr = temp_wd;
-		g_file_fd_handler_sr = ecore_main_fd_handler_add(g_file_fd_sr, ECORE_FD_READ, 
-			(Ecore_Fd_Cb)__sr_inotify_event_callback, NULL, NULL, NULL);
-
-		if (NULL == g_file_fd_handler_sr) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[File message ERROR] Fail to get handler");
-			return -1;
-		}
-		break;
-	default:
-		SLOG(LOG_ERROR, TAG_TTSC, "[File message ERROR] Mode is NOT valid : %d", mode);
-		return -1;
-	}
-
-	/* Set non-blocking mode of file */
-	int value;
-	value = fcntl(temp_fd, F_GETFL, 0);
-	value |= O_NONBLOCK;
-	
-	if (0 > fcntl(temp_fd, F_SETFL, value)) {
-		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] Fail to set non-block mode");
-	}
-
-	return 0;
-}
-
-int tts_file_msg_close_connection(tts_mode_e mode)
-{
-	switch(mode) {
-	case TTS_MODE_DEFAULT:
-		ecore_main_fd_handler_del(g_file_fd_handler);
-		inotify_rm_watch(g_file_fd, g_file_wd);
-		close(g_file_fd);
-		break;
-
-	case TTS_MODE_NOTIFICATION:
-		ecore_main_fd_handler_del(g_file_fd_handler_noti);
-		inotify_rm_watch(g_file_fd_noti, g_file_wd_noti);
-		close(g_file_fd_noti);
-		break;
-
-	case TTS_MODE_SCREEN_READER:
-		ecore_main_fd_handler_del(g_file_fd_handler_sr);
-		inotify_rm_watch(g_file_fd_sr, g_file_wd_sr);
-		close(g_file_fd_sr);
-		break;
-
-	default:
-		SLOG(LOG_ERROR, TAG_TTSC, "[File message ERROR] Mode is NOT valid : %d", mode);
-		return -1;
-	}
-
-	return 0;
 }

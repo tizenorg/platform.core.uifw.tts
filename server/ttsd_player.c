@@ -283,7 +283,7 @@ static void __play_thread(void *data, Ecore_Thread *thread)
 						return;
 					}
 					if (0 != ttsdc_send_utt_finish_message(pid, player->uid, wdata.utt_id)) {
-						SECURE_SLOG(LOG_ERROR, get_tag(), "[Send ERROR] Fail to send Utterance Completed Signal : pid(%d), uid(%d), uttid(%d)", pid, player->uid, wdata.utt_id);
+						SLOG(LOG_ERROR, get_tag(), "[Send ERROR] Fail to send Utterance Completed Signal : pid(%d), uid(%d), uttid(%d)", pid, player->uid, wdata.utt_id);
 					}
 				}
 				SLOG(LOG_DEBUG, get_tag(), "[Player] Finish utterance : uid(%d), uttid(%d)", player->uid, wdata.utt_id);
@@ -488,7 +488,7 @@ int ttsd_player_create_instance(int uid)
 	
 	/* Check uid is duplicated */
 	if (NULL != __player_get_item(uid)) {
-		SECURE_SLOG(LOG_ERROR, get_tag(), "[Player ERROR] uid(%d) is already registered", uid); 
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] uid(%d) is already registered", uid); 
 		return -1;
 	}
 
@@ -501,7 +501,7 @@ int ttsd_player_create_instance(int uid)
 	new_client->idx = 0;
 	new_client->paused_data.data = NULL;
 	
-	SECURE_SLOG(LOG_DEBUG, get_tag(), "[Player] Create player : uid(%d)", uid);
+	SLOG(LOG_DEBUG, get_tag(), "[Player] Create player : uid(%d)", uid);
 
 	g_player_list = g_list_append(g_player_list, new_client);
 
@@ -518,7 +518,7 @@ int ttsd_player_destroy_instance(int uid)
 	player_s* current;
 	current = __player_get_item(uid);
 	if (NULL == current) {
-		SECURE_SLOG(LOG_ERROR, get_tag(), "[Player ERROR] uid(%d) is not valid", uid); 
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] uid(%d) is not valid", uid); 
 		return -1;
 	}
 
@@ -567,16 +567,16 @@ int ttsd_player_play(int uid)
 
 	if (NULL != g_playing_info) {
 		if (uid == g_playing_info->uid) {
-			SECURE_SLOG(LOG_DEBUG, get_tag(), "[Player] uid(%d) has already played", g_playing_info->uid);
+			SLOG(LOG_DEBUG, get_tag(), "[Player] uid(%d) has already played", g_playing_info->uid);
 			return 0;
 		}
 	}
 
-	SECURE_SLOG(LOG_DEBUG, get_tag(), "[Player] start play : uid(%d)", uid );
+	SLOG(LOG_DEBUG, get_tag(), "[Player] start play : uid(%d)", uid );
 
 	/* Check sound queue size */
 	if (0 == ttsd_data_get_sound_data_size(uid)) {
-		SECURE_SLOG(LOG_WARN, get_tag(), "[Player WARNING] A sound queue of current player(%d) is empty", uid); 
+		SLOG(LOG_WARN, get_tag(), "[Player WARNING] A sound queue of current player(%d) is empty", uid); 
 		return -1;
 	}
 
@@ -584,7 +584,7 @@ int ttsd_player_play(int uid)
 	player_s* current;
 	current = __player_get_item(uid);
 	if (NULL == current) {
-		SECURE_SLOG(LOG_ERROR, get_tag(), "[Player ERROR] uid(%d) is not valid", uid); 
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] uid(%d) is not valid", uid); 
 		return -1;
 	}
 
@@ -613,7 +613,7 @@ int ttsd_player_stop(int uid)
 	player_s* current;
 	current = __player_get_item(uid);
 	if (NULL == current) {
-		SECURE_SLOG(LOG_ERROR, get_tag(), "[Player ERROR] uid(%d) is not valid", uid); 
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] uid(%d) is not valid", uid); 
 		return -1;
 	}
 
@@ -639,14 +639,14 @@ int ttsd_player_stop(int uid)
 	current->is_paused_data = false;
 	current->idx = 0;
 
-	SECURE_SLOG(LOG_DEBUG, get_tag(), "[Player SUCCESS] Stop player : uid(%d)", uid);
+	SLOG(LOG_DEBUG, get_tag(), "[Player SUCCESS] Stop player : uid(%d)", uid);
 
 	return 0;
 }
 
 int ttsd_player_pause(int uid)
 {
-	SECURE_SLOG(LOG_DEBUG, get_tag(), "[Player] pause player : uid(%d)", uid );
+	SLOG(LOG_DEBUG, get_tag(), "[Player] pause player : uid(%d)", uid );
 
 	if (false == g_player_init) {
 		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Not Initialized" );
@@ -657,7 +657,7 @@ int ttsd_player_pause(int uid)
 	player_s* current;
 	current = __player_get_item(uid);
 	if (NULL == current) {
-		SECURE_SLOG(LOG_ERROR, get_tag(), "[Player ERROR] ttsd_player_pause() : uid(%d) is not valid", uid); 
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] ttsd_player_pause() : uid(%d) is not valid", uid); 
 		return -1;
 	}
 
@@ -678,7 +678,7 @@ int ttsd_player_pause(int uid)
 
 int ttsd_player_resume(int uid)
 {
-	SECURE_SLOG(LOG_DEBUG, get_tag(), "[Player] Resume player : uid(%d)", uid );
+	SLOG(LOG_DEBUG, get_tag(), "[Player] Resume player : uid(%d)", uid );
 
 	if (false == g_player_init) {
 		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Not Initialized" );
@@ -689,7 +689,7 @@ int ttsd_player_resume(int uid)
 	player_s* current;
 	current = __player_get_item(uid);
 	if (NULL == current) {
-		SECURE_SLOG(LOG_ERROR, get_tag(), "[Player ERROR] uid(%d) is not valid", uid); 
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] uid(%d) is not valid", uid); 
 		return -1;
 	}
 

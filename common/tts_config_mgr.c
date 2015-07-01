@@ -510,51 +510,6 @@ int __tts_config_mgr_unregister_config_event()
 	return 0;
 }
 
-void __tts_config_speech_rate_key_changed_cb(keynode_t *key, void *data)
-{
-	int ret;
-	int speech_rate;
-	ret = vconf_get_int(TTS_ACCESSIBILITY_SPEED_KEY, &speech_rate);
-
-	if (0 != ret) {
-		SLOG(LOG_ERROR, tts_tag(), "[Config ERROR] Fail to get speech rate");
-		return;
-	}
-	
-	/* Check speech rate is valid */
-	if (TTS_CONFIG_SPEED_MIN <= speech_rate && speech_rate <= TTS_CONFIG_SPEED_MAX) {
-		SLOG(LOG_DEBUG, tts_tag(), "[Config] Speech rate  : %d", speech_rate);
-		
-		if (g_config_info->speech_rate != speech_rate) {
-			g_config_info->speech_rate = speech_rate;
-
-			tts_parser_set_speech_rate(g_config_info->speech_rate);
-
-			GSList *iter = NULL;
-			tts_config_client_s* temp_client = NULL;
-
-			/* Call all callbacks of client*/
-			iter = g_slist_nth(g_config_client_list, 0);
-
-			while (NULL != iter) {
-				temp_client = iter->data;
-
-				if (NULL != temp_client) {
-					if (NULL != temp_client->speech_cb) {
-						temp_client->speech_cb(g_config_info->speech_rate, temp_client->user_data);
-					}
-				}
-
-				iter = g_slist_next(iter);
-			}
-		}
-	} else {
-		SLOG(LOG_ERROR, tts_tag(), "[Config ERROR] Speech rate is not valid : %d", speech_rate);
-	}
-
-	return;
-}
-
 int __tts_config_set_auto_language()
 {
 	char* value = NULL;
@@ -723,6 +678,7 @@ int __tts_config_release_client(int uid)
 				if (uid == temp_client->uid) {
 					g_config_client_list = g_slist_remove(g_config_client_list, temp_client);
 					free(temp_client);
+					temp_client = NULL;
 					break;
 				}
 			}
@@ -794,7 +750,7 @@ int __tts_config_mgr_get_engine_info()
 					closedir(dp);
 					return -1;
 				}
-				
+
 				memset(filepath, '\0', 512);
 				snprintf(filepath, 512, "%s/%s", TTS_DEFAULT_ENGINE_INFO, dirp->d_name);
 
@@ -828,7 +784,7 @@ int __tts_config_mgr_get_engine_info()
 					closedir(dp);
 					return -1;
 				}
-				
+
 				memset(filepath, '\0', 512);
 				snprintf(filepath, 512, "%s/%s", TTS_DOWNLOAD_ENGINE_INFO, dirp->d_name);
 
@@ -989,6 +945,10 @@ int tts_config_mgr_initialize(int uid)
 		}
 
 		temp_client = (tts_config_client_s*)calloc(1, sizeof(tts_config_client_s));
+		if (NULL == temp_client) {
+			SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to allocate memory");
+			return TTS_CONFIG_ERROR_OUT_OF_MEMORY;
+		}
 		temp_client->uid = uid;
 
 		g_config_client_list = g_slist_append(g_config_client_list, temp_client);
@@ -997,6 +957,10 @@ int tts_config_mgr_initialize(int uid)
 		return 0;
 	} else {
 		temp_client = (tts_config_client_s*)calloc(1, sizeof(tts_config_client_s));
+		if (NULL == temp_client) {
+			SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to allocate memory");
+			return TTS_CONFIG_ERROR_OUT_OF_MEMORY;
+		}
 		temp_client->uid = uid;
 
 		g_config_client_list = g_slist_append(g_config_client_list, temp_client);
@@ -1085,7 +1049,6 @@ int tts_config_mgr_initialize(int uid)
 
 	/* Register to detect display language change */
 	vconf_notify_key_changed(TTS_LANGSET_KEY, __tts_config_display_language_changed_cb, NULL);
-	vconf_notify_key_changed(TTS_ACCESSIBILITY_SPEED_KEY, __tts_config_speech_rate_key_changed_cb, NULL);
 	vconf_notify_key_changed(TTS_ACCESSIBILITY_KEY, __tts_config_screen_reader_changed_cb, NULL);
 
 	/* For engine directory monitoring */
@@ -1116,7 +1079,6 @@ int tts_config_mgr_finalize(int uid)
 	__tts_config_mgr_unregister_config_event();
 
 	vconf_ignore_key_changed(TTS_LANGSET_KEY, __tts_config_display_language_changed_cb);
-	vconf_ignore_key_changed(TTS_ACCESSIBILITY_SPEED_KEY, __tts_config_speech_rate_key_changed_cb);
 	vconf_ignore_key_changed(TTS_ACCESSIBILITY_KEY, __tts_config_screen_reader_changed_cb);
 
 	return 0;
@@ -1623,10 +1585,8 @@ int tts_config_mgr_set_speech_rate(int value)
 			SLOG(LOG_ERROR, tts_tag(), "Fail to save speech rate");
 			return TTS_CONFIG_ERROR_OPERATION_FAILED;
 		}
-		
-		g_config_info->speech_rate = value;
 
-		vconf_set_int(TTS_ACCESSIBILITY_SPEED_KEY, value);
+		g_config_info->speech_rate = value;
 	} else {
 		SLOG(LOG_ERROR, tts_tag(), "[Config ERROR] Speech rate is invalid : %d", value);
 	}
@@ -1877,22 +1837,4 @@ int __tts_config_mgr_print_engine_info()
 	SLOG(LOG_DEBUG, tts_tag(), "--------------------------------------------");
 
 	return 0;
-}
-
-char* tts_config_get_message_path(int mode, int pid)
-{
-	char* path = NULL;
-	path = calloc(128, sizeof(char));
-
-	switch(mode) {
-	case 0:	snprintf(path, 128, "%s%s_%d", MESSAGE_FILE_PATH_ROOT, MESSAGE_FILE_PREFIX_DEFAULT, pid);	break;
-	case 1:	snprintf(path, 128, "%s%s_%d", MESSAGE_FILE_PATH_ROOT, MESSAGE_FILE_PREFIX_NOTIFICATION, pid);	break;
-	case 2:	snprintf(path, 128, "%s%s_%d", MESSAGE_FILE_PATH_ROOT, MESSAGE_FILE_PREFIX_SCREEN_READER, pid);	break;
-	default:
-		if (NULL != path)	free(path);
-		SLOG(LOG_ERROR, tts_tag(), "[Config] Invalid mode (%d)", mode);
-		return NULL;
-	}
-
-	return path;
 }

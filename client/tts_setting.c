@@ -262,7 +262,7 @@ int tts_setting_set_engine(const char* engine_id)
 	return __setting_convert_config_error_code(ret);
 }
 
-int tts_setting_foreach_surpported_voices(tts_setting_supported_voice_cb callback, void* user_data)
+int tts_setting_foreach_supported_voices(tts_setting_supported_voice_cb callback, void* user_data)
 {
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Foreach supported voices");
 
