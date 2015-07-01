@@ -74,7 +74,7 @@ make %{?jobs:-j%jobs}
 %install
 rm -rf %{buildroot}
 mkdir -p %{buildroot}/usr/share/license
-install LICENSE.APLv2 %{buildroot}/usr/share/license/%{name}
+install LICENSE %{buildroot}/usr/share/license/%{name}
 
 %make_install
 
@@ -102,14 +102,24 @@ chown 5000:5000 /opt/usr/data/voice/tts
 chown 5000:5000 /opt/usr/data/voice/tts/1.0
 chown 5000:5000 /opt/usr/data/voice/tts/1.0/engine-info
 
+chsmack -a '_' /usr/share/dbus-1/system-services/org.tizen.voice.ttsserver.service
+chsmack -a '_' /usr/share/dbus-1/system-services/org.tizen.voice.ttsnotiserver.service
+chsmack -a '_' /usr/share/dbus-1/system-services/org.tizen.voice.ttssrserver.service
+
+chsmack -a '_' /usr/bin/tts-daemon
+chsmack -a '_' /usr/bin/tts-daemon-noti
+chsmack -a '_' /usr/bin/tts-daemon-sr
+
 %postun -p /sbin/ldconfig
 
 %files
 %manifest %{name}.manifest
-%defattr(-,root,root,-)
+%defattr(-,system,system,-)
 %{_libdir}/lib*.so
 /usr/lib/voice/tts/1.0/tts-config.xml
 %{_bindir}/tts-daemon*
+/usr/share/dbus-1/system-services/*
+/etc/dbus-1/system.d/tts-server.conf
 /opt/usr/devel/bin/tts-test
 /usr/share/license/%{name}
 

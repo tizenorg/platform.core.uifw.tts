@@ -1,0 +1,5 @@
+[D-BUS Service]
+Name=org.tizen.voice.ttsnotiserver
+Exec=/usr/bin/tts-daemon-noti
+User=system
+Group=system

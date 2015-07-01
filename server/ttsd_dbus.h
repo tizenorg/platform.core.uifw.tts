@@ -23,12 +23,6 @@ int ttsd_dbus_open_connection();
 
 int ttsd_dbus_close_connection();
 
-int ttsd_file_msg_open_connection(int pid);
-
-int ttsd_file_msg_close_connection(int pid);
-
-int ttsd_file_clean_up();
-
 int ttsdc_send_hello(int pid, int uid);
 
 int ttsdc_send_utt_start_message(int pid, int uid, int uttid);
