@@ -82,33 +82,18 @@ install LICENSE %{buildroot}/usr/share/license/%{name}
 /sbin/ldconfig
 
 mkdir -p /usr/lib/voice
-chsmack -a '_' /usr/lib/voice
 
 mkdir -p /usr/share/voice
-chsmack -a '_' /usr/share/voice
 
 mkdir -p /opt/home/app/.voice
 chown 5000:5000 /opt/home/app/.voice
 
 mkdir -p /opt/usr/data/voice/tts/1.0/engine-info
 
-chsmack -a '_' /opt/usr/data/voice/
-chsmack -a 'tts-server' /opt/usr/data/voice/tts/
-chsmack -a 'tts-server' /opt/usr/data/voice/tts/1.0
-chsmack -a 'tts-server' /opt/usr/data/voice/tts/1.0/engine-info
-
 chown 5000:5000 /opt/usr/data/voice
 chown 5000:5000 /opt/usr/data/voice/tts
 chown 5000:5000 /opt/usr/data/voice/tts/1.0
 chown 5000:5000 /opt/usr/data/voice/tts/1.0/engine-info
-
-chsmack -a '_' /usr/share/dbus-1/system-services/org.tizen.voice.ttsserver.service
-chsmack -a '_' /usr/share/dbus-1/system-services/org.tizen.voice.ttsnotiserver.service
-chsmack -a '_' /usr/share/dbus-1/system-services/org.tizen.voice.ttssrserver.service
-
-chsmack -a '_' /usr/bin/tts-daemon
-chsmack -a '_' /usr/bin/tts-daemon-noti
-chsmack -a '_' /usr/bin/tts-daemon-sr
 
 %postun -p /sbin/ldconfig
 
