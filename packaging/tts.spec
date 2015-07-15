@@ -1,6 +1,6 @@
 Name:       tts
 Summary:    Text To Speech client library and daemon
-Version:    0.2.41
+Version:    0.2.42
 Release:    1
 Group:      Graphics & UI Framework/Voice Framework
 License:    Apache-2.0
@@ -10,6 +10,7 @@ Source1002: %{name}-devel.manifest
 Requires(post):   /sbin/ldconfig
 Requires(postun): /sbin/ldconfig
 BuildRequires:  pkgconfig(aul)
+BuildRequires:  pkgconfig(capi-base-common)
 BuildRequires:  pkgconfig(capi-media-audio-io)
 BuildRequires:  pkgconfig(capi-system-info)
 BuildRequires:  pkgconfig(dbus-1)

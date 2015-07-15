@@ -56,6 +56,7 @@ const char* __ttsd_get_error_code(ttsd_error_e err)
 
 int ttsdc_send_hello(int pid, int uid)
 {
+#if 0
 	if (NULL == g_conn_sender) {
 		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] Dbus connection is not available" );
 		return -1;
@@ -117,6 +118,8 @@ int ttsdc_send_hello(int pid, int uid)
 	}
 
 	return result;
+#endif
+	return 0;
 }
 
 int ttsdc_send_message(int pid, int uid, int data, const char *method)
@@ -126,27 +129,17 @@ int ttsdc_send_message(int pid, int uid, int data, const char *method)
 		return -1;
 	}
 
-	char service_name[64];
-	memset(service_name, 0, 64);
-	//snprintf(service_name, sizeof(service_name), "%s%d", TTS_CLIENT_SERVICE_NAME, pid);
-	snprintf(service_name, sizeof(service_name), "%s", TTS_CLIENT_SERVICE_NAME);
-
 	char target_if_name[64];
 	memset(target_if_name, 0, 64);
-	//snprintf(target_if_name, sizeof(target_if_name), "%s%d", TTS_CLIENT_SERVICE_INTERFACE, pid);
 	snprintf(target_if_name, sizeof(target_if_name), "%s", TTS_CLIENT_SERVICE_INTERFACE);
-
-	SLOG(LOG_ERROR, get_tag(), "<<<< [Dbus] service name(%s) object(%s) interface(%s)", 
-	     service_name, TTS_CLIENT_SERVICE_OBJECT_PATH, target_if_name);
 
 	DBusMessage* msg = NULL;
 
 	/* create a message & check for errors */
-	msg = dbus_message_new_method_call(
-		service_name,
-		TTS_CLIENT_SERVICE_OBJECT_PATH,
-		target_if_name,
-		method);
+	msg = dbus_message_new_signal(
+		TTS_CLIENT_SERVICE_OBJECT_PATH,	/* object name of the signal */
+		target_if_name,			/* interface name of the signal */
+		method);			/* name of the signal */
 
 	if (NULL == msg) {
 		SLOG(LOG_ERROR, get_tag(), "<<<< [Dbus ERROR] Fail to create message : %s", method);
@@ -156,8 +149,6 @@ int ttsdc_send_message(int pid, int uid, int data, const char *method)
 	}
 
 	dbus_message_append_args(msg, DBUS_TYPE_INT32, &uid, DBUS_TYPE_INT32, &data, DBUS_TYPE_INVALID);
-
-	dbus_message_set_no_reply(msg, TRUE);
 
 	if (1 != dbus_connection_send(g_conn_sender, msg, NULL)) {
 		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] Fail to Send");

@@ -1070,6 +1070,8 @@ int tts_config_mgr_finalize(int uid)
 		return 0;
 	}
 
+	tts_config_mgr_unset_callback(uid);
+
 	__tts_config_release_engine();
 
 	tts_parser_unload_config(g_config_info);

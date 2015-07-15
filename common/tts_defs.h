@@ -62,7 +62,6 @@ extern "C" {
 #define TTSD_METHOD_UTTERANCE_COMPLETED	"ttsd_method_utterance_completed"
 #define TTSD_METHOD_ERROR		"ttsd_method_error"
 #define TTSD_METHOD_SET_STATE		"ttsd_method_set_state"
-#define TTSD_METHOD_GET_STATE		"ttsd_method_get_state"
 
 
 /******************************************************************************************
