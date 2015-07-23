@@ -68,7 +68,11 @@ extern "C" {
 * Defines for configuration
 *******************************************************************************************/
 
+#ifdef LIB64
+#define TTS_USR_BASE			"/usr/lib64/voice/tts/1.0"
+#else
 #define TTS_USR_BASE			"/usr/lib/voice/tts/1.0"
+#endif
 #define TTS_OPT_BASE			"/opt/usr/data/voice/tts/1.0"
 
 #define TTS_DEFAULT_CONFIG		TTS_USR_BASE"/tts-config.xml"

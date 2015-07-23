@@ -82,7 +82,7 @@ install LICENSE %{buildroot}/usr/share/license/%{name}
 %post 
 /sbin/ldconfig
 
-mkdir -p /usr/lib/voice
+mkdir -p %{_libdir}/voice
 
 mkdir -p /usr/share/voice
 
@@ -102,7 +102,7 @@ chown 5000:5000 /opt/usr/data/voice/tts/1.0/engine-info
 %manifest %{name}.manifest
 %defattr(-,system,system,-)
 %{_libdir}/lib*.so
-/usr/lib/voice/tts/1.0/tts-config.xml
+%{_libdir}/voice/tts/1.0/tts-config.xml
 %{_bindir}/tts-daemon*
 /usr/share/dbus-1/system-services/org.tizen.voice*
 /etc/dbus-1/system.d/tts-server.conf
