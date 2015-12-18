@@ -55,7 +55,8 @@ static bool __tts_test_get_text_from_file(const char* path, char** text)
 	*text = (char*)calloc(1, text_len+1);
 
 	if (text == NULL) {
-		SLOG(LOG_ERROR, tts_tag(), "Fail to memory allocation\n");		
+		SLOG(LOG_ERROR, tts_tag(), "Fail to memory allocation\n");
+		fclose(fp);
 		return 0;
 	}
 	
@@ -64,6 +65,7 @@ static bool __tts_test_get_text_from_file(const char* path, char** text)
 		result_len = fread(*text, sizeof(char), text_len, fp);
 		if (result_len != text_len) {
 			SLOG(LOG_ERROR, tts_tag(), "Fail to read\n");
+			fclose(fp);
 			return 0;
 		}
 	}
