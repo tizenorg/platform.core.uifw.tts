@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -34,11 +34,11 @@ bool ttsd_network_is_connected()
 	int network_status = 0;
 	vconf_get_int(VCONFKEY_NETWORK_STATUS, &network_status);
 
-	if(network_status == VCONFKEY_NETWORK_OFF){
+	if (network_status == VCONFKEY_NETWORK_OFF) {
 		SLOG(LOG_WARN, get_tag(), "[Network] Current network connection is OFF.");
 		return false;
 	}
-	
+
 	SLOG(LOG_DEBUG, get_tag(), "[Network] Network status is %d", network_status);
 
 	return true;

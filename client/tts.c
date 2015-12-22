@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -15,7 +15,7 @@
 #include <Ecore.h>
 #include <iconv.h>
 #include <sys/stat.h>
-#include <sys/types.h> 
+#include <sys/types.h>
 #include <sys/wait.h>
 #include <system_info.h>
 #include <vconf.h>
@@ -42,7 +42,7 @@ const char* tts_tag()
 
 static const char* __tts_get_error_code(tts_error_e err)
 {
-	switch(err) {
+	switch (err) {
 	case TTS_ERROR_NONE:			return "TTS_ERROR_NONE";
 	case TTS_ERROR_OUT_OF_MEMORY:		return "TTS_ERROR_OUT_OF_MEMORY";
 	case TTS_ERROR_IO_ERROR:		return "TTS_ERROR_IO_ERROR";
@@ -79,8 +79,8 @@ static int __tts_convert_config_error_code(tts_config_error_e code)
 
 void __tts_config_voice_changed_cb(const char* before_lang, int before_voice_type, const char* language, int voice_type, bool auto_voice, void* user_data)
 {
-	SLOG(LOG_DEBUG, TAG_TTSC, "Voice changed : Before lang(%s) type(%d) , Current lang(%s), type(%d)", 
-		before_lang, before_voice_type, language, voice_type);
+	SLOG(LOG_DEBUG, TAG_TTSC, "Voice changed : Before lang(%s) type(%d) , Current lang(%s), type(%d)",
+		 before_lang, before_voice_type, language, voice_type);
 
 	GList* client_list = NULL;
 	client_list = tts_client_get_client_list();
@@ -105,7 +105,7 @@ void __tts_config_voice_changed_cb(const char* before_lang, int before_voice_typ
 		}
 	}
 
-	return; 
+	return;
 }
 
 int tts_create(tts_h* tts)
@@ -119,7 +119,7 @@ int tts_create(tts_h* tts)
 	}
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Create TTS");
-	
+
 	/* check param */
 	if (NULL == tts) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input handle is null");
@@ -244,7 +244,7 @@ int tts_destroy(tts_h tts)
 	default:
 		break;
 	}
- 
+
 	if (0 == tts_client_get_size()) {
 		if (0 != tts_dbus_close_connection()) {
 			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to close connection");
@@ -288,7 +288,7 @@ int tts_set_mode(tts_h tts, tts_mode_e mode)
 
 	/* check state */
 	if (client->current_state != TTS_STATE_CREATED) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Invalid State: Current state is not 'CREATED'"); 
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Invalid State: Current state is not 'CREATED'");
 		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_ERROR_INVALID_STATE;
@@ -347,7 +347,7 @@ int tts_get_mode(tts_h tts, tts_mode_e* mode)
 
 	/* check state */
 	if (client->current_state != TTS_STATE_CREATED) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Invalid State: Current state is not 'CREATED'"); 
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Invalid State: Current state is not 'CREATED'");
 		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_ERROR_INVALID_STATE;
@@ -356,10 +356,10 @@ int tts_get_mode(tts_h tts, tts_mode_e* mode)
 	if (NULL == mode) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input parameter(mode) is NULL");
 		return TTS_ERROR_INVALID_PARAMETER;
-	} 
+	}
 
 	*mode = client->mode;
-	
+
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
 
@@ -391,7 +391,7 @@ static Eina_Bool __tts_connect_daemon(void *data)
 
 	if (TTS_ERROR_ENGINE_NOT_FOUND == ret) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to initialize : %s", __tts_get_error_code(ret));
-		
+
 		client->reason = TTS_ERROR_ENGINE_NOT_FOUND;
 		client->utt_id = -1;
 
@@ -421,7 +421,7 @@ static Eina_Bool __tts_connect_daemon(void *data)
 
 	if (NULL != client->state_changed_cb) {
 		tts_client_use_callback(client);
-		client->state_changed_cb(client->tts, client->before_state, client->current_state, client->state_changed_user_data); 
+		client->state_changed_cb(client->tts, client->before_state, client->current_state, client->state_changed_user_data);
 		tts_client_not_use_callback(client);
 	} else {
 		SLOG(LOG_WARN, TAG_TTSC, "State changed callback is NULL");
@@ -457,7 +457,7 @@ int tts_prepare(tts_h tts)
 
 	/* check state */
 	if (client->current_state != TTS_STATE_CREATED) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Invalid State: Current state is not 'CREATED'"); 
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Invalid State: Current state is not 'CREATED'");
 		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_ERROR_INVALID_STATE;
@@ -493,7 +493,7 @@ int tts_unprepare(tts_h tts)
 
 	/* check state */
 	if (client->current_state != TTS_STATE_READY) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Invalid State: Current state is not 'READY'"); 
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Invalid State: Current state is not 'READY'");
 		return TTS_ERROR_INVALID_STATE;
 	}
 
@@ -526,7 +526,7 @@ int tts_unprepare(tts_h tts)
 
 	if (NULL != client->state_changed_cb) {
 		tts_client_use_callback(client);
-		client->state_changed_cb(client->tts, client->before_state, client->current_state, client->state_changed_user_data); 
+		client->state_changed_cb(client->tts, client->before_state, client->current_state, client->state_changed_user_data);
 		tts_client_not_use_callback(client);
 		SLOG(LOG_DEBUG, TAG_TTSC, "State changed callback is called");
 	}
@@ -608,7 +608,7 @@ int tts_foreach_supported_voices(tts_h tts, tts_supported_voice_cb callback, voi
 	if (0 != ret) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Result : %d", ret);
 		ret = TTS_ERROR_OPERATION_FAILED;
-	}    
+	}
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
@@ -647,13 +647,13 @@ int tts_get_default_voice(tts_h tts, char** lang, int* vctype)
 	/* Request call remote method */
 	int ret = 0;
 	ret = tts_config_mgr_get_voice(lang, vctype);
-    	if (0 != ret) {
+	if (0 != ret) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] result : %d", ret);
 		return __tts_convert_config_error_code(ret);
 	} else {
 		SLOG(LOG_DEBUG, TAG_TTSC, "[DEBUG] Default language(%s), type(%d)", *lang, *vctype);
 	}
-	
+
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
 
@@ -681,9 +681,9 @@ int tts_get_max_text_size(tts_h tts, unsigned int* size)
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Get max text count : A handle is not valid");
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
-	
+
 	if (TTS_STATE_READY != client->current_state) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Get max text count : Current state is NOT 'READY'."); 
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Get max text count : Current state is NOT 'READY'.");
 		return TTS_ERROR_INVALID_STATE;
 	}
 
@@ -717,7 +717,7 @@ int tts_get_state(tts_h tts, tts_state_e* state)
 
 	*state = client->current_state;
 
-	switch(*state) {
+	switch (*state) {
 		case TTS_STATE_CREATED:	SLOG(LOG_DEBUG, TAG_TTSC, "Current state is 'Created'");	break;
 		case TTS_STATE_READY:	SLOG(LOG_DEBUG, TAG_TTSC, "Current state is 'Ready'");		break;
 		case TTS_STATE_PLAYING:	SLOG(LOG_DEBUG, TAG_TTSC, "Current state is 'Playing'");	break;
@@ -786,7 +786,7 @@ int tts_add_text(tts_h tts, const char* text, const char* language, int voice_ty
 	}
 
 	if (TTS_STATE_CREATED == client->current_state) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Current state is 'CREATED'."); 
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Current state is 'CREATED'.");
 		return TTS_ERROR_INVALID_STATE;
 	}
 
@@ -846,10 +846,10 @@ int tts_add_text(tts_h tts, const char* text, const char* language, int voice_ty
 
 	if (NULL == language)
 		temp = strdup("default");
-	else 
+	else
 		temp = strdup(language);
 
-	client->current_utt_id ++;
+	client->current_utt_id++;
 	if (client->current_utt_id == 10000) {
 		client->current_utt_id = 1;
 	}
@@ -914,7 +914,7 @@ int tts_play(tts_h tts)
 	}
 
 	if (TTS_STATE_PLAYING == client->current_state || TTS_STATE_CREATED == client->current_state) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] The current state is invalid."); 
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] The current state is invalid.");
 		return TTS_ERROR_INVALID_STATE;
 	}
 
@@ -948,7 +948,7 @@ int tts_play(tts_h tts)
 
 	if (NULL != client->state_changed_cb) {
 		tts_client_use_callback(client);
-		client->state_changed_cb(client->tts, client->before_state, client->current_state, client->state_changed_user_data); 
+		client->state_changed_cb(client->tts, client->before_state, client->current_state, client->state_changed_user_data);
 		tts_client_not_use_callback(client);
 		SLOG(LOG_DEBUG, TAG_TTSC, "State changed callback is called");
 	}
@@ -989,7 +989,7 @@ int tts_stop(tts_h tts)
 	}
 
 	if (TTS_STATE_CREATED == client->current_state) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Current state is 'CREATED'."); 
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Current state is 'CREATED'.");
 		return TTS_ERROR_INVALID_STATE;
 	}
 
@@ -1023,7 +1023,7 @@ int tts_stop(tts_h tts)
 
 	if (NULL != client->state_changed_cb) {
 		tts_client_use_callback(client);
-		client->state_changed_cb(client->tts, client->before_state, client->current_state, client->state_changed_user_data); 
+		client->state_changed_cb(client->tts, client->before_state, client->current_state, client->state_changed_user_data);
 		tts_client_not_use_callback(client);
 		SLOG(LOG_DEBUG, TAG_TTSC, "State changed callback is called");
 	}
@@ -1064,7 +1064,7 @@ int tts_pause(tts_h tts)
 	}
 
 	if (TTS_STATE_PLAYING != client->current_state) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[Error] The Current state is NOT 'playing'. So this request should be not running.");    
+		SLOG(LOG_ERROR, TAG_TTSC, "[Error] The Current state is NOT 'playing'. So this request should be not running.");
 		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 		SLOG(LOG_DEBUG, TAG_TTSC, " ");
 		return TTS_ERROR_INVALID_STATE;
@@ -1094,13 +1094,13 @@ int tts_pause(tts_h tts)
 			}
 		}
 	}
-	
+
 	client->before_state = client->current_state;
 	client->current_state = TTS_STATE_PAUSED;
 
 	if (NULL != client->state_changed_cb) {
 		tts_client_use_callback(client);
-		client->state_changed_cb(client->tts, client->before_state, client->current_state, client->state_changed_user_data); 
+		client->state_changed_cb(client->tts, client->before_state, client->current_state, client->state_changed_user_data);
 		tts_client_not_use_callback(client);
 		SLOG(LOG_DEBUG, TAG_TTSC, "State changed callback is called");
 	}
@@ -1128,7 +1128,7 @@ static Eina_Bool __tts_notify_error(void *data)
 	if (NULL != client->error_cb) {
 		SLOG(LOG_DEBUG, TAG_TTSC, "Call callback function of error");
 		tts_client_use_callback(client);
-		client->error_cb(client->tts, client->utt_id, client->reason, client->error_user_data );
+		client->error_cb(client->tts, client->utt_id, client->reason, client->error_user_data);
 		tts_client_not_use_callback(client);
 	} else {
 		SLOG(LOG_WARN, TAG_TTSC, "No registered callback function of error ");
@@ -1155,7 +1155,7 @@ int __tts_cb_error(int uid, tts_error_e reason, int utt_id)
 	} else {
 		SLOG(LOG_WARN, TAG_TTSC, "No registered callback function of error ");
 	}
-	
+
 	return 0;
 }
 
@@ -1173,7 +1173,7 @@ static Eina_Bool __tts_notify_state_changed(void *data)
 
 	if (NULL != client->state_changed_cb) {
 		tts_client_use_callback(client);
-		client->state_changed_cb(client->tts, client->before_state, client->current_state, client->state_changed_user_data); 
+		client->state_changed_cb(client->tts, client->before_state, client->current_state, client->state_changed_user_data);
 		tts_client_not_use_callback(client);
 		SLOG(LOG_DEBUG, TAG_TTSC, "State changed callback is called : pre(%d) cur(%d)", client->before_state, client->current_state);
 	} else {
@@ -1186,7 +1186,7 @@ static Eina_Bool __tts_notify_state_changed(void *data)
 int __tts_cb_set_state(int uid, int state)
 {
 	tts_client_s* client = tts_client_get_by_uid(uid);
-	if( NULL == client ) {
+	if (NULL == client) {
 		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] The handle is not valid");
 		return -1;
 	}
@@ -1221,7 +1221,7 @@ static Eina_Bool __tts_notify_utt_started(void *data)
 		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] Fail to notify utt started : A handle is not valid");
 		return EINA_FALSE;
 	}
-	
+
 	if (NULL != client->utt_started_cb) {
 		SLOG(LOG_DEBUG, TAG_TTSC, "Call callback function of utterance started ");
 		tts_client_use_callback(client);
@@ -1327,7 +1327,7 @@ int tts_set_state_changed_cb(tts_h tts, tts_state_changed_cb callback, void* use
 	}
 
 	if (TTS_STATE_CREATED != client->current_state) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Set state changed cb : Current state is not 'Created'."); 
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Set state changed cb : Current state is not 'Created'.");
 		return TTS_ERROR_INVALID_STATE;
 	}
 
@@ -1362,7 +1362,7 @@ int tts_unset_state_changed_cb(tts_h tts)
 	}
 
 	if (TTS_STATE_CREATED != client->current_state) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Unset state changed cb : Current state is not 'Created'."); 
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Unset state changed cb : Current state is not 'Created'.");
 		return TTS_ERROR_INVALID_STATE;
 	}
 
@@ -1397,7 +1397,7 @@ int tts_set_utterance_started_cb(tts_h tts, tts_utterance_started_cb callback, v
 	}
 
 	if (TTS_STATE_CREATED != client->current_state) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Set utt started cb : Current state is not 'Created'."); 
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Set utt started cb : Current state is not 'Created'.");
 		return TTS_ERROR_INVALID_STATE;
 	}
 
@@ -1405,7 +1405,7 @@ int tts_set_utterance_started_cb(tts_h tts, tts_utterance_started_cb callback, v
 	client->utt_started_user_data = user_data;
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Set utt started cb");
-	
+
 	return 0;
 }
 
@@ -1432,7 +1432,7 @@ int tts_unset_utterance_started_cb(tts_h tts)
 	}
 
 	if (TTS_STATE_CREATED != client->current_state) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Unset utt started cb : Current state is not 'Created'."); 
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Unset utt started cb : Current state is not 'Created'.");
 		return TTS_ERROR_INVALID_STATE;
 	}
 
@@ -1440,7 +1440,7 @@ int tts_unset_utterance_started_cb(tts_h tts)
 	client->utt_started_user_data = NULL;
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Unset utt started cb");
-	
+
 	return 0;
 }
 
@@ -1467,7 +1467,7 @@ int tts_set_utterance_completed_cb(tts_h tts, tts_utterance_completed_cb callbac
 	}
 
 	if (TTS_STATE_CREATED != client->current_state) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Set utt completed cb : Current state is not 'Created'."); 
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Set utt completed cb : Current state is not 'Created'.");
 		return TTS_ERROR_INVALID_STATE;
 	}
 
@@ -1475,7 +1475,7 @@ int tts_set_utterance_completed_cb(tts_h tts, tts_utterance_completed_cb callbac
 	client->utt_completed_user_data = user_data;
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Set utt completed cb");
-	
+
 	return 0;
 }
 
@@ -1502,7 +1502,7 @@ int tts_unset_utterance_completed_cb(tts_h tts)
 	}
 
 	if (TTS_STATE_CREATED != client->current_state) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Unset utt completed cb : Current state is not 'Created'."); 
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Unset utt completed cb : Current state is not 'Created'.");
 		return TTS_ERROR_INVALID_STATE;
 	}
 
@@ -1536,7 +1536,7 @@ int tts_set_error_cb(tts_h tts, tts_error_cb callback, void* user_data)
 	}
 
 	if (TTS_STATE_CREATED != client->current_state) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Set error cb : Current state is not 'Created'."); 
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Set error cb : Current state is not 'Created'.");
 		return TTS_ERROR_INVALID_STATE;
 	}
 
@@ -1544,7 +1544,7 @@ int tts_set_error_cb(tts_h tts, tts_error_cb callback, void* user_data)
 	client->error_user_data = user_data;
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Set error cb");
-	
+
 	return 0;
 }
 
@@ -1569,9 +1569,9 @@ int tts_unset_error_cb(tts_h tts)
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Unset error cb : A handle is not valid");
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
-	
+
 	if (TTS_STATE_CREATED != client->current_state) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Unset error cb : Current state is not 'Created'."); 
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Unset error cb : Current state is not 'Created'.");
 		return TTS_ERROR_INVALID_STATE;
 	}
 
@@ -1606,7 +1606,7 @@ int tts_set_default_voice_changed_cb(tts_h tts, tts_default_voice_changed_cb cal
 	}
 
 	if (TTS_STATE_CREATED != client->current_state) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Set default voice changed cb : Current state is not 'Created'."); 
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Set default voice changed cb : Current state is not 'Created'.");
 		return TTS_ERROR_INVALID_STATE;
 	}
 
@@ -1641,7 +1641,7 @@ int tts_unset_default_voice_changed_cb(tts_h tts)
 	}
 
 	if (TTS_STATE_CREATED != client->current_state) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Unset default voice changed cb : Current state is not 'Created'."); 
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Unset default voice changed cb : Current state is not 'Created'.");
 		return TTS_ERROR_INVALID_STATE;
 	}
 

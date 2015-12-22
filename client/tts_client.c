@@ -106,8 +106,7 @@ int tts_client_destroy(tts_h tts)
 			if (tts->handle == data->tts->handle) {
 				g_client_list = g_list_remove_link(g_client_list, iter);
 
-				while (0 != data->cb_ref_count)
-				{
+				while (0 != data->cb_ref_count) {
 					/* wait for release callback function */
 				}
 				free(data);

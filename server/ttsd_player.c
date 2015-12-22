@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -28,7 +28,7 @@ typedef enum {
 	AUDIO_STATE_NONE = 0,
 	AUDIO_STATE_READY,
 	AUDIO_STATE_PLAY
-}audio_state_e;
+} audio_state_e;
 
 typedef struct {
 	int			uid;	/** client id */
@@ -40,7 +40,7 @@ typedef struct {
 	bool			is_paused_data;
 	int			idx;
 	sound_data_s		paused_data;
-}player_s;
+} player_s;
 
 #define SOUND_BUFFER_LENGTH	2048
 
@@ -63,7 +63,7 @@ static int g_sampling_rate;
 static audio_out_h g_audio_h;
 
 /*
-* Internal Interfaces 
+* Internal Interfaces
 */
 
 player_s* __player_get_item(int uid)
@@ -112,7 +112,7 @@ void __player_audio_io_interrupted_cb(audio_io_interrupted_code_e code, void *us
 		int pid = ttsd_data_get_pid(g_playing_info->uid);
 
 		/* send message to client about changing state */
-		ttsdc_send_set_state_message (pid, g_playing_info->uid, APP_STATE_PAUSED);
+		ttsdc_send_set_state_message(pid, g_playing_info->uid, APP_STATE_PAUSED);
 	}
 
 	SLOG(LOG_DEBUG, get_tag(), "=====");
@@ -183,7 +183,7 @@ static int __destroy_audio_out()
 	} else {
 		SLOG(LOG_DEBUG, get_tag(), "[Player SUCCESS] Destroy audio");
 	}
-	
+
 	g_audio_type = 0;
 	g_sampling_rate = 0;
 
@@ -247,10 +247,10 @@ static void __play_thread(void *data, Ecore_Thread *thread)
 				return;
 			}
 
-			/* If wdata's event is 'start', current wdata is first data of engine for synthesis. 
+			/* If wdata's event is 'start', current wdata is first data of engine for synthesis.
 			 * If wdata's event is 'finish', player should check previous event to know whether this wdata is first or not.
-			 * When previous wdata's event is 'finish' and current wdata's event is 'finish', 
-			 * the player should send utt started event. 
+			 * When previous wdata's event is 'finish' and current wdata's event is 'finish',
+			 * the player should send utt started event.
 			 */
 			if (TTSP_RESULT_EVENT_START == wdata.event ||
 			   (TTSP_RESULT_EVENT_FINISH == player->event && TTSP_RESULT_EVENT_FINISH == wdata.event)) {
@@ -403,14 +403,14 @@ static void __play_thread(void *data, Ecore_Thread *thread)
 }
 
 /*
-* Player Interfaces 
+* Player Interfaces
 */
 int ttsd_player_init()
 {
 	g_playing_info = NULL;
 	g_audio_state = AUDIO_STATE_NONE;
 	g_audio_h = NULL;
-	
+
 	int ret;
 
 	if (TTSD_MODE_DEFAULT == ttsd_get_mode()) {
@@ -418,17 +418,17 @@ int ttsd_player_init()
 		if (0 != ret) {
 			SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail to set session type");
 		}
-		
+
 		ret = sound_manager_set_media_session_option(SOUND_SESSION_OPTION_PAUSE_OTHERS_WHEN_START, SOUND_SESSION_OPTION_INTERRUPTIBLE_DURING_PLAY);
 		if (0 != ret) {
-			SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail set media session option");	
+			SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail set media session option");
 		} else {
-			SLOG(LOG_DEBUG, get_tag(), "[Player SUCCESS] set media session option");	
+			SLOG(LOG_DEBUG, get_tag(), "[Player SUCCESS] set media session option");
 		}
 	}
 
 	ecore_thread_max_set(1);
-		
+
 	ret = __create_audio_out(TTSP_AUDIO_TYPE_RAW_S16, 16000);
 	if (0 != ret)
 		return -1;
@@ -482,13 +482,13 @@ int ttsd_player_release(void)
 int ttsd_player_create_instance(int uid)
 {
 	if (false == g_player_init) {
-		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Not Initialized" );
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Not Initialized");
 		return -1;
 	}
-	
+
 	/* Check uid is duplicated */
 	if (NULL != __player_get_item(uid)) {
-		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] uid(%d) is already registered", uid); 
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] uid(%d) is already registered", uid);
 		return -1;
 	}
 
@@ -500,7 +500,7 @@ int ttsd_player_create_instance(int uid)
 	new_client->is_paused_data = false;
 	new_client->idx = 0;
 	new_client->paused_data.data = NULL;
-	
+
 	SLOG(LOG_DEBUG, get_tag(), "[Player] Create player : uid(%d)", uid);
 
 	g_player_list = g_list_append(g_player_list, new_client);
@@ -511,14 +511,14 @@ int ttsd_player_create_instance(int uid)
 int ttsd_player_destroy_instance(int uid)
 {
 	if (false == g_player_init) {
-		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Not Initialized" );
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Not Initialized");
 		return -1;
 	}
 
 	player_s* current;
 	current = __player_get_item(uid);
 	if (NULL == current) {
-		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] uid(%d) is not valid", uid); 
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] uid(%d) is not valid", uid);
 		return -1;
 	}
 
@@ -542,12 +542,12 @@ int ttsd_player_destroy_instance(int uid)
 			if (NULL != data) {
 				/* compare uid */
 				if (uid == data->uid) {
-					g_player_list = g_list_remove_link(g_player_list, iter);				
+					g_player_list = g_list_remove_link(g_player_list, iter);
 					free(data);
 					break;
 				}
 			}
-				
+
 			/* Get next item */
 			iter = g_list_next(iter);
 		}
@@ -561,7 +561,7 @@ int ttsd_player_destroy_instance(int uid)
 int ttsd_player_play(int uid)
 {
 	if (false == g_player_init) {
-		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Not Initialized" );
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Not Initialized");
 		return -1;
 	}
 
@@ -572,11 +572,11 @@ int ttsd_player_play(int uid)
 		}
 	}
 
-	SLOG(LOG_DEBUG, get_tag(), "[Player] start play : uid(%d)", uid );
+	SLOG(LOG_DEBUG, get_tag(), "[Player] start play : uid(%d)", uid);
 
 	/* Check sound queue size */
 	if (0 == ttsd_data_get_sound_data_size(uid)) {
-		SLOG(LOG_WARN, get_tag(), "[Player WARNING] A sound queue of current player(%d) is empty", uid); 
+		SLOG(LOG_WARN, get_tag(), "[Player WARNING] A sound queue of current player(%d) is empty", uid);
 		return -1;
 	}
 
@@ -584,12 +584,12 @@ int ttsd_player_play(int uid)
 	player_s* current;
 	current = __player_get_item(uid);
 	if (NULL == current) {
-		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] uid(%d) is not valid", uid); 
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] uid(%d) is not valid", uid);
 		return -1;
 	}
 
 	current->state = APP_STATE_PLAYING;
-	
+
 	g_playing_info = current;
 
 	SLOG(LOG_DEBUG, get_tag(), "[Player DEBUG] Active thread count : %d", ecore_thread_active_get());
@@ -613,7 +613,7 @@ int ttsd_player_stop(int uid)
 	player_s* current;
 	current = __player_get_item(uid);
 	if (NULL == current) {
-		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] uid(%d) is not valid", uid); 
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] uid(%d) is not valid", uid);
 		return -1;
 	}
 
@@ -624,7 +624,7 @@ int ttsd_player_stop(int uid)
 			g_playing_info = NULL;
 		}
 	} else {
-		SLOG(LOG_DEBUG, get_tag(), "[Player] No current playing"); 
+		SLOG(LOG_DEBUG, get_tag(), "[Player] No current playing");
 	}
 
 	if (true == current->is_paused_data) {
@@ -646,10 +646,10 @@ int ttsd_player_stop(int uid)
 
 int ttsd_player_pause(int uid)
 {
-	SLOG(LOG_DEBUG, get_tag(), "[Player] pause player : uid(%d)", uid );
+	SLOG(LOG_DEBUG, get_tag(), "[Player] pause player : uid(%d)", uid);
 
 	if (false == g_player_init) {
-		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Not Initialized" );
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Not Initialized");
 		return -1;
 	}
 
@@ -657,7 +657,7 @@ int ttsd_player_pause(int uid)
 	player_s* current;
 	current = __player_get_item(uid);
 	if (NULL == current) {
-		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] ttsd_player_pause() : uid(%d) is not valid", uid); 
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] ttsd_player_pause() : uid(%d) is not valid", uid);
 		return -1;
 	}
 
@@ -678,10 +678,10 @@ int ttsd_player_pause(int uid)
 
 int ttsd_player_resume(int uid)
 {
-	SLOG(LOG_DEBUG, get_tag(), "[Player] Resume player : uid(%d)", uid );
+	SLOG(LOG_DEBUG, get_tag(), "[Player] Resume player : uid(%d)", uid);
 
 	if (false == g_player_init) {
-		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Not Initialized" );
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Not Initialized");
 		return -1;
 	}
 
@@ -689,7 +689,7 @@ int ttsd_player_resume(int uid)
 	player_s* current;
 	current = __player_get_item(uid);
 	if (NULL == current) {
-		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] uid(%d) is not valid", uid); 
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] uid(%d) is not valid", uid);
 		return -1;
 	}
 
@@ -709,7 +709,7 @@ int ttsd_player_resume(int uid)
 int ttsd_player_all_stop()
 {
 	if (false == g_player_init) {
-		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Not Initialized" );
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Not Initialized");
 		return -1;
 	}
 
@@ -744,11 +744,11 @@ int ttsd_player_all_stop()
 						data->paused_data.data = NULL;
 					}
 				}
-				
+
 				data->is_paused_data = false;
 				data->idx = 0;
 			}
-			
+
 			/* Get next item */
 			iter = g_list_next(iter);
 		}

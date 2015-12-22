@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -33,7 +33,7 @@ typedef struct {
 	tts_config_screen_reader_changed_cb	screen_cb;
 	tts_config_pitch_changed_cb		pitch_cb;
 	void*	user_data;
-}tts_config_client_s;
+} tts_config_client_s;
 
 extern char* tts_tag();
 
@@ -91,7 +91,7 @@ int __tts_config_mgr_check_engine_is_valid(const char* engine_id)
 	/* Change default engine */
 	iter = g_slist_nth(g_engine_list, 0);
 	engine_info = iter->data;
-	
+
 	if (NULL != g_config_info->engine_id)	free(g_config_info->engine_id);
 	if (NULL != g_config_info->setting)	free(g_config_info->setting);
 
@@ -111,7 +111,7 @@ int __tts_config_mgr_check_engine_is_valid(const char* engine_id)
 	while (NULL != iter_voice) {
 		/*Get handle data from list*/
 		voice = iter_voice->data;
-		
+
 		if (NULL != voice && NULL != g_config_info) {
 			if (NULL != voice->language && NULL != g_config_info->language) {
 				if (0 == strcmp(voice->language, g_config_info->language)) {
@@ -147,7 +147,7 @@ int __tts_config_mgr_check_engine_is_valid(const char* engine_id)
 		}
 	}
 
-	if ( 0 != tts_parser_set_engine(g_config_info->engine_id, g_config_info->setting, 
+	if (0 != tts_parser_set_engine(g_config_info->engine_id, g_config_info->setting, 
 		g_config_info->language, g_config_info->type)) {
 		SLOG(LOG_ERROR, tts_tag(), " Fail to save config");
 		return TTS_CONFIG_ERROR_OPERATION_FAILED;
@@ -195,7 +195,7 @@ bool __tts_config_mgr_check_lang_is_valid(const char* engine_id, const char* lan
 			iter = g_slist_next(iter);
 			return false;
 		}
-		
+
 		/* Get a first item */
 		iter_voice = g_slist_nth(engine_info->voices, 0);
 
@@ -211,7 +211,7 @@ bool __tts_config_mgr_check_lang_is_valid(const char* engine_id, const char* lan
 					}
 				}
 			}
-			
+
 			/*Get next item*/
 			iter_voice = g_slist_next(iter_voice);
 			i++;
@@ -237,7 +237,7 @@ int __tts_config_mgr_select_lang(const char* engine_id, char** language, int* ty
 		SLOG(LOG_ERROR, tts_tag(), "There is no engine!!");
 		return false;
 	}
-	
+
 	/* Get a first item */
 	iter = g_slist_nth(g_engine_list, 0);
 
@@ -248,7 +248,7 @@ int __tts_config_mgr_select_lang(const char* engine_id, char** language, int* ty
 			SLOG(LOG_ERROR, tts_tag(), "engine info is NULL");
 			return false;
 		}
-		
+
 		if (0 != strcmp(engine_id, engine_info->uuid)) {
 			iter = g_slist_next(iter);
 			continue;
@@ -402,7 +402,7 @@ Eina_Bool tts_config_mgr_inotify_event_cb(void* data, Ecore_Fd_Handler *fd_handl
 
 				iter = g_slist_next(iter);
 			}
-			
+
 			if (NULL != before_lang) {
 				free(before_lang);
 			}
@@ -481,8 +481,8 @@ int __tts_config_mgr_register_config_event()
 	wd = inotify_add_watch(fd, TTS_CONFIG, IN_CLOSE_WRITE);
 	g_config_wd_noti = wd;
 
-	g_config_fd_handler_noti = ecore_main_fd_handler_add(fd, ECORE_FD_READ, 
-		(Ecore_Fd_Cb)tts_config_mgr_inotify_event_cb, NULL, NULL, NULL);		
+	g_config_fd_handler_noti = ecore_main_fd_handler_add(fd, ECORE_FD_READ,
+		(Ecore_Fd_Cb)tts_config_mgr_inotify_event_cb, NULL, NULL, NULL);
 	if (NULL == g_config_fd_handler_noti) {
 		SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to get handler_noti");
 		return -1;
@@ -492,7 +492,7 @@ int __tts_config_mgr_register_config_event()
 	int value;
 	value = fcntl(fd, F_GETFL, 0);
 	value |= O_NONBLOCK;
-	
+
 	if (0 > fcntl(fd, F_SETFL, value)) {
 		SLOG(LOG_WARN, tts_tag(), "[WARNING] Fail to set non-block mode");
 	}
@@ -860,7 +860,7 @@ static Eina_Bool __tts_config_mgr_engine_config_inotify_event_callback(void* dat
 			if (0 != ret) {
 				SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to get voice");
 			}
-			
+
 			ret = tts_config_mgr_set_voice(temp_lang, temp_type);
 			if (0 != ret) {
 				SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to set voice");
@@ -904,7 +904,7 @@ static int __tts_config_mgr_register_engine_config_updated_event()
 	int value;
 	value = fcntl(g_dir_fd, F_GETFL, 0);
 	value |= O_NONBLOCK;
-	
+
 	if (0 > fcntl(g_dir_fd, F_SETFL, value)) {
 		SLOG(LOG_WARN, tts_tag(), "[WARNING] Fail to set non-block mode");
 	}
@@ -979,9 +979,9 @@ int tts_config_mgr_initialize(int uid)
 		SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to parse configure information");
 		__tts_config_release_client(uid);
 		__tts_config_release_engine();
-		return TTS_CONFIG_ERROR_OPERATION_FAILED; 
+		return TTS_CONFIG_ERROR_OPERATION_FAILED;
 	}
-	
+
 	/* Check whether engine id is valid */
 	if (0 != __tts_config_mgr_check_engine_is_valid(g_config_info->engine_id)) {
 		SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to get default engine");
@@ -990,7 +990,7 @@ int tts_config_mgr_initialize(int uid)
 		tts_parser_unload_config(g_config_info);
 		return TTS_CONFIG_ERROR_ENGINE_NOT_FOUND;
 	}
-	
+
 	if (true == g_config_info->auto_voice) {
 		/* Check language with display language */
 		__tts_config_set_auto_language();
@@ -1263,7 +1263,7 @@ int tts_config_mgr_get_engine(char** engine)
 			}
 			iter = g_slist_next(iter);
 		}
-		
+
 		SLOG(LOG_ERROR, tts_tag(), "[ERROR] Current engine id is not valid");
 	} else {
 		SLOG(LOG_ERROR, tts_tag(), "[ERROR] Engine id is NULL");
@@ -1283,7 +1283,7 @@ int tts_config_mgr_set_engine(const char* engine)
 		return TTS_CONFIG_ERROR_INVALID_PARAMETER;
 
 	/* Check current engine id with new engine id */
-	if (0 == strcmp(g_config_info->engine_id, engine)) 
+	if (0 == strcmp(g_config_info->engine_id, engine))
 		return 0;
 
 	if (0 >= g_slist_length(g_engine_list)) {
@@ -1337,7 +1337,7 @@ int tts_config_mgr_set_engine(const char* engine)
 		while (NULL != iter_voice) {
 			/*Get handle data from list*/
 			voice = iter_voice->data;
-			
+
 			if (NULL != voice) {
 				if (NULL == voice->language)
 					continue;
@@ -1389,8 +1389,8 @@ int tts_config_mgr_set_engine(const char* engine)
 		SECURE_SLOG(LOG_DEBUG, tts_tag(), "  Setting : %s", g_config_info->setting);
 		SECURE_SLOG(LOG_DEBUG, tts_tag(), "  Language : %s", g_config_info->language);
 		SECURE_SLOG(LOG_DEBUG, tts_tag(), "  Type : %d", g_config_info->type);
-		
-		if ( 0 != tts_parser_set_engine(g_config_info->engine_id, g_config_info->setting, 
+
+		if (0 != tts_parser_set_engine(g_config_info->engine_id, g_config_info->setting,
 			g_config_info->language, g_config_info->type)) {
 				SLOG(LOG_ERROR, tts_tag(), " Fail to save config");
 				return TTS_CONFIG_ERROR_OPERATION_FAILED;
@@ -1436,7 +1436,7 @@ int tts_config_mgr_get_voice_list(const char* engine_id, tts_config_supported_vo
 
 		GSList *iter_voice = NULL;
 		tts_config_voice_s* voice = NULL;
-		
+
 		/* Get a first item */
 		iter_voice = g_slist_nth(engine_info->voices, 0);
 
@@ -1449,7 +1449,7 @@ int tts_config_mgr_get_voice_list(const char* engine_id, tts_config_supported_vo
 				if (false == callback(engine_info->uuid, voice->language, voice->type, user_data))
 					break;
 			}
-			
+
 			/*Get next item*/
 			iter_voice = g_slist_next(iter_voice);
 		}
@@ -1564,7 +1564,7 @@ int tts_config_mgr_get_speech_rate(int* value)
 		SLOG(LOG_ERROR, tts_tag(), "Not initialized");
 		return TTS_CONFIG_ERROR_INVALID_PARAMETER;
 	}
-	
+
 	if (NULL == value) {
 		return TTS_CONFIG_ERROR_INVALID_PARAMETER;
 	}
@@ -1592,7 +1592,7 @@ int tts_config_mgr_set_speech_rate(int value)
 	} else {
 		SLOG(LOG_ERROR, tts_tag(), "[Config ERROR] Speech rate is invalid : %d", value);
 	}
-	
+
 	return 0;
 }
 
@@ -1625,7 +1625,7 @@ int tts_config_mgr_get_pitch(int* value)
 			SLOG(LOG_ERROR, tts_tag(), "engine info is NULL");
 			return TTS_CONFIG_ERROR_OPERATION_FAILED;
 		}
-		
+
 		if (0 != strcmp(g_config_info->engine_id, engine_info->uuid)) {
 			iter = g_slist_next(iter);
 			continue;
@@ -1657,7 +1657,7 @@ int tts_config_mgr_set_pitch(int value)
 		SLOG(LOG_ERROR, tts_tag(), "[ERROR] There is no engine!!");
 		return TTS_CONFIG_ERROR_ENGINE_NOT_FOUND;
 	}
-	
+
 	/* Get a first item */
 	iter = g_slist_nth(g_engine_list, 0);
 
@@ -1668,7 +1668,7 @@ int tts_config_mgr_set_pitch(int value)
 			SLOG(LOG_ERROR, tts_tag(), "engine info is NULL");
 			return TTS_CONFIG_ERROR_OPERATION_FAILED;
 		}
-		
+
 		if (0 != strcmp(g_config_info->engine_id, engine_info->uuid)) {
 			iter = g_slist_next(iter);
 			continue;
@@ -1685,7 +1685,7 @@ int tts_config_mgr_set_pitch(int value)
 		SLOG(LOG_ERROR, tts_tag(), "Fail to save speech rate");
 		return TTS_CONFIG_ERROR_OPERATION_FAILED;
 	}
-	
+
 	g_config_info->pitch = value;
 
 	return 0;
@@ -1701,7 +1701,7 @@ bool tts_config_check_default_engine_is_valid(const char* engine)
 	if (NULL == engine)
 		return false;
 
-	if (0 >= g_slist_length(g_engine_list)) 
+	if (0 >= g_slist_length(g_engine_list))
 		return false;
 
 	GSList *iter = NULL;
@@ -1739,7 +1739,7 @@ bool tts_config_check_default_voice_is_valid(const char* language, int type)
 		return false;
 	}
 
-	if (0 >= g_slist_length(g_engine_list)) 
+	if (0 >= g_slist_length(g_engine_list))
 		return false;
 
 	GSList *iter = NULL;
@@ -1770,7 +1770,7 @@ bool tts_config_check_default_voice_is_valid(const char* language, int type)
 
 		while (NULL != iter_voice) {
 			voice = iter_voice->data;
-			
+
 			if (0 == strcmp(language, voice->language) && voice->type == type)
 				return true;
 
@@ -1802,7 +1802,7 @@ int __tts_config_mgr_print_engine_info()
 
 	SLOG(LOG_DEBUG, tts_tag(), "--------------- engine list -----------------");
 
-	int i = 1;	
+	int i = 1;
 	while (NULL != iter) {
 		engine_info = iter->data;
 

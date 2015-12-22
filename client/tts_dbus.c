@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -56,13 +56,13 @@ static Eina_Bool listener_event_callback(void* data, Ecore_Fd_Handler *fd_handle
 	}
 
 	/* loop again if we haven't read a message */
-	if (NULL == msg) { 
+	if (NULL == msg) {
 		return ECORE_CALLBACK_RENEW;
 	}
 
 	DBusError err;
 	dbus_error_init(&err);
-	
+
 	char if_name[64] = {0, };
 	snprintf(if_name, 64, "%s", TTS_CLIENT_SERVICE_INTERFACE);
 
@@ -126,7 +126,7 @@ static Eina_Bool listener_event_callback(void* data, Ecore_Fd_Handler *fd_handle
 			SLOG(LOG_ERROR, TAG_TTSC, "<<<< Get Error message - Get arguments error (%s)", err.message);
 			dbus_error_free(&err);
 		}
-		
+
 		if (0 == __tts_cb_error(uid, reason, uttid)) {
 			SLOG(LOG_ERROR, TAG_TTSC, "<<<< Get Error message : uid(%d), error(%d), uttid(%d)", uid, reason, uttid);
 		}
@@ -152,14 +152,14 @@ int tts_dbus_open_connection()
 
 	/* connect to the DBUS system bus, and check for errors */
 	g_conn_sender = dbus_bus_get_private(DBUS_BUS_SYSTEM, &err);
-	if (dbus_error_is_set(&err)) { 
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Dbus Connection Error (%s)", err.message); 
-		dbus_error_free(&err); 
+	if (dbus_error_is_set(&err)) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Dbus Connection Error (%s)", err.message);
+		dbus_error_free(&err);
 	}
 
 	if (NULL == g_conn_sender) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] fail to get dbus connection");
-		return TTS_ERROR_OPERATION_FAILED; 
+		return TTS_ERROR_OPERATION_FAILED;
 	}
 
 	dbus_connection_set_exit_on_disconnect(g_conn_sender, false);
@@ -208,7 +208,7 @@ int tts_dbus_open_connection()
 	}
 
 	g_dbus_fd_handler = ecore_main_fd_handler_add(fd, ECORE_FD_READ, (Ecore_Fd_Cb)listener_event_callback, NULL, NULL, NULL);
-	if (NULL == g_dbus_fd_handler) { 
+	if (NULL == g_dbus_fd_handler) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to get fd handler from ecore");
 		return TTS_ERROR_OPERATION_FAILED;
 	}
@@ -249,27 +249,27 @@ int tts_dbus_reconnect()
 {
 	bool sender_connected = dbus_connection_get_is_connected(g_conn_sender);
 	bool listener_connected = dbus_connection_get_is_connected(g_conn_listener);
-	SLOG(LOG_DEBUG, TAG_TTSC, "[DBUS] Sender(%s) Listener(%s)", 
-		sender_connected ? "Connected" : "Not connected", listener_connected ? "Connected" : "Not connected");
+	SLOG(LOG_DEBUG, TAG_TTSC, "[DBUS] Sender(%s) Listener(%s)",
+		 sender_connected ? "Connected" : "Not connected", listener_connected ? "Connected" : "Not connected");
 
 	if (false == sender_connected || false == listener_connected) {
 		tts_dbus_close_connection();
 
-		if(0 != tts_dbus_open_connection()) {
+		if (0 != tts_dbus_open_connection()) {
 			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to reconnect");
 			return -1;
-		} 
+		}
 
 		SLOG(LOG_DEBUG, TAG_TTSC, "[DBUS] Reconnect");
 	}
-	
+
 	return 0;
 }
 
 DBusMessage* __tts_dbus_make_message(int uid, const char* method)
 {
 	if (NULL == method) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input method is NULL"); 
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input method is NULL");
 		return NULL;
 	}
 
@@ -302,7 +302,7 @@ DBusMessage* __tts_dbus_make_message(int uid, const char* method)
 			TTS_SR_SERVER_SERVICE_INTERFACE, 
 			method);
 	} else {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input mode is not available"); 
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input mode is not available");
 		return NULL;
 	}
 
@@ -316,16 +316,16 @@ int tts_dbus_request_hello(int uid)
 	DBusMessage* msg;
 
 	msg = __tts_dbus_make_message(uid, TTS_METHOD_HELLO);
-	
+
 	if (dbus_error_is_set(&err)) {
 		SLOG(LOG_DEBUG, TAG_TTSC, "<<<< tts dbus log : %s", err);
 		dbus_error_free(&err);
 	}
 
-	if (NULL == msg) { 
+	if (NULL == msg) {
 		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts hello : Fail to make message");
 		return TTS_ERROR_OPERATION_FAILED;
-	} 
+	}
 
 	DBusMessage* result_msg = NULL;
 	int result = 0;
@@ -357,7 +357,7 @@ int tts_dbus_request_initialize(int uid)
 
 	msg = __tts_dbus_make_message(uid, TTS_METHOD_INITIALIZE);
 
-	if (NULL == msg) { 
+	if (NULL == msg) {
 		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts initialize : Fail to make message");
 		return TTS_ERROR_OPERATION_FAILED;
 	} else {
@@ -367,7 +367,7 @@ int tts_dbus_request_initialize(int uid)
 	int pid = getpid();
 	if (true != dbus_message_append_args(msg, DBUS_TYPE_INT32, &pid, DBUS_TYPE_INT32, &uid,	DBUS_TYPE_INVALID)) {
 		dbus_message_unref(msg);
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to append args"); 
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to append args");
 
 		return TTS_ERROR_OPERATION_FAILED;
 	}
@@ -387,9 +387,9 @@ int tts_dbus_request_initialize(int uid)
 				  DBUS_TYPE_INT32, &result,
 				  DBUS_TYPE_INVALID);
 
-		if (dbus_error_is_set(&err)) { 
+		if (dbus_error_is_set(&err)) {
 			SLOG(LOG_ERROR, TAG_TTSC, "<<<< Get arguments error (%s)", err.message);
-			dbus_error_free(&err); 
+			dbus_error_free(&err);
 			result = TTS_ERROR_OPERATION_FAILED;
 		}
 
@@ -418,8 +418,8 @@ int tts_dbus_request_finalize(int uid)
 
 	msg = __tts_dbus_make_message(uid, TTS_METHOD_FINALIZE);
 
-	if (NULL == msg) { 
-		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts finalize : Fail to make message"); 
+	if (NULL == msg) {
+		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts finalize : Fail to make message");
 		return TTS_ERROR_OPERATION_FAILED;
 	} else {
 		SLOG(LOG_DEBUG, TAG_TTSC, ">>>> Request tts finalize : uid(%d)", uid);
@@ -427,7 +427,7 @@ int tts_dbus_request_finalize(int uid)
 
 	if (true != dbus_message_append_args(msg, DBUS_TYPE_INT32, &uid, DBUS_TYPE_INVALID)) {
 		dbus_message_unref(msg);
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to append args"); 
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to append args");
 
 		return TTS_ERROR_OPERATION_FAILED;
 	}
@@ -445,9 +445,9 @@ int tts_dbus_request_finalize(int uid)
 	if (NULL != result_msg) {
 		dbus_message_get_args(result_msg, &err, DBUS_TYPE_INT32, &result, DBUS_TYPE_INVALID);
 
-		if (dbus_error_is_set(&err)) { 
+		if (dbus_error_is_set(&err)) {
 			SLOG(LOG_ERROR, TAG_TTSC, "<<<< Get arguments error (%s)", err.message);
-			dbus_error_free(&err); 
+			dbus_error_free(&err);
 			result = TTS_ERROR_OPERATION_FAILED;
 		}
 
@@ -480,15 +480,15 @@ int tts_dbus_request_add_text(int uid, const char* text, const char* lang, int v
 
 	msg = __tts_dbus_make_message(uid, TTS_METHOD_ADD_QUEUE);
 
-	if (NULL == msg) { 
-		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts add text : Fail to make message"); 
+	if (NULL == msg) {
+		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts add text : Fail to make message");
 		return TTS_ERROR_OPERATION_FAILED;
 	} else {
-		SLOG(LOG_DEBUG, TAG_TTSC, ">>>> Request tts add text : uid(%d), text(%s), lang(%s), type(%d), speed(%d), id(%d)", 
-			uid, text, lang, vctype, speed, uttid);
+		SLOG(LOG_DEBUG, TAG_TTSC, ">>>> Request tts add text : uid(%d), text(%s), lang(%s), type(%d), speed(%d), id(%d)",
+			 uid, text, lang, vctype, speed, uttid);
 	}
 
-	if (true != dbus_message_append_args( msg, 
+	if (true != dbus_message_append_args(msg,
 		DBUS_TYPE_INT32, &uid,
 		DBUS_TYPE_STRING, &text,
 		DBUS_TYPE_STRING, &lang,
@@ -497,7 +497,7 @@ int tts_dbus_request_add_text(int uid, const char* text, const char* lang, int v
 		DBUS_TYPE_INT32, &uttid,
 		DBUS_TYPE_INVALID)) {
 		dbus_message_unref(msg);
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to append args"); 
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to append args");
 
 		return TTS_ERROR_OPERATION_FAILED;
 	}
@@ -517,18 +517,18 @@ int tts_dbus_request_add_text(int uid, const char* text, const char* lang, int v
 			DBUS_TYPE_INT32, &result,
 			DBUS_TYPE_INVALID);
 
-		if (dbus_error_is_set(&err)) { 
+		if (dbus_error_is_set(&err)) {
 			SLOG(LOG_ERROR, TAG_TTSC, "<<<< tts add text : Get arguments error (%s)", err.message);
-			dbus_error_free(&err); 
+			dbus_error_free(&err);
 			result = TTS_ERROR_OPERATION_FAILED;
 		}
 		dbus_message_unref(result_msg);
-		
+
 		if (0 == result) {
 			SLOG(LOG_DEBUG, TAG_TTSC, "<<<< tts add text : result(%d)", result);
 		} else {
 			SLOG(LOG_ERROR, TAG_TTSC, "<<<< tts add text : result(%d)", result);
-		}	
+		}
 	} else {
 		SLOG(LOG_ERROR, TAG_TTSC, "<<<< Result message is NULL ");
 		tts_dbus_reconnect();
@@ -538,7 +538,7 @@ int tts_dbus_request_add_text(int uid, const char* text, const char* lang, int v
 	return result;
 }
 
-int tts_dbus_request_play(int uid) 
+int tts_dbus_request_play(int uid)
 {
 	DBusMessage* msg;
 	DBusError err;
@@ -546,16 +546,16 @@ int tts_dbus_request_play(int uid)
 
 	msg = __tts_dbus_make_message(uid, TTS_METHOD_PLAY);
 
-	if (NULL == msg) { 
-		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts play : Fail to make message"); 
+	if (NULL == msg) {
+		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts play : Fail to make message");
 		return TTS_ERROR_OPERATION_FAILED;
 	} else {
 		SLOG(LOG_DEBUG, TAG_TTSC, ">>>> Request tts play : uid(%d)", uid);
 	}
-	
+
 	if (true != dbus_message_append_args(msg, DBUS_TYPE_INT32, &uid, DBUS_TYPE_INVALID)) {
 		dbus_message_unref(msg);
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to append args"); 
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to append args");
 
 		return TTS_ERROR_OPERATION_FAILED;
 	}
@@ -575,9 +575,9 @@ int tts_dbus_request_play(int uid)
 			DBUS_TYPE_INT32, &result,
 			DBUS_TYPE_INVALID);
 
-		if (dbus_error_is_set(&err)) { 
+		if (dbus_error_is_set(&err)) {
 			SLOG(LOG_ERROR, TAG_TTSC, "<<<< tts play : Get arguments error (%s)", err.message);
-			dbus_error_free(&err); 
+			dbus_error_free(&err);
 			result = TTS_ERROR_OPERATION_FAILED;
 		}
 		dbus_message_unref(result_msg);
@@ -604,8 +604,8 @@ int tts_dbus_request_stop(int uid)
 
 	msg = __tts_dbus_make_message(uid, TTS_METHOD_STOP);
 
-	if (NULL == msg) { 
-		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts stop : Fail to make message"); 
+	if (NULL == msg) {
+		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts stop : Fail to make message");
 		return TTS_ERROR_OPERATION_FAILED;
 	} else {
 		SLOG(LOG_DEBUG, TAG_TTSC, ">>>> Request tts stop : uid(%d)", uid);
@@ -616,7 +616,7 @@ int tts_dbus_request_stop(int uid)
 
 	if (true != dbus_message_append_args(msg, DBUS_TYPE_INT32, &uid, DBUS_TYPE_INVALID)) {
 		dbus_message_unref(msg);
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to append args"); 
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to append args");
 
 		return TTS_ERROR_OPERATION_FAILED;
 	}
@@ -633,9 +633,9 @@ int tts_dbus_request_stop(int uid)
 			DBUS_TYPE_INT32, &result,
 			DBUS_TYPE_INVALID);
 
-		if (dbus_error_is_set(&err)) { 
+		if (dbus_error_is_set(&err)) {
 			SLOG(LOG_ERROR, TAG_TTSC, "<<<< tts stop : Get arguments error (%s)", err.message);
-			dbus_error_free(&err); 
+			dbus_error_free(&err);
 			result = TTS_ERROR_OPERATION_FAILED;
 		}
 		dbus_message_unref(result_msg);
@@ -662,8 +662,8 @@ int tts_dbus_request_pause(int uid)
 
 	msg = __tts_dbus_make_message(uid, TTS_METHOD_PAUSE);
 
-	if (NULL == msg) { 
-		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts pause : Fail to make message"); 
+	if (NULL == msg) {
+		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts pause : Fail to make message");
 		return TTS_ERROR_OPERATION_FAILED;
 	} else {
 		SLOG(LOG_DEBUG, TAG_TTSC, ">>>> Request tts pause : uid(%d)", uid);
@@ -674,7 +674,7 @@ int tts_dbus_request_pause(int uid)
 
 	if (true != dbus_message_append_args(msg, DBUS_TYPE_INT32, &uid, DBUS_TYPE_INVALID)) {
 		dbus_message_unref(msg);
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to append args"); 
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to append args");
 
 		return TTS_ERROR_OPERATION_FAILED;
 	}
@@ -691,9 +691,9 @@ int tts_dbus_request_pause(int uid)
 			DBUS_TYPE_INT32, &result,
 			DBUS_TYPE_INVALID);
 
-		if (dbus_error_is_set(&err)) { 
+		if (dbus_error_is_set(&err)) {
 			SLOG(LOG_ERROR, TAG_TTSC, "<<<< tts pause : Get arguments error (%s)", err.message);
-			dbus_error_free(&err); 
+			dbus_error_free(&err);
 			result = TTS_ERROR_OPERATION_FAILED;
 		}
 		dbus_message_unref(result_msg);

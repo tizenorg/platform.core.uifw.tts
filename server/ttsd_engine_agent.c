@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -28,12 +28,12 @@
 typedef struct {
 	/* base info */
 	char*	engine_uuid;
-	char*	engine_name; 
+	char*	engine_name;
 	char*	engine_path;
 
 	/* info for using engine load */
 	bool	is_set;
-	bool	is_loaded;		
+	bool	is_loaded;
 	bool	need_network;
 	void	*handle;
 
@@ -48,7 +48,7 @@ typedef struct {
 
 	int (*ttsp_load_engine)(const ttspd_funcs_s* pdfuncs, ttspe_funcs_s* pefuncs);
 	int (*ttsp_unload_engine)();
-}ttsengine_s;
+} ttsengine_s;
 
 typedef struct {
 	char*	engine_uuid;
@@ -56,17 +56,16 @@ typedef struct {
 	char*	engine_name;
 	char*	setting_ug_path;
 	bool	use_network;
-}ttsengine_info_s;
+} ttsengine_info_s;
 
-typedef struct 
-{
+typedef struct {
 	bool	is_default;
 	bool	is_loaded;
 	int	client_ref_count;
 
 	char*	lang;
 	int	type;
-}ttsvoice_s;
+} ttsvoice_s;
 
 
 /** Init flag */
@@ -122,7 +121,7 @@ int ttsd_print_voicelist();
 
 static const char* __ttsd_get_engine_error_code(ttsp_error_e err)
 {
-	switch(err) {
+	switch (err) {
 	case TTSP_ERROR_NONE:			return "TTSP_ERROR_NONE";
 	case TTSP_ERROR_OUT_OF_MEMORY:		return "TTSP_ERROR_OUT_OF_MEMORY";
 	case TTSP_ERROR_IO_ERROR:		return "TTSP_ERROR_IO_ERROR";
@@ -158,19 +157,19 @@ int ttsd_engine_agent_init(synth_result_callback result_cb)
 	g_agent_init = true;
 
 	if (0 != ttsd_config_get_default_voice(&(g_cur_engine.default_lang), &(g_cur_engine.default_vctype))) {
-		SLOG(LOG_WARN, get_tag(), "[Server WARNING] There is No default voice in config"); 
+		SLOG(LOG_WARN, get_tag(), "[Server WARNING] There is No default voice in config");
 		/* Set default voice */
 		g_cur_engine.default_lang = strdup(TTS_BASE_LANGUAGE);
 		g_cur_engine.default_vctype = TTSP_VOICE_TYPE_FEMALE;
 	}
 
 	if (0 != ttsd_config_get_default_speed(&(g_cur_engine.default_speed))) {
-		SLOG(LOG_WARN, get_tag(), "[Server WARNING] There is No default speed in config"); 
+		SLOG(LOG_WARN, get_tag(), "[Server WARNING] There is No default speed in config");
 		g_cur_engine.default_speed = TTS_SPEED_NORMAL;
 	}
 
 	if (0 != ttsd_config_get_default_pitch(&(g_cur_engine.default_pitch))) {
-		SLOG(LOG_WARN, get_tag(), "[Server WARNING] There is No default pitch in config"); 
+		SLOG(LOG_WARN, get_tag(), "[Server WARNING] There is No default pitch in config");
 		g_cur_engine.default_pitch = TTS_PITCH_NORMAL;
 	}
 
@@ -231,7 +230,7 @@ int ttsd_engine_agent_release()
 int ttsd_engine_agent_initialize_current_engine()
 {
 	if (false == g_agent_init) {
-		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized" );
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized");
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
@@ -266,17 +265,17 @@ int ttsd_engine_agent_initialize_current_engine()
 			}
 		} else {
 			SLOG(LOG_WARN, get_tag(), "[Engine Agent WARNING] Fail to set a engine of engine list");
-			return TTSD_ERROR_OPERATION_FAILED;	
+			return TTSD_ERROR_OPERATION_FAILED;
 		}
-		
+
 		is_get_engineid_from_config = false;
 	} else {
 		is_get_engineid_from_config = true;
 	}
 
 	if (NULL == cur_engine_uuid) {
-			SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Current engine id is NULL");
-			return TTSD_ERROR_OPERATION_FAILED;
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Current engine id is NULL");
+		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
 	/* check whether cur engine uuid is valid or not. */
@@ -284,13 +283,13 @@ int ttsd_engine_agent_initialize_current_engine()
 		SLOG(LOG_WARN, get_tag(), "[Engine Agent WARNING] It is not valid engine id from config");
 
 		GList *iter = NULL;
-		
-		if (g_list_length(g_engine_list) > 0) 
+
+		if (g_list_length(g_engine_list) > 0)
 			iter = g_list_first(g_engine_list);
 		else {
 			SLOG(LOG_WARN, get_tag(), "[Engine Agent ERROR] NO TTS Engine !!");
 			if (NULL != cur_engine_uuid)	free(cur_engine_uuid);
-			return TTSD_ERROR_OPERATION_FAILED;	
+			return TTSD_ERROR_OPERATION_FAILED;
 		}
 
 		if (cur_engine_uuid != NULL)	free(cur_engine_uuid);
@@ -302,9 +301,9 @@ int ttsd_engine_agent_initialize_current_engine()
 		is_get_engineid_from_config = false;
 	}
 
-	if (NULL != cur_engine_uuid) 
+	if (NULL != cur_engine_uuid)
 		SECURE_SLOG(LOG_DEBUG, get_tag(), "[Engine Agent] Current Engine Id : %s", cur_engine_uuid);
-	else 
+	else
 		return TTSD_ERROR_OPERATION_FAILED;
 
 	/* set current engine */
@@ -312,7 +311,7 @@ int ttsd_engine_agent_initialize_current_engine()
 		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] fail to set current engine ");
 		if (NULL != cur_engine_uuid)	free(cur_engine_uuid);
 		return TTSD_ERROR_OPERATION_FAILED;
-	} 
+	}
 
 	if (false == is_get_engineid_from_config) {
 		if (0 != ttsd_config_set_default_engine(cur_engine_uuid)) {
@@ -322,7 +321,7 @@ int ttsd_engine_agent_initialize_current_engine()
 
 	if (NULL != cur_engine_uuid)	free(cur_engine_uuid);
 
-	SLOG(LOG_DEBUG, get_tag(), "[Engine Agent SUCCESS] Set current engine"); 
+	SLOG(LOG_DEBUG, get_tag(), "[Engine Agent SUCCESS] Set current engine");
 
 	return 0;
 }
@@ -338,9 +337,9 @@ int __internal_check_engine_id(const char* engine_uuid)
 		while (NULL != iter) {
 			data = iter->data;
 
-			if (0 == strncmp(engine_uuid, data->engine_uuid, strlen(data->engine_uuid))) 
+			if (0 == strncmp(engine_uuid, data->engine_uuid, strlen(data->engine_uuid)))
 				return 0;
-	
+
 			iter = g_list_next(iter);
 		}
 	}
@@ -351,11 +350,11 @@ int __internal_check_engine_id(const char* engine_uuid)
 void __engine_info_cb(const char* engine_uuid, const char* engine_name, const char* setting_ug_name, 
 			     bool use_network, void* user_data)
 {
-	ttsengine_info_s* temp = (ttsengine_info_s*)user_data; 
+	ttsengine_info_s* temp = (ttsengine_info_s*)user_data;
 
 	if (NULL != engine_uuid)
 		temp->engine_uuid = strdup(engine_uuid);
-	
+
 	if (NULL != engine_name)
 		temp->engine_name = strdup(engine_name);
 
@@ -374,7 +373,7 @@ int __internal_get_engine_info(const char* filepath, ttsengine_info_s** info)
 	handle = dlopen(filepath, RTLD_LAZY);
 
 	if (!handle) {
-		SECURE_SLOG(LOG_WARN, get_tag(), "[Engine Agent] Invalid engine : %s", filepath); 
+		SECURE_SLOG(LOG_WARN, get_tag(), "[Engine Agent] Invalid engine : %s", filepath);
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
@@ -431,13 +430,13 @@ int __internal_get_engine_info(const char* filepath, ttsengine_info_s** info)
 	}
 
 	temp->engine_path = strdup(filepath);
-	
+
 	SLOG(LOG_DEBUG, get_tag(), "----- Valid engine");
 	SECURE_SLOG(LOG_DEBUG, get_tag(), "Engine uuid : %s", temp->engine_uuid);
 	SECURE_SLOG(LOG_DEBUG, get_tag(), "Engine name : %s", temp->engine_name);
 	SECURE_SLOG(LOG_DEBUG, get_tag(), "Setting path : %s", temp->setting_ug_path);
 	SECURE_SLOG(LOG_DEBUG, get_tag(), "Engine path : %s", temp->engine_path);
-	SECURE_SLOG(LOG_DEBUG, get_tag(), "Use network : %s", temp->use_network ? "true":"false");
+	SECURE_SLOG(LOG_DEBUG, get_tag(), "Use network : %s", temp->use_network ? "true" : "false");
 	SLOG(LOG_DEBUG, get_tag(), "-----");
 	SLOG(LOG_DEBUG, get_tag(), "  ");
 
@@ -478,11 +477,11 @@ int __internal_update_engine_list()
 			file_size = strlen(TTS_DEFAULT_ENGINE) + strlen(dirp->d_name) + 5;
 			filepath = (char*)calloc(file_size, sizeof(char));
 
-			if (NULL != filepath) { 
+			if (NULL != filepath) {
 				snprintf(filepath, file_size, "%s/%s", TTS_DEFAULT_ENGINE, dirp->d_name);
 			} else {
-				SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not enough memory!!" );
-				continue;	
+				SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not enough memory!!");
+				continue;
 			}
 
 			/* get its info and update engine list */
@@ -511,8 +510,8 @@ int __internal_update_engine_list()
 			if (NULL != filepath) {
 				snprintf(filepath, file_size, "%s/%s", TTS_DOWNLOAD_ENGINE, dirp->d_name);
 			} else {
-				SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not enough memory!!" );
-				continue;	
+				SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not enough memory!!");
+				continue;
 			}
 
 			/* get its info and update engine list */
@@ -529,7 +528,7 @@ int __internal_update_engine_list()
 
 	if (g_list_length(g_engine_list) <= 0) {
 		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] No Engine");
-		return TTSD_ERROR_OPERATION_FAILED;	
+		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
 #ifdef ENGINE_AGENT_DEBUG
@@ -650,7 +649,7 @@ int __update_voice_list()
 int ttsd_engine_agent_load_current_engine()
 {
 	if (false == g_agent_init) {
-		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized" );
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized");
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
@@ -660,8 +659,8 @@ int ttsd_engine_agent_load_current_engine()
 	}
 
 	/* check whether current engine is loaded or not */
-	if (true == g_cur_engine.is_loaded ) {
-		SLOG(LOG_ERROR, get_tag(), "[Engine Agent] Engine has already been loaded " );
+	if (true == g_cur_engine.is_loaded) {
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent] Engine has already been loaded ");
 		return 0;
 	}
 
@@ -680,7 +679,7 @@ int ttsd_engine_agent_load_current_engine()
 		return -3;
 	}
 
-	g_cur_engine.ttsp_load_engine = (int (*)(const ttspd_funcs_s* , ttspe_funcs_s*) )dlsym(g_cur_engine.handle, "ttsp_load_engine");
+	g_cur_engine.ttsp_load_engine = (int (*)(const ttspd_funcs_s* , ttspe_funcs_s*))dlsym(g_cur_engine.handle, "ttsp_load_engine");
 	if (NULL != (error = dlerror()) || NULL == g_cur_engine.ttsp_load_engine) {
 		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Fail to link daemon to ttsp_load_engine() : %s", error);
 		return -3;
@@ -691,10 +690,10 @@ int ttsd_engine_agent_load_current_engine()
 	g_cur_engine.pdfuncs->size = sizeof(ttspd_funcs_s);
 
 	int ret = 0;
-	ret = g_cur_engine.ttsp_load_engine(g_cur_engine.pdfuncs, g_cur_engine.pefuncs); 
+	ret = g_cur_engine.ttsp_load_engine(g_cur_engine.pdfuncs, g_cur_engine.pefuncs);
 	if (0 != ret) {
-		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] fail to load engine - %s : result(%s)", 
-			g_cur_engine.engine_path, __ttsd_get_engine_error_code(ret));
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] fail to load engine - %s : result(%s)",
+			 g_cur_engine.engine_path, __ttsd_get_engine_error_code(ret));
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
@@ -710,7 +709,7 @@ int ttsd_engine_agent_load_current_engine()
 		NULL == g_cur_engine.pefuncs->start_synth ||
 		NULL == g_cur_engine.pefuncs->cancel_synth) {
 		SLOG(LOG_ERROR, get_tag(), "[Engine ERROR] The engine functions are NOT valid");
-		return TTSD_ERROR_OPERATION_FAILED; 
+		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
 	ret = g_cur_engine.pefuncs->initialize(__result_cb);
@@ -729,11 +728,11 @@ int ttsd_engine_agent_load_current_engine()
 	/* Select default voice */
 	if (NULL != g_cur_engine.default_lang) {
 		if (true == g_cur_engine.pefuncs->is_valid_voice(g_cur_engine.default_lang, g_cur_engine.default_vctype)) {
-			SLOG(LOG_DEBUG, get_tag(), "[Engine Agent SUCCESS] Set origin default voice to current engine : lang(%s), type(%d)", 
-				g_cur_engine.default_lang,  g_cur_engine.default_vctype);
+			SLOG(LOG_DEBUG, get_tag(), "[Engine Agent SUCCESS] Set origin default voice to current engine : lang(%s), type(%d)",
+				 g_cur_engine.default_lang,  g_cur_engine.default_vctype);
 		} else {
 			SLOG(LOG_WARN, get_tag(), "[Engine Agent WARNING] Fail set origin default voice : lang(%s), type(%d)",
-				g_cur_engine.default_lang, g_cur_engine.default_vctype);
+				 g_cur_engine.default_lang, g_cur_engine.default_vctype);
 
 			return TTSD_ERROR_OPERATION_FAILED;
 		}
@@ -743,11 +742,11 @@ int ttsd_engine_agent_load_current_engine()
 	if (NULL != g_cur_engine.pefuncs->load_voice) {
 		ret = g_cur_engine.pefuncs->load_voice(g_cur_engine.default_lang, g_cur_engine.default_vctype);
 		if (0 == ret) {
-			SLOG(LOG_DEBUG, get_tag(), "[Engine Agent SUCCESS] Load default voice : lang(%s), type(%d)", 
-				g_cur_engine.default_lang,  g_cur_engine.default_vctype);
+			SLOG(LOG_DEBUG, get_tag(), "[Engine Agent SUCCESS] Load default voice : lang(%s), type(%d)",
+				 g_cur_engine.default_lang,  g_cur_engine.default_vctype);
 		} else {
 			SLOG(LOG_WARN, get_tag(), "[Engine Agent ERROR] Fail to load default voice : lang(%s), type(%d) result(%s)",
-				g_cur_engine.default_lang, g_cur_engine.default_vctype, __ttsd_get_engine_error_code(ret));
+				 g_cur_engine.default_lang, g_cur_engine.default_vctype, __ttsd_get_engine_error_code(ret));
 
 			return TTSD_ERROR_OPERATION_FAILED;
 		}
@@ -764,7 +763,7 @@ int ttsd_engine_agent_load_current_engine()
 		if (0 == ret && 0 < g_list_length(voice_list)) {
 			GList *iter = NULL;
 			voice_s* voice = NULL;
-			
+
 			iter = g_list_first(voice_list);
 
 			/* check english */
@@ -772,7 +771,7 @@ int ttsd_engine_agent_load_current_engine()
 				voice = iter->data;
 
 				if (NULL != voice) {
-					if (0 == strcmp("en_US", voice->language)) 
+					if (0 == strcmp("en_US", voice->language))
 						break;
 				}
 
@@ -782,7 +781,7 @@ int ttsd_engine_agent_load_current_engine()
 				SLOG(LOG_ERROR, get_tag(), "[Engine ERROR] Fail to find voice in list");
 				return TTSD_ERROR_OPERATION_FAILED;
 			}
-	
+
 			/* Set selected language and type */
 			if (true != g_cur_engine.pefuncs->is_valid_voice(voice->language, voice->type)) {
 				SLOG(LOG_ERROR, get_tag(), "[Engine ERROR] Fail voice is NOT valid");
@@ -790,12 +789,12 @@ int ttsd_engine_agent_load_current_engine()
 			}
 
 			ttsd_config_set_default_voice(voice->language, (int)voice->type);
-			
+
 			g_cur_engine.default_lang = strdup(voice->language);
 			g_cur_engine.default_vctype = voice->type;
 
-			SLOG(LOG_DEBUG, get_tag(), "[Engine Agent SUCCESS] Select default voice : lang(%s), type(%d)", 
-				voice->language,  voice->type);
+			SLOG(LOG_DEBUG, get_tag(), "[Engine Agent SUCCESS] Select default voice : lang(%s), type(%d)",
+				 voice->language,  voice->type);
 
 			__free_voice_list(voice_list);
 		} else {
@@ -812,7 +811,7 @@ int ttsd_engine_agent_load_current_engine()
 int ttsd_engine_agent_unload_current_engine()
 {
 	if (false == g_agent_init) {
-		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized" );
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized");
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
@@ -822,7 +821,7 @@ int ttsd_engine_agent_unload_current_engine()
 	}
 
 	if (false == g_cur_engine.is_loaded) {
-		SLOG(LOG_DEBUG, get_tag(), "[Engine Agent] Engine has already been unloaded " );
+		SLOG(LOG_DEBUG, get_tag(), "[Engine Agent] Engine has already been unloaded ");
 		return 0;
 	}
 
@@ -835,7 +834,7 @@ int ttsd_engine_agent_unload_current_engine()
 
 	/* unload engine */
 	g_cur_engine.ttsp_unload_engine();
-	
+
 	dlclose(g_cur_engine.handle);
 
 	/* reset current engine data */
@@ -865,7 +864,7 @@ int ttsd_engine_agent_unload_current_engine()
 bool ttsd_engine_agent_need_network()
 {
 	if (false == g_agent_init) {
-		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized" );
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized");
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
@@ -891,14 +890,13 @@ bool ttsd_engine_select_valid_voice(const char* lang, int type, char** out_lang,
 	SECURE_SLOG(LOG_DEBUG, get_tag(), "[Engine Agent] Select voice : input lang(%s), input type(%d), default lang(%s), default type(%d)", 
 		lang, type, g_cur_engine.default_lang, g_cur_engine.default_vctype);
 
-	
 	/* case 1 : Both are default */
 	if (0 == strncmp(lang, "default", strlen("default")) && 0 == type) {
 		*out_lang = strdup(g_cur_engine.default_lang);
 		*out_type = g_cur_engine.default_vctype;
 		return true;
 	}
-	
+
 	/* Get voice list */
 	GList* voice_list = NULL;
 	int ret = 0;
@@ -975,7 +973,7 @@ bool ttsd_engine_select_valid_voice(const char* lang, int type, char** out_lang,
 				/* Get handle data from list */
 				voice = iter->data;
 
-				if (0 == strncmp(voice->language, g_cur_engine.default_lang, strlen(g_cur_engine.default_lang)) ) {
+				if (0 == strncmp(voice->language, g_cur_engine.default_lang, strlen(g_cur_engine.default_lang))) {
 					voice_selected = voice;
 					if (voice->type == type) {
 						voice_selected = voice;
@@ -1005,7 +1003,7 @@ bool ttsd_engine_select_valid_voice(const char* lang, int type, char** out_lang,
 bool ttsd_engine_agent_is_same_engine(const char* engine_id)
 {
 	if (false == g_agent_init) {
-		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized" );
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized");
 		return false;
 	}
 
@@ -1025,7 +1023,7 @@ bool ttsd_engine_agent_is_same_engine(const char* engine_id)
 int ttsd_engine_agent_set_default_engine(const char* engine_id)
 {
 	if (false == g_agent_init) {
-		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized" );
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized");
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
@@ -1035,7 +1033,7 @@ int ttsd_engine_agent_set_default_engine(const char* engine_id)
 		return 0;
 	}
 
-	bool is_engine_loaded = false; 
+	bool is_engine_loaded = false;
 	char* tmp_uuid = NULL;
 	tmp_uuid = strdup(g_cur_engine.engine_uuid);
 	if (NULL == tmp_uuid) {
@@ -1061,7 +1059,7 @@ int ttsd_engine_agent_set_default_engine(const char* engine_id)
 		if (true == is_engine_loaded) {
 			ttsd_engine_agent_load_current_engine();
 		}
-		
+
 		if (tmp_uuid != NULL)	free(tmp_uuid);
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
@@ -1070,7 +1068,7 @@ int ttsd_engine_agent_set_default_engine(const char* engine_id)
 		/* load engine */
 		if (0 != ttsd_engine_agent_load_current_engine()) {
 			SLOG(LOG_ERROR, get_tag(), "[Engine Agent Error] Fail to load new engine. Recovery origin engine");
-			
+
 			/* roll back to old current engine. */
 			__internal_set_current_engine(tmp_uuid);
 			if (true == is_engine_loaded) {
@@ -1091,7 +1089,7 @@ int ttsd_engine_agent_set_default_engine(const char* engine_id)
 int ttsd_engine_agent_set_default_voice(const char* language, int vctype)
 {
 	if (false == g_agent_init) {
-		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized" );
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized");
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
@@ -1140,7 +1138,7 @@ int ttsd_engine_agent_set_default_voice(const char* language, int vctype)
 			}
 			break;
 		}
-		
+
 		/*Get next item*/
 		iter = g_slist_next(iter);
 	}
@@ -1180,7 +1178,7 @@ int ttsd_engine_agent_set_default_voice(const char* language, int vctype)
 			}
 			break;
 		}
-		
+
 		/*Get next item*/
 		iter = g_slist_next(iter);
 	}
@@ -1203,7 +1201,7 @@ int ttsd_engine_agent_set_default_voice(const char* language, int vctype)
 int ttsd_engine_agent_set_default_speed(int speed)
 {
 	if (false == g_agent_init) {
-		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized" );
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized");
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
@@ -1215,7 +1213,7 @@ int ttsd_engine_agent_set_default_speed(int speed)
 int ttsd_engine_agent_set_default_pitch(int pitch)
 {
 	if (false == g_agent_init) {
-		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized" );
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized");
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
@@ -1231,8 +1229,8 @@ int ttsd_engine_agent_set_default_pitch(int pitch)
 
 	int ret = g_cur_engine.pefuncs->set_pitch(pitch);
 	if (0 != ret) {
-		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Fail to set pitch : pitch(%d), result(%s)", 
-			pitch, __ttsd_get_engine_error_code(ret));
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Fail to set pitch : pitch(%d), result(%s)",
+			 pitch, __ttsd_get_engine_error_code(ret));
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
@@ -1259,12 +1257,12 @@ int ttsd_engine_load_voice(const char* lang, const int vctype)
 
 		if (NULL != data) {
 			if (0 == strcmp(data->lang, lang) && data->type == vctype) {
-				SLOG(LOG_DEBUG, get_tag(), "[Engine Agent] Find voice : default(%d) loaded(%d) ref(%d) lang(%s) type(%d)", 
-					data->is_default, data->is_loaded,  data->client_ref_count, data->lang, data->type);
+				SLOG(LOG_DEBUG, get_tag(), "[Engine Agent] Find voice : default(%d) loaded(%d) ref(%d) lang(%s) type(%d)",
+					 data->is_default, data->is_loaded,  data->client_ref_count, data->lang, data->type);
 				break;
 			}
 		}
-		
+
 		/*Get next item*/
 		iter = g_slist_next(iter);
 		data = NULL;
@@ -1322,12 +1320,12 @@ int ttsd_engine_unload_voice(const char* lang, const int vctype)
 
 		if (NULL != data) {
 			if (0 == strcmp(data->lang, lang) && data->type == vctype) {
-				SLOG(LOG_DEBUG, get_tag(), "[Engine Agent] Find voice : default(%d) loaded(%d) ref(%d) lang(%s) type(%d)", 
-					data->is_default, data->is_loaded,  data->client_ref_count, data->lang, data->type);
+				SLOG(LOG_DEBUG, get_tag(), "[Engine Agent] Find voice : default(%d) loaded(%d) ref(%d) lang(%s) type(%d)",
+					 data->is_default, data->is_loaded,  data->client_ref_count, data->lang, data->type);
 				break;
 			}
 		}
-		
+
 		/*Get next item*/
 		iter = g_slist_next(iter);
 		data = NULL;
@@ -1373,7 +1371,7 @@ int ttsd_engine_unload_voice(const char* lang, const int vctype)
 int ttsd_engine_start_synthesis(const char* lang, int vctype, const char* text, int speed, void* user_param)
 {
 	if (false == g_agent_init) {
-		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized" );
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized");
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
@@ -1426,7 +1424,7 @@ int ttsd_engine_start_synthesis(const char* lang, int vctype, const char* text, 
 int ttsd_engine_cancel_synthesis()
 {
 	if (false == g_agent_init) {
-		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized" );
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized");
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
@@ -1434,7 +1432,7 @@ int ttsd_engine_cancel_synthesis()
 		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not loaded engine");
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
-	
+
 	if (NULL == g_cur_engine.pefuncs->cancel_synth) {
 		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] cancel_synth() of engine is NULL!!");
 		return TTSD_ERROR_OPERATION_FAILED;
@@ -1472,7 +1470,7 @@ bool __supported_voice_cb(const char* language, int type, void* user_data)
 int ttsd_engine_get_voice_list(GList** voice_list)
 {
 	if (false == g_agent_init) {
-		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized" );
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized");
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
@@ -1494,7 +1492,7 @@ int ttsd_engine_get_voice_list(GList** voice_list)
 int ttsd_engine_get_default_voice(char** lang, int* vctype)
 {
 	if (false == g_agent_init) {
-		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized" );
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized");
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
@@ -1504,7 +1502,7 @@ int ttsd_engine_get_default_voice(char** lang, int* vctype)
 	}
 
 	if (NULL == lang || NULL == vctype) {
-		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] BAD Parameter"); 
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] BAD Parameter");
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
@@ -1517,7 +1515,7 @@ int ttsd_engine_get_default_voice(char** lang, int* vctype)
 		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Default voice is NULL");
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
-	
+
 	return 0;
 }
 
@@ -1533,14 +1531,14 @@ void __free_voice_list(GList* voice_list)
 
 		while (NULL != iter) {
 			data = iter->data;
-			
+
 			if (NULL != data) {
 				if (NULL != data->language)	free(data->language);
 				free(data);
 			}
-			
+
 			voice_list = g_list_remove_link(voice_list, iter);
-			
+
 			iter = g_list_first(voice_list);
 		}
 	}
@@ -1566,7 +1564,7 @@ int ttsd_print_enginelist()
 
 		SLOG(LOG_DEBUG, get_tag(), "----- engine list -----");
 
-		int i = 1;	
+		int i = 1;
 		while (NULL != iter) {
 			data = iter->data;
 
@@ -1602,7 +1600,7 @@ int ttsd_print_voicelist()
 		/* Get a first item */
 		iter = g_slist_nth(g_cur_voices, 0);
 
-		int i = 1;	
+		int i = 1;
 		while (NULL != iter) {
 			/*Get handle data from list*/
 			data = iter->data;
@@ -1612,9 +1610,9 @@ int ttsd_print_voicelist()
 				return 0;
 			}
 
-			SLOG(LOG_DEBUG, get_tag(), "[%dth] default(%d) loaded(%d) ref(%d) lang(%s) type(%d)", 
-				i, data->is_default, data->is_loaded,  data->client_ref_count, data->lang, data->type);
-			
+			SLOG(LOG_DEBUG, get_tag(), "[%dth] default(%d) loaded(%d) ref(%d) lang(%s) type(%d)",
+				 i, data->is_default, data->is_loaded,  data->client_ref_count, data->lang, data->type);
+
 			/*Get next item*/
 			iter = g_slist_next(iter);
 			i++;

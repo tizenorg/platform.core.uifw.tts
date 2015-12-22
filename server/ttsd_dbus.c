@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -35,7 +35,7 @@ static char *g_service_interface = NULL;
 
 const char* __ttsd_get_error_code(ttsd_error_e err)
 {
-	switch(err) {
+	switch (err) {
 	case TTSD_ERROR_NONE:			return "TTS_ERROR_NONE";
 	case TTSD_ERROR_OUT_OF_MEMORY:		return "TTS_ERROR_OUT_OF_MEMORY";
 	case TTSD_ERROR_IO_ERROR:		return "TTS_ERROR_IO_ERROR";
@@ -58,17 +58,17 @@ int ttsdc_send_hello(int pid, int uid)
 {
 #if 0
 	if (NULL == g_conn_sender) {
-		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] Dbus connection is not available" );
+		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] Dbus connection is not available");
 		return -1;
 	}
 
 	char service_name[64];
 	memset(service_name, 0, 64);
-	//snprintf(service_name, 64, "%s%d", TTS_CLIENT_SERVICE_NAME, pid);
+	/*snprintf(service_name, 64, "%s%d", TTS_CLIENT_SERVICE_NAME, pid); */
 	snprintf(service_name, 64, "%s", TTS_CLIENT_SERVICE_NAME);
 
 	char target_if_name[64];
-	//snprintf(target_if_name, sizeof(target_if_name), "%s%d", TTS_CLIENT_SERVICE_INTERFACE, pid);
+	/*snprintf(target_if_name, sizeof(target_if_name), "%s%d", TTS_CLIENT_SERVICE_INTERFACE, pid); */
 	snprintf(target_if_name, sizeof(target_if_name), "%s", TTS_CLIENT_SERVICE_INTERFACE);
 
 	DBusMessage* msg;
@@ -166,7 +166,7 @@ int ttsdc_send_utt_start_message(int pid, int uid, int uttid)
 	return ttsdc_send_message(pid, uid, uttid, TTSD_METHOD_UTTERANCE_STARTED);
 }
 
-int ttsdc_send_utt_finish_message(int pid, int uid, int uttid) 
+int ttsdc_send_utt_finish_message(int pid, int uid, int uttid)
 {
 	return ttsdc_send_message(pid, uid, uttid, TTSD_METHOD_UTTERANCE_COMPLETED);
 }
@@ -179,7 +179,7 @@ int ttsdc_send_set_state_message(int pid, int uid, int state)
 int ttsdc_send_error_message(int pid, int uid, int uttid, int reason)
 {
 	if (NULL == g_conn_sender) {
-		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] Dbus connection is not available" );
+		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] Dbus connection is not available");
 		return -1;
 	}
 
@@ -203,7 +203,7 @@ int ttsdc_send_error_message(int pid, int uid, int uttid, int reason)
 		return -1;
 	}
 
-	dbus_message_append_args( msg, 
+	dbus_message_append_args(msg,
 		DBUS_TYPE_INT32, &uid, 
 		DBUS_TYPE_INT32, &uttid, 
 		DBUS_TYPE_INT32, &reason, 
@@ -214,8 +214,8 @@ int ttsdc_send_error_message(int pid, int uid, int uttid, int reason)
 	if (!dbus_connection_send(g_conn_sender, msg, NULL)) {
 		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] <<<< error message : Out Of Memory !");
 	} else {
-		SLOG(LOG_DEBUG, get_tag(), "<<<< Send error message : uid(%d), reason(%s), uttid(%d)", 
-			uid, __ttsd_get_error_code(reason), uttid);
+		SLOG(LOG_DEBUG, get_tag(), "<<<< Send error message : uid(%d), reason(%s), uttid(%d)",
+			 uid, __ttsd_get_error_code(reason), uttid);
 		dbus_connection_flush(g_conn_sender);
 	}
 
@@ -249,10 +249,10 @@ static Eina_Bool listener_event_callback(void* data, Ecore_Fd_Handler *fd_handle
 
 	} else if (dbus_message_is_method_call(msg, g_service_interface, TTS_METHOD_INITIALIZE)) {
 		ttsd_dbus_server_initialize(g_conn_listener, msg);
-	
+
 	} else if (dbus_message_is_method_call(msg, g_service_interface, TTS_METHOD_FINALIZE)) {
 		ttsd_dbus_server_finalize(g_conn_listener, msg);
-	
+
 	} else if (dbus_message_is_method_call(msg, g_service_interface, TTS_METHOD_GET_SUPPORT_VOICES)) {
 		ttsd_dbus_server_get_support_voices(g_conn_listener, msg);
 
@@ -264,7 +264,7 @@ static Eina_Bool listener_event_callback(void* data, Ecore_Fd_Handler *fd_handle
 
 	} else if (dbus_message_is_method_call(msg, g_service_interface, TTS_METHOD_PLAY)) {
 		ttsd_dbus_server_play(g_conn_listener, msg);
-	
+
 	} else if (dbus_message_is_method_call(msg, g_service_interface, TTS_METHOD_STOP)) {
 		ttsd_dbus_server_stop(g_conn_listener, msg);
 
@@ -335,7 +335,7 @@ int ttsd_dbus_open_connection()
 
 		snprintf(g_service_name, strlen(TTS_SERVER_SERVICE_NAME) + 1, "%s", TTS_SERVER_SERVICE_NAME);
 		snprintf(g_service_object, strlen(TTS_SERVER_SERVICE_OBJECT_PATH) + 1, "%s", TTS_SERVER_SERVICE_OBJECT_PATH);
-		snprintf(g_service_interface, strlen(TTS_SERVER_SERVICE_INTERFACE)+ 1, "%s", TTS_SERVER_SERVICE_INTERFACE);
+		snprintf(g_service_interface, strlen(TTS_SERVER_SERVICE_INTERFACE) + 1, "%s", TTS_SERVER_SERVICE_INTERFACE);
 	}
 
 	/* request our name on the bus and check for errors */
@@ -386,7 +386,7 @@ int ttsd_dbus_close_connection()
 		g_dbus_fd_handler = NULL;
 	}
 
-	dbus_bus_release_name (g_conn_listener, g_service_name, &err);
+	dbus_bus_release_name(g_conn_listener, g_service_name, &err);
 	if (dbus_error_is_set(&err)) {
 		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] dbus_bus_release_name() : %s", err.message);
 		dbus_error_free(&err);

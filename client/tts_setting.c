@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -21,13 +21,13 @@
 #include "tts_main.h"
 #include "tts_setting.h"
 
-/** 
+/**
 * @brief Enumerations of setting state.
 */
 typedef enum {
 	TTS_SETTING_STATE_NONE = 0,
 	TTS_SETTING_STATE_READY
-}tts_setting_state_e;
+} tts_setting_state_e;
 
 
 static tts_setting_state_e g_state = TTS_SETTING_STATE_NONE;
@@ -70,8 +70,8 @@ static int __setting_convert_config_error_code(tts_config_error_e code)
 
 void __setting_config_engine_changed_cb(const char* engine_id, const char* setting, const char* language, int voice_type, bool auto_voice, void* user_data)
 {
-	SLOG(LOG_DEBUG, TAG_TTSC, "Engine chagned : engine(%s) setting(%s) lang(%s) type(%d)", 
-		engine_id, setting, language, language, voice_type);
+	SLOG(LOG_DEBUG, TAG_TTSC, "Engine chagned : engine(%s) setting(%s) lang(%s) type(%d)",
+		 engine_id, setting, language, language, voice_type);
 
 	if (NULL != g_engine_changed_cb)
 		g_engine_changed_cb(engine_id, g_engine_changed_user_data);
@@ -172,7 +172,7 @@ bool __tts_config_mgr_get_engine_list(const char* engine_id, const char* engine_
 }
 
 int tts_setting_foreach_supported_engines(tts_setting_supported_engine_cb callback, void* user_data)
-{    
+{
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Foreach supported engines");
 
 	if (TTS_SETTING_STATE_NONE == g_state) {
@@ -255,10 +255,10 @@ int tts_setting_set_engine(const char* engine_id)
 	} else {
 		SECURE_SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Set current engine : %s", engine_id);
 	}
-	
+
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
-    
+
 	return __setting_convert_config_error_code(ret);
 }
 
@@ -350,12 +350,12 @@ int tts_setting_set_voice(const char* language, int voice_type)
 	if (0 != ret) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Result : %d", ret);
 	} else {
-		SECURE_SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Set default voice : lang(%s) type(%d)",language, voice_type);
+		SECURE_SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Set default voice : lang(%s) type(%d)", language, voice_type);
 	}
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
-    
+
 	return __setting_convert_config_error_code(ret);
 }
 
@@ -488,7 +488,7 @@ int tts_setting_set_speed(int speed)
 	} else {
 		SECURE_SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Set default speed, %d", speed);
 	}
-	
+
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
 
