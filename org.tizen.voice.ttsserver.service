@@ -3,4 +3,3 @@ Name=org.tizen.voice.ttsserver
 Exec=/usr/bin/tts-daemon
 User=root
 Group=root
-

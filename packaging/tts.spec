@@ -86,9 +86,6 @@ mkdir -p %{_libdir}/voice
 
 mkdir -p /usr/share/voice
 
-mkdir -p /opt/home/app/.voice
-chown 5000:5000 /opt/home/app/.voice
-
 mkdir -p /opt/usr/data/voice/tts/1.0/engine-info
 
 chown 5000:5000 /opt/usr/data/voice
@@ -100,7 +97,7 @@ chown 5000:5000 /opt/usr/data/voice/tts/1.0/engine-info
 
 %files
 %manifest %{name}.manifest
-%defattr(-,system,system,-)
+%defattr(-,root,root,-)
 %{_libdir}/lib*.so
 %{_libdir}/voice/tts/1.0/tts-config.xml
 %{_bindir}/tts-daemon*
