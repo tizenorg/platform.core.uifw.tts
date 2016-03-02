@@ -36,7 +36,7 @@ INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/common")
 INCLUDE(FindPkgConfig)
 pkg_check_modules(pkgs REQUIRED  
 	aul capi-media-audio-io capi-system-info dbus-1 dlog ecore 
-	glib-2.0 libprivilege-control libtzplatform-config libxml-2.0 vconf
+	glib-2.0 libtzplatform-config libxml-2.0 vconf
 )
 
 pkg_check_modules(pkgs_test REQUIRED
