@@ -459,7 +459,7 @@ int ttsd_player_release(void)
 	int thread_count = ecore_thread_active_get();
 	int count = 0;
 	while (0 < thread_count) {
-		usleep(10);
+		usleep(10000);
 
 		count++;
 		if (100 == count) {
