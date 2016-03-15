@@ -85,39 +85,36 @@ static synth_result_callback g_result_cb;
 
 
 /** Set current engine */
-int __internal_set_current_engine(const char* engine_uuid);
+static int __internal_set_current_engine(const char* engine_uuid);
 
 /** Check engine id */
-int __internal_check_engine_id(const char* engine_uuid);
+static int __internal_check_engine_id(const char* engine_uuid);
 
 /** Update engine list */
-int __internal_update_engine_list();
+static int __internal_update_engine_list();
 
 /** Get engine info */
-int __internal_get_engine_info(const char* filepath, ttsengine_info_s** info);
+static int __internal_get_engine_info(const char* filepath, ttsengine_info_s** info);
 
 /** Callback function for result */
 bool __result_cb(ttsp_result_event_e event, const void* data, unsigned int data_size, 
 		 ttsp_audio_type_e audio_type, int rate, void *user_data);
 
 /** Callback function for voice list */
-bool __supported_voice_cb(const char* language, int type, void* user_data);
+static bool __supported_voice_cb(const char* language, int type, void* user_data);
 
 /** Free voice list */
-void __free_voice_list(GList* voice_list);
+static void __free_voice_list(GList* voice_list);
 
 /** Callback function for engine info */
-void __engine_info_cb(const char* engine_uuid, const char* engine_name, const char* setting_ug_name, 
+static void __engine_info_cb(const char* engine_uuid, const char* engine_name, const char* setting_ug_name, 
 		      bool use_network, void* user_data);
-
-/** Callback fucntion for engine setting */
-bool __engine_setting_cb(const char* key, const char* value, void* user_data);
 
 
 /** Print list */
-int ttsd_print_enginelist();
+static int ttsd_print_enginelist();
 
-int ttsd_print_voicelist();
+static int ttsd_print_voicelist();
 
 static const char* __ttsd_get_engine_error_code(ttsp_error_e err)
 {
@@ -326,7 +323,7 @@ int ttsd_engine_agent_initialize_current_engine()
 	return 0;
 }
 
-int __internal_check_engine_id(const char* engine_uuid)
+static int __internal_check_engine_id(const char* engine_uuid)
 {
 	GList *iter = NULL;
 	ttsengine_s *data = NULL;
@@ -365,7 +362,7 @@ void __engine_info_cb(const char* engine_uuid, const char* engine_name, const ch
 	return;
 }
 
-int __internal_get_engine_info(const char* filepath, ttsengine_info_s** info)
+static int __internal_get_engine_info(const char* filepath, ttsengine_info_s** info)
 {
 	char *error;
 	void* handle;
@@ -445,7 +442,7 @@ int __internal_get_engine_info(const char* filepath, ttsengine_info_s** info)
 	return 0;
 }
 
-int __internal_update_engine_list()
+static int __internal_update_engine_list()
 {
 	/* relsease engine list */
 	GList *iter = NULL;
@@ -459,6 +456,7 @@ int __internal_update_engine_list()
 
 			if (data != NULL)	free(data);
 			g_engine_list = g_list_remove_link(g_engine_list, iter);
+			g_list_free(iter);
 			iter = g_list_first(g_engine_list);
 		}
 	}
@@ -555,7 +553,7 @@ int __internal_update_engine_list()
 	return 0;
 }
 
-int __internal_set_current_engine(const char* engine_uuid)
+static int __internal_set_current_engine(const char* engine_uuid)
 {
 	/* check whether engine id is valid or not. */
 	GList *iter = NULL;
@@ -620,7 +618,53 @@ int __internal_set_current_engine(const char* engine_uuid)
 	return 0;
 }
 
-bool __set_voice_info_cb(const char* language, int type, void* user_data)
+int __ttsd_get_mode(ttsp_mode_e* mode)
+{
+	if (NULL == mode) {
+		SLOG(LOG_ERROR, get_tag(), "[ERROR] Input parameter is null");
+		return TTSP_ERROR_INVALID_PARAMETER;
+	}
+
+	switch (ttsd_get_mode()) {
+	case TTSD_MODE_DEFAULT:		*mode = TTSP_MODE_DEFAULT;	break;
+	case TTSD_MODE_NOTIFICATION:	*mode = TTSP_MODE_NOTIFICATION;	break;
+	case TTSD_MODE_SCREEN_READER:	*mode = TTSP_MODE_SCREEN_READER;	break;
+	default:
+		SLOG(LOG_ERROR, get_tag(), "[ERROR] tts mode is NOT valid");
+	}
+
+	return 0;
+}
+
+int __ttsd_engine_agent_get_speed_range(int* min, int* normal, int* max)
+{
+	if (NULL == min || NULL == normal || NULL == max) {
+		SLOG(LOG_ERROR, get_tag(), "[ERROR] Input parameter is null");
+		return TTSP_ERROR_INVALID_PARAMETER;
+	}
+
+	*min = TTS_SPEED_MIN;
+	*normal = TTS_SPEED_NORMAL;
+	*max = TTS_SPEED_MAX;
+
+	return 0;
+}
+
+int __ttsd_engine_agent_get_pitch_range(int* min, int* normal, int* max)
+{
+	if (NULL == min || NULL == normal || NULL == max) {
+		SLOG(LOG_ERROR, get_tag(), "[ERROR] Input parameter is null");
+		return TTSP_ERROR_INVALID_PARAMETER;
+	}
+
+	*min = TTS_PITCH_MIN;
+	*normal = TTS_PITCH_NORMAL;
+	*max = TTS_PITCH_MAX;
+
+	return 0;
+}
+
+static bool __set_voice_info_cb(const char* language, int type, void* user_data)
 {
 	if (NULL == language) {
 		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Input parameter is NULL in voice list callback!!!!");
@@ -628,6 +672,10 @@ bool __set_voice_info_cb(const char* language, int type, void* user_data)
 	}
 
 	ttsvoice_s* voice = calloc(1, sizeof(ttsvoice_s));
+	if (NULL == voice) {
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Fail to allocate memory");
+		return false;
+	}
 	voice->lang = strdup(language);
 	voice->type = type;
 
@@ -646,7 +694,7 @@ bool __set_voice_info_cb(const char* language, int type, void* user_data)
 	return true;
 }
 
-int __update_voice_list()
+static int __update_voice_list()
 {
 	/* Get voice list */
 	g_cur_voices = NULL;
@@ -706,6 +754,9 @@ int ttsd_engine_agent_load_current_engine()
 	/* load engine */
 	g_cur_engine.pdfuncs->version = 1;
 	g_cur_engine.pdfuncs->size = sizeof(ttspd_funcs_s);
+	g_cur_engine.pdfuncs->get_mode = __ttsd_get_mode;
+	g_cur_engine.pdfuncs->get_speed_range = __ttsd_engine_agent_get_speed_range;
+	g_cur_engine.pdfuncs->get_pitch_range = __ttsd_engine_agent_get_pitch_range;
 
 	int ret = 0;
 	ret = g_cur_engine.ttsp_load_engine(g_cur_engine.pdfuncs, g_cur_engine.pefuncs);
@@ -764,10 +815,21 @@ int ttsd_engine_agent_load_current_engine()
 				 g_cur_engine.default_lang,  g_cur_engine.default_vctype);
 		} else {
 			SLOG(LOG_WARN, get_tag(), "[Engine Agent ERROR] Fail to load default voice : lang(%s), type(%d) result(%s)",
-				 g_cur_engine.default_lang, g_cur_engine.default_vctype, __ttsd_get_engine_error_code(ret));
+				g_cur_engine.default_lang, g_cur_engine.default_vctype, __ttsd_get_engine_error_code(ret));
 
 			return TTSD_ERROR_OPERATION_FAILED;
 		}
+	}
+
+	/* set default pitch */
+	if (NULL != g_cur_engine.pefuncs->set_pitch) {
+		ret = g_cur_engine.pefuncs->set_pitch(g_cur_engine.default_pitch);
+		if (0 != ret) {
+			SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Fail to set pitch : pitch(%d), result(%s)", 
+				g_cur_engine.default_pitch, __ttsd_get_engine_error_code(ret));
+			return TTSD_ERROR_OPERATION_FAILED;
+		}
+		SLOG(LOG_DEBUG, get_tag(), "[Engine Agent SUCCESS] Set default pitch : pitch(%d)", g_cur_engine.default_pitch);
 	}
 
 #if 0
@@ -1477,6 +1539,10 @@ bool __supported_voice_cb(const char* language, int type, void* user_data)
 	}
 
 	voice_s* voice = calloc(1, sizeof(voice_s));
+	if (NULL == voice) {
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Fail to allocate memory");
+		return false;
+	}
 	voice->language = strdup(language);
 	voice->type = type;
 
@@ -1556,7 +1622,7 @@ void __free_voice_list(GList* voice_list)
 			}
 
 			voice_list = g_list_remove_link(voice_list, iter);
-
+			g_list_free(iter);
 			iter = g_list_first(voice_list);
 		}
 	}

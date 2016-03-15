@@ -14,6 +14,7 @@
 #include <audio_io.h>
 #include <Ecore.h>
 #include <sound_manager.h>
+#include <sound_manager_internal.h>
 
 #include "ttsd_main.h"
 #include "ttsd_player.h"
@@ -39,8 +40,8 @@ typedef struct {
 
 	bool			is_paused_data;
 	int			idx;
-	sound_data_s		paused_data;
-} player_s;
+	sound_data_s*		paused_data;
+}player_s;
 
 #define SOUND_BUFFER_LENGTH	2048
 
@@ -132,7 +133,7 @@ static int __create_audio_out(ttsp_audio_type_e type, int rate)
 		sample_type = AUDIO_SAMPLE_TYPE_U8;
 	}
 
-	ret = audio_out_create(rate, AUDIO_CHANNEL_MONO, sample_type, SOUND_TYPE_MEDIA, &g_audio_h);
+	ret = audio_out_create(rate, AUDIO_CHANNEL_MONO, sample_type, SOUND_TYPE_VOICE, &g_audio_h);
 	if (AUDIO_IO_ERROR_NONE != ret) {
 		g_audio_state = AUDIO_STATE_NONE;
 		g_audio_h = NULL;
@@ -195,7 +196,30 @@ static int __destroy_audio_out()
 
 static void __end_play_thread(void *data, Ecore_Thread *thread)
 {
-	SLOG(LOG_DEBUG, get_tag(), "===== End thread");
+	SLOG(LOG_ERROR, get_tag(), "===== End thread");
+}
+
+static void __set_volume_using_voice_policy(int volume)
+{
+/*
+	SLOG(LOG_WARN, get_tag(), "[Player WARNING] set volume policy");
+	int ret = sound_manager_set_volume_voice_policy(volume);
+	if (SOUND_MANAGER_ERROR_NONE != ret) {
+		SLOG(LOG_WARN, get_tag(), "[Player WARNING] Fail to set volume policy");
+	}
+*/
+	return;
+}
+
+static void __unset_volume_using_voice_policy()
+{
+/*
+	SLOG(LOG_WARN, get_tag(), "[Player WARNING] unset volume policy");
+	int ret = sound_manager_unset_volume_voice_policy();
+	if (SOUND_MANAGER_ERROR_NONE != ret) {
+		SLOG(LOG_WARN, get_tag(), "[Player WARNING] Fail to unset volume policy");
+	}
+*/
 	return;
 }
 
@@ -209,32 +233,26 @@ static void __play_thread(void *data, Ecore_Thread *thread)
 	}
 
 	player_s* player = g_playing_info;
-	sound_data_s wdata;
+	sound_data_s* sound_data = NULL;
 
 	int ret = -1;
 	int len = SOUND_BUFFER_LENGTH;
 	int idx = 0;
 
+	/* set volume policy as 40% */
+	__set_volume_using_voice_policy(40);
 	while (1) {
 		if (true == player->is_paused_data) {
 			/* Resume player */
-			wdata.data = player->paused_data.data;
-			wdata.data_size = player->paused_data.data_size;
-			wdata.utt_id = player->paused_data.utt_id;
-			wdata.audio_type = player->paused_data.audio_type;
-			wdata.rate = player->paused_data.rate;
-			wdata.channels = player->paused_data.channels;
-			wdata.event = player->paused_data.event;
+			sound_data = player->paused_data;
+			player->paused_data = NULL;
 
 			idx = player->idx;
 
 			player->is_paused_data = false;
 			player->idx = 0;
-		} else {
-			if (0 != ttsd_data_get_sound_data(player->uid, &wdata)) {
-				g_playing_info = NULL;
-				SLOG(LOG_DEBUG, get_tag(), "[Player] No sound data. Finish thread");
 
+			if (NULL == sound_data) {
 				/* Request unprepare */
 				ret = audio_out_unprepare(g_audio_h);
 				if (AUDIO_IO_ERROR_NONE != ret) {
@@ -244,7 +262,51 @@ static void __play_thread(void *data, Ecore_Thread *thread)
 				}
 
 				g_audio_state = AUDIO_STATE_READY;
+
+				/* unset volume policy, volume will be 100% */
+				__unset_volume_using_voice_policy();
 				return;
+			}
+			SLOG(LOG_INFO, get_tag(), "[Player] Sound info : id(%d) data(%p) size(%d) audiotype(%d) rate(%d) event(%d)", 
+				sound_data->utt_id, sound_data->data, sound_data->data_size, sound_data->audio_type, sound_data->rate, sound_data->event);
+		} else {
+			sound_data = NULL;
+			ret = ttsd_data_get_sound_data(player->uid, &sound_data);
+			if (0 != ret || NULL == sound_data) {
+				/* empty queue */
+				SLOG(LOG_DEBUG, get_tag(), "[Player] No sound data. Waiting mode");
+				/* release audio & recover session */
+				ret = audio_out_unprepare(g_audio_h);
+				if (AUDIO_IO_ERROR_NONE != ret) {
+					SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail to unprepare audio : %d", ret);
+				} else {
+					SLOG(LOG_DEBUG, get_tag(), "[Player SUCCESS] Unprepare audio");
+				}
+				g_audio_state = AUDIO_STATE_READY;
+
+				/* unset volume policy, volume will be 100% */
+				__unset_volume_using_voice_policy();
+
+				/* wait for new audio data come */
+				while (1) {
+					usleep(10000);
+					if (NULL == g_playing_info) {
+						/* current playing uid is replaced */
+						SLOG(LOG_DEBUG, get_tag(), "[Player] Finish thread");
+						return;
+					} else if (0 < ttsd_data_get_sound_data_size(player->uid)) {
+						/* new audio data come */
+						SLOG(LOG_DEBUG, get_tag(), "[Player] Resume thread");
+						break;
+					}
+				}
+
+				/* set volume policy as 40%, when resume play thread*/
+				__set_volume_using_voice_policy(40);
+
+				/* resume play thread */
+				player->state = APP_STATE_PLAYING;
+				continue;
 			}
 
 			/* If wdata's event is 'start', current wdata is first data of engine for synthesis.
@@ -252,66 +314,70 @@ static void __play_thread(void *data, Ecore_Thread *thread)
 			 * When previous wdata's event is 'finish' and current wdata's event is 'finish',
 			 * the player should send utt started event.
 			 */
-			if (TTSP_RESULT_EVENT_START == wdata.event ||
-			   (TTSP_RESULT_EVENT_FINISH == player->event && TTSP_RESULT_EVENT_FINISH == wdata.event)) {
+			if (TTSP_RESULT_EVENT_START == sound_data->event ||
+			   (TTSP_RESULT_EVENT_FINISH == player->event && TTSP_RESULT_EVENT_FINISH == sound_data->event)) {
 				int pid = ttsd_data_get_pid(player->uid);
 
 				if (pid <= 0) {
 					SLOG(LOG_WARN, get_tag(), "[Send WARNIING] Current player is not valid");
+					/* unset volume policy, volume will be 100% */
+					__unset_volume_using_voice_policy();
 					return;
 				}
 
-				if (0 != ttsdc_send_utt_start_message(pid, player->uid, wdata.utt_id)) {
+				if (0 != ttsdc_send_utt_start_message(pid, player->uid, sound_data->utt_id)) {
 					SLOG(LOG_ERROR, get_tag(), "[Send ERROR] Fail to send Utterance Start Signal : pid(%d), uid(%d), uttid(%d)", 
-						pid, player->uid, wdata.utt_id);
+						pid, player->uid, sound_data->utt_id);
 				}
-				SLOG(LOG_DEBUG, get_tag(), "[Player] Start utterance : uid(%d), uttid(%d)", player->uid, wdata.utt_id);
+				SLOG(LOG_DEBUG, get_tag(), "[Player] Start utterance : uid(%d), uttid(%d)", player->uid, sound_data->utt_id);
 			}
 
 			/* Save last event to check utterance start */
-			player->event = wdata.event;
+			player->event = sound_data->event;
 			idx = 0;
 
-			if (NULL == wdata.data || 0 >= wdata.data_size) {
-				if (TTSP_RESULT_EVENT_FINISH == wdata.event) {
+			if (NULL == sound_data->data || 0 >= sound_data->data_size) {
+				if (TTSP_RESULT_EVENT_FINISH == sound_data->event) {
 					SLOG(LOG_DEBUG, get_tag(), "No sound data");
 					/* send utterence finish signal */
 					int pid = ttsd_data_get_pid(player->uid);
 
 					if (pid <= 0) {
 						SLOG(LOG_WARN, get_tag(), "[Send WARNIING] Current player is not valid");
+						/* unset volume policy, volume will be 100% */
+						__unset_volume_using_voice_policy();
 						return;
 					}
-					if (0 != ttsdc_send_utt_finish_message(pid, player->uid, wdata.utt_id)) {
-						SLOG(LOG_ERROR, get_tag(), "[Send ERROR] Fail to send Utterance Completed Signal : pid(%d), uid(%d), uttid(%d)", pid, player->uid, wdata.utt_id);
+					if (0 != ttsdc_send_utt_finish_message(pid, player->uid, sound_data->utt_id)) {
+						SLOG(LOG_ERROR, get_tag(), "[Send ERROR] Fail to send Utterance Completed Signal : pid(%d), uid(%d), uttid(%d)", 
+							pid, player->uid, sound_data->utt_id);
 					}
 				}
-				SLOG(LOG_DEBUG, get_tag(), "[Player] Finish utterance : uid(%d), uttid(%d)", player->uid, wdata.utt_id);
+				SLOG(LOG_DEBUG, get_tag(), "[Player] Finish utterance : uid(%d), uttid(%d)", player->uid, sound_data->utt_id);
 				continue;
 			}
 		}
 
-		SLOG(LOG_DEBUG, get_tag(), "[Player] Sound info : id(%d) size(%d) audiotype(%d) rate(%d) event(%d)", 
-			wdata.utt_id, wdata.data_size, wdata.audio_type, wdata.rate, wdata.event);
-
-		if (g_sampling_rate != wdata.rate || g_audio_type != wdata.audio_type) {
+		if (g_sampling_rate != sound_data->rate || g_audio_type != sound_data->audio_type) {
 			SLOG(LOG_DEBUG, get_tag(), "[Player] Change audio handle : org type(%d) org rate(%d)", g_audio_type, g_sampling_rate);
 			if (NULL != g_audio_h) {
 				__destroy_audio_out();
 			}
 
-			if (0 > __create_audio_out(wdata.audio_type, wdata.rate)) {
+			if (0 > __create_audio_out(sound_data->audio_type, sound_data->rate)) {
 				SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail to create audio out");
+				/* unset volume policy, volume will be 100% */
+				__unset_volume_using_voice_policy();
 				return;
 			}
 		}
 
 		while (APP_STATE_PLAYING == player->state || APP_STATE_PAUSED == player->state) {
-			if ((unsigned int)idx >= wdata.data_size)
+			if ((unsigned int)idx >= sound_data->data_size)
 				break;
 
-			if ((unsigned int)idx + SOUND_BUFFER_LENGTH > wdata.data_size) {
-				len = wdata.data_size - idx;
+			if ((unsigned int)idx + SOUND_BUFFER_LENGTH > sound_data->data_size) {
+				len = sound_data->data_size - idx;
 			} else {
 				len = SOUND_BUFFER_LENGTH;
 			}
@@ -322,13 +388,15 @@ static void __play_thread(void *data, Ecore_Thread *thread)
 				if (AUDIO_IO_ERROR_NONE != ret) {
 					SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail to prepare audio : %d", ret);
 					g_playing_info = NULL;
+					/* unset volume policy, volume will be 100% */
+					__unset_volume_using_voice_policy();
 					return;
 				}
 				SLOG(LOG_DEBUG, get_tag(), "[Player SUCCESS] Prepare audio");
 				g_audio_state = AUDIO_STATE_PLAY;
 			}
 
-			char* temp_data = wdata.data;
+			char* temp_data = sound_data->data;
 			ret = audio_out_write(g_audio_h, &temp_data[idx], len);
 			if (0 > ret) {
 				SLOG(LOG_WARN, get_tag(), "[Player WARNING] Fail to audio write - %d", ret);
@@ -336,15 +404,32 @@ static void __play_thread(void *data, Ecore_Thread *thread)
 				idx += len;
 			}
 
+			if (NULL == g_playing_info && APP_STATE_PAUSED != player->state) {
+				SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Current player is NULL");
+				g_audio_state = AUDIO_STATE_READY;
+				ret = audio_out_unprepare(g_audio_h);
+				if (AUDIO_IO_ERROR_NONE != ret) {
+					SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail to unprepare audio : %d", ret);
+				}
+				/* unset volume policy, volume will be 100% */
+				__unset_volume_using_voice_policy();
+
+				if (NULL != sound_data) {
+					if (NULL != sound_data->data) {
+						free(sound_data->data);
+						sound_data->data = NULL;
+					}
+
+					free(sound_data);
+					sound_data = NULL;
+				}
+
+				return;
+			}
+
 			if (APP_STATE_PAUSED == player->state) {
 				/* Save data */
-				player->paused_data.data = wdata.data;
-				player->paused_data.data_size = wdata.data_size;
-				player->paused_data.utt_id = wdata.utt_id;
-				player->paused_data.audio_type = wdata.audio_type;
-				player->paused_data.rate = wdata.rate;
-				player->paused_data.channels = wdata.channels;
-				player->paused_data.event = wdata.event;
+				player->paused_data = sound_data;
 
 				player->is_paused_data = true;
 				player->idx = idx;
@@ -359,16 +444,14 @@ static void __play_thread(void *data, Ecore_Thread *thread)
 				} else {
 					SLOG(LOG_DEBUG, get_tag(), "[Player SUCCESS] Unprepare audio");
 				}
+				/* unset volume policy, volume will be 100% */
+				__unset_volume_using_voice_policy();
 				return;
 			}
 		}
 
-		if (NULL != wdata.data) {
-			free(wdata.data);
-			wdata.data = NULL;
-		}
-
-		if (APP_STATE_READY == player->state) {
+		if (NULL == g_playing_info && APP_STATE_READY == player->state) {
+			/* player_stop */ 
 			g_audio_state = AUDIO_STATE_READY;
 			SLOG(LOG_DEBUG, get_tag(), "[Player] Stop player thread");
 
@@ -379,25 +462,65 @@ static void __play_thread(void *data, Ecore_Thread *thread)
 			} else {
 				SLOG(LOG_DEBUG, get_tag(), "[Player SUCCESS] Unprepare audio");
 			}
+
+			if (NULL != sound_data) {
+				if (NULL != sound_data->data) {
+					free(sound_data->data);
+					sound_data->data = NULL;
+				}
+
+				free(sound_data);
+				sound_data = NULL;
+			}
+			/* unset volume policy, volume will be 100% */
+			__unset_volume_using_voice_policy();
 			return;
 		}
 
-		if (TTSP_RESULT_EVENT_FINISH == wdata.event) {
+		if ((APP_STATE_PLAYING == player->state || APP_STATE_PAUSED == player->state) &&
+			(TTSP_RESULT_EVENT_FINISH == sound_data->event)) {
 			/* send utterence finish signal */
 			int pid = ttsd_data_get_pid(player->uid);
 
 			if (pid <= 0) {
 				SLOG(LOG_WARN, get_tag(), "[Send WARNIING] Current player is not valid");
+				/* unset volume policy, volume will be 100% */
+				__unset_volume_using_voice_policy();
 				return;
 			}
 
-			if (0 != ttsdc_send_utt_finish_message(pid, player->uid, wdata.utt_id)) {
+			if (0 != ttsdc_send_utt_finish_message(pid, player->uid, sound_data->utt_id)) {
 				SLOG(LOG_ERROR, get_tag(), "[Send ERROR] Fail to send Utterance Completed Signal : pid(%d), uid(%d), uttid(%d)", 
-					pid, player->uid, wdata.utt_id);
+					pid, player->uid, sound_data->utt_id);
+				/* unset volume policy, volume will be 100% */
+				__unset_volume_using_voice_policy();
 				return;
 			}
 
-			SLOG(LOG_DEBUG, get_tag(), "[Player] Finish utterance : uid(%d), uttid(%d)", player->uid, wdata.utt_id);
+			SLOG(LOG_DEBUG, get_tag(), "[Player] Finish utterance : uid(%d), uttid(%d)", player->uid, sound_data->utt_id);
+		}
+
+		if (NULL != sound_data) {
+			if (NULL != sound_data->data) {
+				free(sound_data->data);
+				sound_data->data = NULL;
+			}
+
+			free(sound_data);
+			sound_data = NULL;
+		}
+
+		if (NULL == g_playing_info) {
+			SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Current player is NULL");
+			g_audio_state = AUDIO_STATE_READY;
+			ret = audio_out_unprepare(g_audio_h);
+			if (AUDIO_IO_ERROR_NONE != ret) {
+				SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail to unprepare audio : %d", ret);
+			}
+			/* unset volume policy, volume will be 100% */
+			__unset_volume_using_voice_policy();
+
+			return;
 		}
 	}
 }
@@ -447,10 +570,6 @@ int ttsd_player_release(void)
 
 	int ret;
 
-	ret = __destroy_audio_out();
-	if (0 != ret)
-		return -1;
-
 	SLOG(LOG_DEBUG, get_tag(), "[Player DEBUG] ==========================");
 	SLOG(LOG_DEBUG, get_tag(), "[Player DEBUG] Active thread count : %d", ecore_thread_active_get());
 	SLOG(LOG_DEBUG, get_tag(), "[Player DEBUG] ==========================");
@@ -462,7 +581,7 @@ int ttsd_player_release(void)
 		usleep(10000);
 
 		count++;
-		if (100 == count) {
+		if (20 == count) {
 			SLOG(LOG_WARN, get_tag(), "[Player WARNING!!] Thread is blocked. Player release continue.");
 			break;
 		}
@@ -471,6 +590,10 @@ int ttsd_player_release(void)
 	}
 
 	SLOG(LOG_DEBUG, get_tag(), "[Player DEBUG] Thread is released");
+
+	ret = __destroy_audio_out();
+	if (0 != ret)
+		return -1;
 
 	/* clear g_player_list */
 	g_playing_info = NULL;
@@ -493,15 +616,19 @@ int ttsd_player_create_instance(int uid)
 	}
 
 	player_s* new_client = (player_s*)calloc(1, sizeof(player_s));
+	if (NULL == new_client) {
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail to allocate memory");
+		return TTSP_ERROR_OUT_OF_MEMORY;
+	}
 
 	new_client->uid = uid;
 	new_client->event = TTSP_RESULT_EVENT_FINISH;
 	new_client->state = APP_STATE_READY;
 	new_client->is_paused_data = false;
 	new_client->idx = 0;
-	new_client->paused_data.data = NULL;
-
-	SLOG(LOG_DEBUG, get_tag(), "[Player] Create player : uid(%d)", uid);
+	new_client->paused_data = NULL;
+	
+	SECURE_SLOG(LOG_DEBUG, get_tag(), "[Player] Create player : uid(%d)", uid);
 
 	g_player_list = g_list_append(g_player_list, new_client);
 
@@ -544,6 +671,7 @@ int ttsd_player_destroy_instance(int uid)
 				if (uid == data->uid) {
 					g_player_list = g_list_remove_link(g_player_list, iter);
 					free(data);
+					g_list_free(iter);		
 					break;
 				}
 			}
@@ -569,6 +697,9 @@ int ttsd_player_play(int uid)
 		if (uid == g_playing_info->uid) {
 			SLOG(LOG_DEBUG, get_tag(), "[Player] uid(%d) has already played", g_playing_info->uid);
 			return 0;
+		} else {
+			SLOG(LOG_WARN, get_tag(), "[Player WARNING] stop old player (%d)", g_playing_info->uid);
+			ttsd_player_stop(g_playing_info->uid);
 		}
 	}
 
@@ -628,9 +759,14 @@ int ttsd_player_stop(int uid)
 	}
 
 	if (true == current->is_paused_data) {
-		if (NULL != current->paused_data.data) {
-			free(current->paused_data.data);
-			current->paused_data.data = NULL;
+		if (NULL != current->paused_data) {
+			if (NULL != current->paused_data->data) {
+				free(current->paused_data->data);
+				current->paused_data->data = NULL;
+			}
+
+			free(current->paused_data);
+			current->paused_data = NULL;
 		}
 	}
 
@@ -639,7 +775,68 @@ int ttsd_player_stop(int uid)
 	current->is_paused_data = false;
 	current->idx = 0;
 
+
+	SLOG(LOG_DEBUG, get_tag(), "[Player] ==========================");
+	SLOG(LOG_ERROR, get_tag(), "[Player] Active thread count : %d", ecore_thread_active_get());
+	SLOG(LOG_DEBUG, get_tag(), "[Player] ==========================");
+
+	/* The thread should be released */
+	int thread_count = ecore_thread_active_get();
+	int count = 0;
+	while (0 < thread_count) {
+		usleep(10000);
+
+		count++;
+		if (30 == count) {
+			SLOG(LOG_WARN, get_tag(), "[Player WARNING!!] Thread is blocked. Player release continue.");
+			break;
+		}
+
+		thread_count = ecore_thread_active_get();
+	}
+
+	SLOG(LOG_DEBUG, get_tag(), "[Player] ==========================");
+	SLOG(LOG_ERROR, get_tag(), "[Player] Active thread count : %d", ecore_thread_active_get());
+	SLOG(LOG_DEBUG, get_tag(), "[Player] ==========================");
+
 	SLOG(LOG_DEBUG, get_tag(), "[Player SUCCESS] Stop player : uid(%d)", uid);
+
+	return 0;
+}
+
+int ttsd_player_clear(int uid)
+{
+	if (false == g_player_init) {
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Not Initialized");
+		return -1;
+	}
+
+	/* Check uid */
+	player_s* current;
+	current = __player_get_item(uid);
+	if (NULL == current) {
+		SECURE_SLOG(LOG_ERROR, get_tag(), "[Player ERROR] uid(%d) is not valid", uid); 
+		return -1;
+	}
+
+	if (true == current->is_paused_data) {
+		if (NULL != current->paused_data) {
+			if (NULL != current->paused_data->data) {
+				free(current->paused_data->data);
+				current->paused_data->data = NULL;
+			}
+
+			free(current->paused_data);
+			current->paused_data = NULL;
+		}
+	}
+
+	current->event = TTSP_RESULT_EVENT_FINISH;
+	current->state = APP_STATE_READY;
+	current->is_paused_data = false;
+	current->idx = 0;
+
+	SLOG(LOG_DEBUG, get_tag(), "[Player SUCCESS] Clear player : uid(%d)", uid);
 
 	return 0;
 }
@@ -672,6 +869,31 @@ int ttsd_player_pause(int uid)
 	}
 
 	current->state = APP_STATE_PAUSED;
+	
+	SLOG(LOG_DEBUG, get_tag(), "[Player] ==========================");
+	SLOG(LOG_ERROR, get_tag(), "[Player] Active thread count : %d", ecore_thread_active_get());
+	SLOG(LOG_DEBUG, get_tag(), "[Player] ==========================");
+
+	/* The thread should be released */
+	int thread_count = ecore_thread_active_get();
+	int count = 0;
+	while (0 < thread_count) {
+		usleep(10000);
+
+		count++;
+		if (30 == count) {
+			SLOG(LOG_WARN, get_tag(), "[Player WARNING!!] Thread is blocked. Player release continue.");
+			break;
+		}
+
+		thread_count = ecore_thread_active_get();
+	}
+
+	SLOG(LOG_DEBUG, get_tag(), "[Player] ==========================");
+	SLOG(LOG_ERROR, get_tag(), "[Player] Active thread count : %d", ecore_thread_active_get());
+	SLOG(LOG_DEBUG, get_tag(), "[Player] ==========================");
+
+	SLOG(LOG_DEBUG, get_tag(), "[Player SUCCESS] Pause player : uid(%d)", uid);
 
 	return 0;
 }
@@ -739,9 +961,14 @@ int ttsd_player_all_stop()
 				data->state = APP_STATE_READY;
 
 				if (true == data->is_paused_data) {
-					if (NULL != data->paused_data.data) {
-						free(data->paused_data.data);
-						data->paused_data.data = NULL;
+					if (NULL != data->paused_data) {
+						if (NULL != data->paused_data->data) {
+							free(data->paused_data->data);
+							data->paused_data->data = NULL;
+						}
+
+						free(data->paused_data);
+						data->paused_data = NULL;
 					}
 				}
 

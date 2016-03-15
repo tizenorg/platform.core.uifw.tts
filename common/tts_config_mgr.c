@@ -637,7 +637,7 @@ void __tts_config_screen_reader_changed_cb(keynode_t *key, void *data)
 {
 	int ret;
 	int screen_reader;
-	ret = vconf_get_int(TTS_ACCESSIBILITY_KEY, &screen_reader);
+	ret = vconf_get_bool(TTS_ACCESSIBILITY_KEY, &screen_reader);
 	if (0 != ret) {
 		SLOG(LOG_ERROR, tts_tag(), "[Config ERROR] Fail to get screen reader");
 		return;
@@ -1283,8 +1283,10 @@ int tts_config_mgr_set_engine(const char* engine)
 		return TTS_CONFIG_ERROR_INVALID_PARAMETER;
 
 	/* Check current engine id with new engine id */
-	if (0 == strcmp(g_config_info->engine_id, engine))
-		return 0;
+	if (NULL != g_config_info->engine_id) {
+		if (0 == strcmp(g_config_info->engine_id, engine))
+			return 0;
+	}
 
 	if (0 >= g_slist_length(g_engine_list)) {
 		SLOG(LOG_ERROR, tts_tag(), "[ERROR] There is no engine!!");
@@ -1347,13 +1349,7 @@ int tts_config_mgr_set_engine(const char* engine)
 					if (voice->type == g_config_info->type) {
 						/* language is valid */
 						is_valid_voice = true;
-
-						if (NULL != g_config_info->language) {
-							free(g_config_info->language);
-
-							g_config_info->language = strdup(voice->language);
-							g_config_info->type = voice->type;
-						}
+						g_config_info->type = voice->type;
 					}
 					break;
 				}

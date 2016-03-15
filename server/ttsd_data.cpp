@@ -11,7 +11,10 @@
 *  limitations under the License.
 */
 
+#include <list>
+#include <pthread.h>
 #include <vector>
+
 #include "ttsd_main.h"
 #include "ttsd_data.h"
 
@@ -30,19 +33,19 @@ typedef struct
 	int		utt_id_stopped;
 	app_state_e	state;
 
-	std::vector<speak_data_s> m_speak_data;
-	std::vector<sound_data_s> m_wav_data;
+	std::list<speak_data_s*> m_speak_data;
+	std::list<sound_data_s*> m_wav_data;
 
-	std::vector<used_voice_s> m_used_voice;	
+	std::list<used_voice_s> m_used_voice;
 }app_data_s;
 
 static vector<app_data_s> g_app_list;
 
+static pthread_mutex_t g_sound_data_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /*
 * functions for debug
 */
-
 int __data_show_list()
 {
 	int vsize = g_app_list.size();
@@ -66,10 +69,12 @@ int __data_show_sound_list(int index)
 {
 	SLOG(LOG_DEBUG, get_tag(), "----- Sound list -----");
 	
-	unsigned int i;
-	for (i=0 ; i < g_app_list[index].m_wav_data.size() ; i++) {
-		SECURE_SLOG(LOG_DEBUG, get_tag(), "[%dth] data size(%ld), uttid(%d), type(%d)", 
-			i+1, g_app_list[index].m_wav_data[i].data_size, g_app_list[index].m_wav_data[i].utt_id, g_app_list[index].m_wav_data[i].audio_type);
+	unsigned int i = 0;
+	std::list<sound_data_s*>::iterator iter;
+	for (iter = g_app_list[index].m_wav_data.begin(); iter != g_app_list[index].m_wav_data.end(); iter++) {
+		SLOG(LOG_DEBUG, get_tag(), "[%dth][%p] data(%p) data size(%ld), uttid(%d), type(%d)", 
+			i, *iter, (*iter)->data, (*iter)->data_size, (*iter)->utt_id, (*iter)->audio_type);
+		i++;
 	}
 
 	if (i == 0) {
@@ -84,11 +89,12 @@ int __data_show_text_list(int index)
 {
 	SLOG(LOG_DEBUG, get_tag(), "----- Text list -----");
 
-	unsigned int i;
-	for (i=0 ; i< g_app_list[index].m_speak_data.size() ; i++) {
-		SECURE_SLOG(LOG_DEBUG, get_tag(), "[%dth] lang(%s), vctype(%d), speed(%d), uttid(%d), text(%s)", 
-				i+1, g_app_list[index].m_speak_data[i].lang, g_app_list[index].m_speak_data[i].vctype, g_app_list[index].m_speak_data[i].speed,
-				g_app_list[index].m_speak_data[i].utt_id, g_app_list[index].m_speak_data[i].text);	
+	unsigned int i = 0;
+	std::list<speak_data_s*>::iterator iter;
+	for (iter = g_app_list[index].m_speak_data.begin(); iter != g_app_list[index].m_speak_data.end(); iter++) {
+		SLOG(LOG_DEBUG, get_tag(), "[%dth][%p] lang(%s), vctype(%d), speed(%d), uttid(%d), text(%s)", 
+			i + 1, *iter, (*iter)->lang, (*iter)->vctype, (*iter)->speed, (*iter)->utt_id, (*iter)->text);
+		i++;
 	}
 
 	if (0 == i) {
@@ -101,19 +107,20 @@ int __data_show_text_list(int index)
 
 int __data_show_used_voice_list(int index)
 {
-	SLOG(LOG_DEBUG, get_tag(), "----- Voice list -----");
+	SLOG(LOG_DEBUG, get_tag(), "----- Used voice list -----");
 
-	unsigned int i;
-	for (i=0 ; i< g_app_list[index].m_speak_data.size() ; i++) {
-		SECURE_SLOG(LOG_DEBUG, get_tag(), "[%dth] lang(%s), vctype(%d)", 
-				i+1, g_app_list[index].m_used_voice[i].lang, g_app_list[index].m_used_voice[i].vctype);	
+	unsigned int i = 0;
+	std::list<used_voice_s>::iterator iter;
+	for (iter = g_app_list[index].m_used_voice.begin(); iter != g_app_list[index].m_used_voice.end(); iter++) {
+		SLOG(LOG_DEBUG, get_tag(), "[%dth] lang(%s), vctype(%d)", i + 1, iter->lang, iter->vctype);
+		i++;
 	}
 
 	if (0 == i) {
 		SLOG(LOG_DEBUG, get_tag(), "No Voice Data");
 	}
 
-	SLOG(LOG_DEBUG, get_tag(), "---------------------");
+	SLOG(LOG_DEBUG, get_tag(), "---------------------------");
 	return TTSD_ERROR_NONE;
 }
 
@@ -223,12 +230,10 @@ int ttsd_data_set_used_voice(int uid, const char* lang, int type)
 	}
 
 	/* Find voice */
-	int vsize = g_app_list[index].m_used_voice.size();
-	int i = 0;
+	std::list<used_voice_s>::iterator iter;
 
-	for (i = 0;i < vsize;i++) {
-		if (0 == strcmp(lang, g_app_list[index].m_used_voice[i].lang) && 
-			type == g_app_list[index].m_used_voice[i].vctype) {
+	for (iter = g_app_list[index].m_used_voice.begin();iter != g_app_list[index].m_used_voice.end();iter++) {
+		if (0 == strcmp(lang, iter->lang) && type == iter->vctype) {
 			SLOG(LOG_DEBUG, get_tag(), "[DATA] The voice is already registered (%s)(%d)", lang, type);
 			return 0;
 		}
@@ -258,28 +263,33 @@ int ttsd_data_reset_used_voice(int uid, ttsd_used_voice_cb callback)
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
-	/* Find voice */
-	int vsize = g_app_list[index].m_used_voice.size();
-	int i = 0;
+	if (NULL == callback) {
+		SLOG(LOG_WARN, get_tag(), "[DATA WARNING] Used voice callback is NULL");
+	}
 
-	for (i = 0;i < vsize;i++) {
+	/* Find voice */
+	std::list<used_voice_s>::iterator iter;
+
+	for (iter = g_app_list[index].m_used_voice.begin(); iter != g_app_list[index].m_used_voice.end(); iter++) {
 		if (NULL != callback) {
-			callback(g_app_list[index].m_used_voice[i].lang, g_app_list[index].m_used_voice[i].vctype);
-		} else {
-			SECURE_SLOG(LOG_WARN, get_tag(), "[DATA WARNING] Used voice callback is NULL");
+			callback(iter->lang, iter->vctype);
 		}
 
-		if (NULL != g_app_list[index].m_used_voice[i].lang) {
-			free(g_app_list[index].m_used_voice[i].lang);
+		if (NULL != iter->lang) {
+			free(iter->lang);
 		}
 	} 
 
 	g_app_list[index].m_used_voice.clear();
 
+#ifdef DATA_DEBUG
+	__data_show_used_voice_list(index);
+#endif
+
 	return TTSD_ERROR_NONE;
 }
 
-int ttsd_data_add_speak_data(int uid, speak_data_s data)
+int ttsd_data_add_speak_data(int uid, speak_data_s* data)
 {
 	int index = 0;
 	index = ttsd_data_is_client(uid);
@@ -291,7 +301,7 @@ int ttsd_data_add_speak_data(int uid, speak_data_s data)
 	
 	g_app_list[index].m_speak_data.insert(g_app_list[index].m_speak_data.end(), data);
 
-	if (1 == data.utt_id)
+	if (1 == data->utt_id)
 		g_app_list[index].utt_id_stopped = 0;
 
 #ifdef DATA_DEBUG
@@ -300,7 +310,7 @@ int ttsd_data_add_speak_data(int uid, speak_data_s data)
 	return TTSD_ERROR_NONE;
 }
 
-int ttsd_data_get_speak_data(int uid, speak_data_s* data)
+int ttsd_data_get_speak_data(int uid, speak_data_s** data)
 {
 	int index = 0;
 	index = ttsd_data_is_client(uid);
@@ -317,14 +327,9 @@ int ttsd_data_get_speak_data(int uid, speak_data_s* data)
 		return -1;
 	}
 
-	data->lang = g_strdup(g_app_list[index].m_speak_data[0].lang);
-	data->vctype = g_app_list[index].m_speak_data[0].vctype;
-	data->speed = g_app_list[index].m_speak_data[0].speed;
-
-	data->text = g_app_list[index].m_speak_data[0].text;
-	data->utt_id = g_app_list[index].m_speak_data[0].utt_id;
-
-	g_app_list[index].m_speak_data.erase(g_app_list[index].m_speak_data.begin());
+	std::list<speak_data_s*>::iterator iter = g_app_list[index].m_speak_data.begin();
+	*data = *iter;
+	g_app_list[index].m_speak_data.pop_front();
 
 #ifdef DATA_DEBUG
 	__data_show_text_list(index);
@@ -332,7 +337,7 @@ int ttsd_data_get_speak_data(int uid, speak_data_s* data)
 	return TTSD_ERROR_NONE;
 }
 
-int ttsd_data_add_sound_data(int uid, sound_data_s data)
+int ttsd_data_add_sound_data(int uid, sound_data_s* data)
 {
 	int index = 0;
 	index = ttsd_data_is_client(uid);
@@ -342,15 +347,26 @@ int ttsd_data_add_sound_data(int uid, sound_data_s data)
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
+	if (NULL == data) {
+		SLOG(LOG_ERROR, get_tag(), "[DATA ERROR] sound data is NULL");
+		return TTSD_ERROR_INVALID_PARAMETER;
+	}
+	/* mutex is locked */
+	pthread_mutex_lock(&g_sound_data_mutex);
+
 	g_app_list[index].m_wav_data.insert(g_app_list[index].m_wav_data.end(), data);
 
 #ifdef DATA_DEBUG
 	__data_show_sound_list(index);
 #endif 
+
+	/* mutex is unlocked */
+	pthread_mutex_unlock(&g_sound_data_mutex);
+
 	return TTSD_ERROR_NONE;
 }
 
-int ttsd_data_get_sound_data(int uid, sound_data_s* data)
+int ttsd_data_get_sound_data(int uid, sound_data_s** data)
 {
 	int index = 0;
 	index = ttsd_data_is_client(uid);
@@ -360,26 +376,29 @@ int ttsd_data_get_sound_data(int uid, sound_data_s* data)
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
+	/* mutex is locked */
+	pthread_mutex_lock(&g_sound_data_mutex);
+
 	if (0 == g_app_list[index].m_wav_data.size()) {
 #ifdef DATA_DEBUG
 		SLOG(LOG_DEBUG, get_tag(), "[DATA] There is no wav data");
 #endif
+		/* mutex is unlocked */
+		pthread_mutex_unlock(&g_sound_data_mutex);
 		return -1;
 	}
 
-	data->data = g_app_list[index].m_wav_data[0].data;
-	data->data_size = g_app_list[index].m_wav_data[0].data_size;
-	data->utt_id = g_app_list[index].m_wav_data[0].utt_id;
-	data->audio_type = g_app_list[index].m_wav_data[0].audio_type;
-	data->rate = g_app_list[index].m_wav_data[0].rate;
-	data->channels = g_app_list[index].m_wav_data[0].channels;
-	data->event = g_app_list[index].m_wav_data[0].event;
-
-	g_app_list[index].m_wav_data.erase(g_app_list[index].m_wav_data.begin());
+	std::list<sound_data_s*>::iterator iter = g_app_list[index].m_wav_data.begin();
+	*data = *iter;
+	g_app_list[index].m_wav_data.pop_front();
 
 #ifdef DATA_DEBUG
 	__data_show_sound_list(index);
 #endif 
+
+	/* mutex is unlocked */
+	pthread_mutex_unlock(&g_sound_data_mutex);
+
 	return TTSD_ERROR_NONE;
 }
 
@@ -407,17 +426,32 @@ int ttsd_data_clear_data(int uid)
 	}
 
 	int removed_last_uttid = -1;
+	speak_data_s* temp_speak = NULL;
+	sound_data_s* temp_sound = NULL;
+
 	/* free allocated data */
 	while(1) {
-		speak_data_s temp;
-		if (0 != ttsd_data_get_speak_data(uid, &temp)) {
+		if (0 != ttsd_data_get_speak_data(uid, &temp_speak)) {
 			break;
 		}
 
-		if (NULL != temp.text)	free(temp.text);
-		if (NULL != temp.lang)	free(temp.lang);
+		if (NULL != temp_speak) {
+			SLOG(LOG_DEBUG, get_tag(), "[DEBUG] utt(%d), text(%s), lang(%s), vctype(%d) speed(%d)", 
+					temp_speak->utt_id, temp_speak->text, temp_speak->lang, temp_speak->vctype, temp_speak->speed);
 
-		removed_last_uttid = temp.utt_id;
+			if (NULL != temp_speak->text) {
+				free(temp_speak->text);
+				temp_speak->text = NULL;
+			}
+			if (NULL != temp_speak->lang) {
+				free(temp_speak->lang);
+				temp_speak->lang = NULL;
+			}
+			removed_last_uttid = temp_speak->utt_id;
+
+			free(temp_speak);
+			temp_speak = NULL;
+		}
 	}
 
 	if (-1 != removed_last_uttid) {
@@ -425,15 +459,21 @@ int ttsd_data_clear_data(int uid)
 	}
 
 	while(1) {
-		sound_data_s temp;
-		if (0 != ttsd_data_get_sound_data(uid, &temp)) {
+		if (0 != ttsd_data_get_sound_data(uid, &temp_sound)) {
 			break;
 		}
 
-		if (0 < temp.data_size) {
-			if (NULL != temp.data)	free(temp.data);
-		} else {
-			SLOG(LOG_ERROR, get_tag(), "Sound data is NULL");
+		if (NULL != temp_sound) {
+			SLOG(LOG_ERROR, get_tag(), "[DEBUG][%p] uid(%d), event(%d) data(%p) size(%d) rate(%d) utt(%d)", 
+				temp_sound, uid, temp_sound->event, temp_sound->data, temp_sound->data_size, temp_sound->rate, temp_sound->utt_id);
+
+			if (NULL != temp_sound->data) {
+				free(temp_sound->data);
+				temp_sound->data = NULL;
+			}
+
+			free(temp_sound);
+			temp_sound = NULL;
 		}
 	}
 
@@ -605,23 +645,33 @@ int ttsd_data_save_error_log(int uid, FILE* fp)
 	unsigned int i;
 
 	index = ttsd_data_is_client(uid);
+	if (0 > index) {
+		SLOG(LOG_ERROR, get_tag(), "[ERROR] Invalid client");
+		return -1;
+	}
 
 	/* get sound data */
 	fprintf(fp, "----- Sound list -----");
-	
-	for (i=0 ; i < g_app_list[index].m_wav_data.size() ; i++) {
-		fprintf(fp, "[%dth] data size(%d), uttid(%d), type(%d)", 
-			i+1, g_app_list[index].m_wav_data[i].data_size, g_app_list[index].m_wav_data[i].utt_id, g_app_list[index].m_wav_data[i].audio_type );
+
+	i = 0;
+	std::list<sound_data_s*>::iterator iter;
+	for (iter = g_app_list[index].m_wav_data.begin(); iter != g_app_list[index].m_wav_data.end(); iter++) {
+		SLOG(LOG_DEBUG, get_tag(), "[%dth][%p] data(%p) data size(%ld), uttid(%d), type(%d)",
+			i, *iter, (*iter)->data, (*iter)->data_size, (*iter)->utt_id, (*iter)->audio_type);
+		i++;
 	}
+
 	fprintf(fp, "----------------------");
 	
 	/* get speck data */
 	fprintf(fp, "----- Text list -----");
 
-	for (i=0 ; i< g_app_list[index].m_speak_data.size() ; i++) {
-		fprintf(fp, "[%dth] lang(%s), vctype(%d), speed(%d), uttid(%d), text(%s)", 
-				i+1, g_app_list[index].m_speak_data[i].lang, g_app_list[index].m_speak_data[i].vctype, g_app_list[index].m_speak_data[i].speed,
-				g_app_list[index].m_speak_data[i].utt_id, g_app_list[index].m_speak_data[i].text );	
+	i = 0;
+	std::list<speak_data_s*>::iterator iter_speak;
+	for (iter_speak = g_app_list[index].m_speak_data.begin(); iter_speak != g_app_list[index].m_speak_data.end(); iter_speak++) {
+		SLOG(LOG_DEBUG, get_tag(), "[%dth][%p] lang(%s), vctype(%d), speed(%d), uttid(%d), text(%s)",
+			i, *iter_speak, (*iter_speak)->lang, (*iter_speak)->vctype, (*iter_speak)->speed, (*iter_speak)->utt_id, (*iter_speak)->text);
+		i++;
 	}
 	fprintf(fp, "---------------------");
 	

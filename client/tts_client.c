@@ -112,6 +112,9 @@ int tts_client_destroy(tts_h tts)
 				free(data);
 				free(tts);
 
+				SLOG(LOG_DEBUG, TAG_TTSC, "Client destroy");
+				g_list_free(iter);
+
 				return TTS_ERROR_NONE;
 			}
 

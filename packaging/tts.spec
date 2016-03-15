@@ -1,6 +1,6 @@
 Name:       tts
 Summary:    Text To Speech client library and daemon
-Version:    0.2.42
+Version:    0.2.43
 Release:    1
 Group:      Graphics & UI Framework/Voice Framework
 License:    Apache-2.0
@@ -83,7 +83,7 @@ install LICENSE %{buildroot}/usr/share/license/%{name}
 
 mkdir -p %{_libdir}/voice
 
-mkdir -p /usr/share/voice
+mkdir -p /usr/share/voice/test
 
 mkdir -p /opt/usr/data/voice/tts/1.0/engine-info
 
@@ -102,7 +102,7 @@ chown 5000:5000 /opt/usr/data/voice/tts/1.0/engine-info
 %{_bindir}/tts-daemon*
 /usr/share/dbus-1/system-services/org.tizen.voice*
 /etc/dbus-1/system.d/tts-server.conf
-/opt/usr/devel/bin/tts-test
+/usr/share/voice/test/tts-test
 /usr/share/license/%{name}
 
 %files devel

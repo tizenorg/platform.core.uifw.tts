@@ -62,16 +62,16 @@ int ttsd_data_get_client_count();
 int ttsd_data_get_pid(int uid);
 
 /* speak data */
-int ttsd_data_add_speak_data(int uid, speak_data_s data);
+int ttsd_data_add_speak_data(int uid, speak_data_s* data);
 
-int ttsd_data_get_speak_data(int uid, speak_data_s* data);
+int ttsd_data_get_speak_data(int uid, speak_data_s** data);
 
 int ttsd_data_get_speak_data_size(int uid);
 
 /* sound data */
-int ttsd_data_add_sound_data(int uid, sound_data_s data);
+int ttsd_data_add_sound_data(int uid, sound_data_s* data);
 
-int ttsd_data_get_sound_data(int uid, sound_data_s* data);
+int ttsd_data_get_sound_data(int uid, sound_data_s** data);
 
 int ttsd_data_get_sound_data_size(int uid);
 
@@ -94,8 +94,6 @@ typedef bool(*ttsd_data_get_client_cb)(int pid, int uid, app_state_e state, void
 int ttsd_data_foreach_clients(ttsd_data_get_client_cb callback, void* user_data);
 
 bool ttsd_data_is_uttid_valid(int uid, int uttid);
-
-int ttsd_data_is_current_playing();
 
 int ttsd_data_get_same_pid_client_count(int pid);
 

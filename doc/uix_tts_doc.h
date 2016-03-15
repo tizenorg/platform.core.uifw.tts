@@ -27,10 +27,10 @@
  *   \#include <tts.h>
  * 
  * @section CAPI_UIX_TTS_MODULE_OVERVIEW Overview
- * A main function of Text-To-Speech(below TTS) API reads sound data transformed by the engine using input texts.
- * Applications can add input-text to queue for reading continuously and control a player that can play, pause, and stop sound data synthesized from text.
+ * You can use Text-To-Speech (TTS) API to read sound data transformed by the engine from input texts.
+ * Applications can add input-text to queue for reading continuously and control the player that can play, pause, and stop sound data synthesized from text.
  *
- * To use of TTS, use the following steps:<br>
+ * To use TTS, follow these steps:<br>
  * 1. Create a handle <br>
  * 2. Register callback functions for notifications <br> 
  * 3. Prepare tts-daemon asynchronously <br>
@@ -47,11 +47,21 @@
  * tts_utterance_completed_cb(), tts_default_voice_changed_cb(), tts_error_cb().
  *
  * @section CAPI_UIX_TTS_MODULE_STATE_DIAGRAM State Diagram
- * The following diagram shows the life cycle and the states of the TTS.
+ * The following diagram shows the life cycle and the states of the TTS. 
+ * This state diagram shows that the state can be changed from 'None' to 'Created' by calling the tts_create() function. 
+ * Similarly, you can know the relation between the states and API functions. 
+ * You need to know the current state before calling the API, because the TTS API is based on state machine. 
+ * The current state can be known from the state changed callback.
  *
  * @image html capi_uix_tts_state_diagram.png "State diagram"
  *
  * @section CAPI_UIX_TTS_MODULE_STATE_TRANSITIONS State Transitions
+ * The following table shows previous state and post state of main function. 
+ * It can be known what precondition is and which synchronous type is. 
+ * Please check both previous state and post state from the table carefully.
+ * In case of tts_prepare() function, state doesn't be changed at once, but acynchronously. 
+ * From the above state diagram, you can see dotted line as asynchronous api. 
+ * In this case, the state changed callback is only way to know state transition as ready. 
  *
  * <table>
  * <tr>

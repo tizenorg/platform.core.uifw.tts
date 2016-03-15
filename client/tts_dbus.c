@@ -94,7 +94,7 @@ static Eina_Bool listener_event_callback(void* data, Ecore_Fd_Handler *fd_handle
 		if (0 == __tts_cb_utt_completed(uid, uttid)) {
 			SLOG(LOG_DEBUG, TAG_TTSC, "<<<< tts utterance completed : uid(%d) uttid(%d)", uid, uttid);
 		}
-	} /* TTSD_METHOD_UTTERANCE_COMPLETED */
+	} /* TTS_SIGNAL_UTTERANCE_STARTED */
 
 	else if (dbus_message_is_signal(msg, if_name, TTSD_METHOD_SET_STATE)) {
 		int uid = 0;
@@ -109,7 +109,7 @@ static Eina_Bool listener_event_callback(void* data, Ecore_Fd_Handler *fd_handle
 		if (0 == __tts_cb_set_state(uid, state)) {
 			SLOG(LOG_DEBUG, TAG_TTSC, "<<<< tts state changed : uid(%d) state(%d)", uid, state);
 		}
-	} /* TTSD_METHOD_SET_STATE */
+	} /* TTSD_SIGNAL_SET_STATE */
 
 	else if (dbus_message_is_signal(msg, if_name, TTSD_METHOD_ERROR)) {
 		int uid;
@@ -130,7 +130,7 @@ static Eina_Bool listener_event_callback(void* data, Ecore_Fd_Handler *fd_handle
 		if (0 == __tts_cb_error(uid, reason, uttid)) {
 			SLOG(LOG_ERROR, TAG_TTSC, "<<<< Get Error message : uid(%d), error(%d), uttid(%d)", uid, reason, uttid);
 		}
-	} /* TTSD_METHOD_ERROR */
+	} /* TTSD_SIGNAL_ERROR */
 
 	/* free the message */
 	dbus_message_unref(msg);
@@ -175,25 +175,8 @@ int tts_dbus_open_connection()
 		return TTS_ERROR_OPERATION_FAILED;
 	}
 
-#if 0
-	int pid = getpid();
-
-	char service_name[64];
-	memset(service_name, 0, 64);
-	snprintf(service_name, 64, "%s%d", TTS_CLIENT_SERVICE_NAME, pid);
-
-	SLOG(LOG_DEBUG, TAG_TTSC, "Service name is %s", service_name);
-
-	/* register our name on the bus, and check for errors */
-	dbus_bus_request_name(g_conn_listener, service_name, DBUS_NAME_FLAG_REPLACE_EXISTING, &err);
-	if (dbus_error_is_set(&err)) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Name Error (%s)", err.message);
-		dbus_error_free(&err);
-	}
-#endif
 	char rule[128] = {0, };
 	snprintf(rule, 128, "type='signal',interface='%s'", TTS_CLIENT_SERVICE_INTERFACE);
-	SLOG(LOG_DEBUG, TAG_TTSC, "rule is %s", rule);
 
 	/* add a rule for which messages we want to see */
 	dbus_bus_add_match(g_conn_listener, rule, &err);
@@ -225,20 +208,13 @@ int tts_dbus_close_connection()
 		ecore_main_fd_handler_del(g_dbus_fd_handler);
 		g_dbus_fd_handler = NULL;
 	}
-#if 0
-	int pid = getpid();
 
-	char service_name[64];
-	memset(service_name, 0, 64);
-	snprintf(service_name, 64, "%s%d", TTS_CLIENT_SERVICE_NAME, pid);
-	snprintf(service_name, 64, "%s", TTS_CLIENT_SERVICE_NAME);
+	dbus_connection_close(g_conn_sender);
+	dbus_connection_close(g_conn_listener);
 
-	dbus_bus_release_name(g_conn_listener, service_name, &err);
-	if (dbus_error_is_set(&err)) {
-		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Release name error (%s)", err.message);
-		dbus_error_free(&err);
-	}
-#endif
+	dbus_connection_unref(g_conn_sender);
+	dbus_connection_unref(g_conn_listener);
+
 	g_conn_sender = NULL;
 	g_conn_listener = NULL;
 
