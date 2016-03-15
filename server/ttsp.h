@@ -60,19 +60,14 @@ typedef enum {
 	TTSP_RESULT_EVENT_FINISH	= 3   /**< event when the sound data is last data or sound data is only one result */
 }ttsp_result_event_e;
 
-/** 
-* @brief Defines of speaking speed.
+/**
+* @brief Enumerations of TTS mode.
 */
-#define TTSP_SPEED_MIN		1
-#define TTSP_SPEED_NORMAL	8
-#define TTSP_SPEED_MAX		15
-
-/** 
-* @brief Defines of speaking pitch.
-*/
-#define TTSP_PITCH_MIN		1
-#define TTSP_PITCH_NORMAL	8
-#define TTSP_PITCH_MAX		15
+typedef enum {
+	TTSP_MODE_DEFAULT	= 0,	/**< Default mode for normal application */
+	TTSP_MODE_NOTIFICATION	= 1,	/**< Notification mode */
+	TTSP_MODE_SCREEN_READER	= 2	/**< Accessibiliity mode */
+}ttsp_mode_e;
 
 /** 
 * @brief Defines of voice type.
@@ -257,6 +252,47 @@ typedef int (* ttspe_start_synthesis)(const char* language, int type, const char
 */
 typedef int (* ttspe_cancel_synthesis)(void);
 
+
+/**
+* @brief Gets the mode.
+*
+* @param[out] mode The tts daemon mode
+*
+* @return 0 on success, otherwise a negative error value
+* @retval #TTSP_ERROR_NONE Successful
+* @retval #TTSP_ERROR_INVALID_PARAMETER Invalid parameter
+*
+*/
+typedef int (* ttspd_get_mode)(ttsp_mode_e* mode);
+
+/**
+* @brief Gets the speed range.
+*
+* @param[out] min The minimun speed value
+* @param[out] normal The normal speed value
+* @param[out] max The maximum speed value
+*
+* @return 0 on success, otherwise a negative error value
+* @retval #TTSP_ERROR_NONE Successful
+* @retval #TTSP_ERROR_INVALID_PARAMETER Invalid parameter
+*
+*/
+typedef int (* ttspd_get_speed_range)(int* min, int* normal, int* max);
+
+/**
+* @brief Gets the pitch range.
+*
+* @param[out] min The minimun pitch value
+* @param[out] normal The normal pitch value
+* @param[out] max The maximum pitch value
+*
+* @return 0 on success, otherwise a negative error value
+* @retval #TTSP_ERROR_NONE Successful
+* @retval #TTSP_ERROR_INVALID_PARAMETER Invalid parameter
+*
+*/
+typedef int (* ttspd_get_pitch_range)(int* min, int* normal, int* max);
+
 /**
 * @brief A structure of the engine functions
 */
@@ -288,6 +324,9 @@ typedef struct {
 	int size;						/**< size */
 	int version;						/**< version */
 
+	ttspd_get_mode			get_mode;		/**< Get mode */
+	ttspd_get_speed_range		get_speed_range;	/**< Get speed range */
+	ttspd_get_pitch_range		get_pitch_range;	/**< Get pitch range */
 }ttspd_funcs_s;
 
 /**

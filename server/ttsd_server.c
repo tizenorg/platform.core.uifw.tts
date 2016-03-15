@@ -47,6 +47,8 @@ static Ecore_Timer* g_wait_timer = NULL;
 
 static utterance_t g_utt;
 
+static GList *g_proc_list = NULL;
+
 /* Function definitions */
 static int __synthesis(int uid);
 
@@ -88,33 +90,45 @@ static int __synthesis(int uid)
 {
 	SLOG(LOG_DEBUG, get_tag(), "===== SYNTHESIS  START");
 
-	speak_data_s sdata;
-	if (0 == ttsd_data_get_speak_data(uid, &sdata)) {
+	speak_data_s* speak_data = NULL;
+	if (0 == ttsd_data_get_speak_data(uid, &speak_data)) {
+		if (NULL == speak_data) {
+			return 0;
+		}
 
-		if (NULL == sdata.lang || NULL == sdata.text) {
+		if (NULL == speak_data->lang || NULL == speak_data->text) {
 			SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Current data is NOT valid");
 			ttsd_server_stop(uid);
 
 			int pid = ttsd_data_get_pid(uid);
 			ttsdc_send_set_state_message(pid, uid, APP_STATE_READY);
 
-			if (NULL != sdata.lang)	free(sdata.lang);
+			if (NULL != speak_data) {
+				if (NULL != speak_data->lang)	free(speak_data->lang);
+				if (NULL != speak_data->text)	free(speak_data->text);
+
+				speak_data->lang = NULL;
+				speak_data->text = NULL;
+
+				free(speak_data);
+				speak_data = NULL;
+			}
 
 			return 0;
 		}
 
 		g_utt.uid = uid;
-		g_utt.uttid = sdata.utt_id;
+		g_utt.uttid = speak_data->utt_id;
 
 		SLOG(LOG_DEBUG, get_tag(), "-----------------------------------------------------------");
-		SLOG(LOG_DEBUG, get_tag(), "ID : uid (%d), uttid(%d) ", g_utt.uid, g_utt.uttid);
-		SLOG(LOG_DEBUG, get_tag(), "Voice : langauge(%s), type(%d), speed(%d)", sdata.lang, sdata.vctype, sdata.speed);
-		SLOG(LOG_DEBUG, get_tag(), "Text : %s", sdata.text);
+		SECURE_SLOG(LOG_DEBUG, get_tag(), "ID : uid (%d), uttid(%d) ", g_utt.uid, g_utt.uttid);
+		SECURE_SLOG(LOG_DEBUG, get_tag(), "Voice : langauge(%s), type(%d), speed(%d)", speak_data->lang, speak_data->vctype, speak_data->speed);
+		SECURE_SLOG(LOG_DEBUG, get_tag(), "Text : %s", speak_data->text);
 		SLOG(LOG_DEBUG, get_tag(), "-----------------------------------------------------------");
 
 		int ret = 0;
 		__server_set_synth_control(TTSD_SYNTHESIS_CONTROL_DOING);
-		ret = ttsd_engine_start_synthesis(sdata.lang, sdata.vctype, sdata.text, sdata.speed, NULL);
+		ret = ttsd_engine_start_synthesis(speak_data->lang, speak_data->vctype, speak_data->text, speak_data->speed, NULL);
 		if (0 != ret) {
 			SLOG(LOG_ERROR, get_tag(), "[Server ERROR] * FAIL to start SYNTHESIS !!!! * ");
 
@@ -128,8 +142,16 @@ static int __synthesis(int uid)
 			g_wait_timer = ecore_timer_add(0, __wait_synthesis, NULL);
 		}
 
-		free(sdata.lang);
-		free(sdata.text);
+		if (NULL != speak_data) {
+			if (NULL != speak_data->lang)	free(speak_data->lang);
+			if (NULL != speak_data->text)	free(speak_data->text);
+
+			speak_data->lang = NULL;
+			speak_data->text = NULL;
+
+			free(speak_data);
+			speak_data = NULL;
+		}
 	}
 
 	SLOG(LOG_DEBUG, get_tag(), "===== SYNTHESIS  END");
@@ -151,10 +173,19 @@ int __synthesis_result_callback(ttsp_result_event_e event, const void* data, uns
 
 	/* Synthesis is success */
 	if (TTSP_RESULT_EVENT_START == event || TTSP_RESULT_EVENT_CONTINUE == event || TTSP_RESULT_EVENT_FINISH == event) {
+		
+		if (TTSP_RESULT_EVENT_START == event) {
+			SLOG(LOG_DEBUG, get_tag(), "[SERVER] Event : TTSP_RESULT_EVENT_START");
+			SECURE_SLOG(LOG_DEBUG, get_tag(), "[SERVER] Result Info : uid(%d), utt(%d), data(%p), data size(%d) audiotype(%d) rate(%d)", 
+				uid, uttid, data, data_size, audio_type, rate);
+		} else if (TTSP_RESULT_EVENT_FINISH == event) {
+			SLOG(LOG_DEBUG, get_tag(), "[SERVER] Event : TTSP_RESULT_EVENT_FINISH");
+			SECURE_SLOG(LOG_DEBUG, get_tag(), "[SERVER] Result Info : uid(%d), utt(%d), data(%p), data size(%d) audiotype(%d) rate(%d)", 
+				uid, uttid, data, data_size, audio_type, rate);
+		} else {
+			/*if (TTSP_RESULT_EVENT_CONTINUE == event)  SLOG(LOG_DEBUG, get_tag(), "[SERVER] Event : TTSP_RESULT_EVENT_CONTINUE");*/
+		}
 
-		if (TTSP_RESULT_EVENT_START == event)		SLOG(LOG_DEBUG, get_tag(), "[SERVER] Event : TTSP_RESULT_EVENT_START");
-		if (TTSP_RESULT_EVENT_CONTINUE == event)	SLOG(LOG_DEBUG, get_tag(), "[SERVER] Event : TTSP_RESULT_EVENT_CONTINUE");
-		if (TTSP_RESULT_EVENT_FINISH == event)		SLOG(LOG_DEBUG, get_tag(), "[SERVER] Event : TTSP_RESULT_EVENT_FINISH");
 
 		if (false == ttsd_data_is_uttid_valid(uid, uttid)) {
 			__server_set_synth_control(TTSD_SYNTHESIS_CONTROL_DONE);
@@ -163,9 +194,6 @@ int __synthesis_result_callback(ttsp_result_event_e event, const void* data, uns
 			SLOG(LOG_DEBUG, get_tag(), "  ");
 			return 0;
 		}
-
-		SLOG(LOG_DEBUG, get_tag(), "[SERVER] Result Info : uid(%d), utt(%d), data(%p), data size(%d) audiotype(%d) rate(%d)",
-			 uid, uttid, data, data_size, audio_type, rate);
 
 		if (rate <= 0 || audio_type < 0 || audio_type > TTSP_AUDIO_TYPE_MAX) {
 			__server_set_synth_control(TTSD_SYNTHESIS_CONTROL_DONE);
@@ -176,26 +204,38 @@ int __synthesis_result_callback(ttsp_result_event_e event, const void* data, uns
 		}
 
 		/* add wav data */
-		sound_data_s temp_data;
-		temp_data.data = NULL;
-		temp_data.rate = 0;
-		temp_data.data_size = 0;
+		sound_data_s* temp_sound_data = NULL;
+		temp_sound_data = (sound_data_s*)calloc(1, sizeof(sound_data_s));
+		if (NULL == temp_sound_data) {
+			SLOG(LOG_ERROR, get_tag(), "[SERVER ERROR] Out of memory");
+			return 0;
+		}
+		
+		temp_sound_data->data = NULL;
+		temp_sound_data->rate = 0;
+		temp_sound_data->data_size = 0;
 
 		if (0 < data_size) {
-			temp_data.data = (char*)calloc(data_size, sizeof(char));
-			memcpy(temp_data.data, data, data_size);
+			temp_sound_data->data = (char*)calloc(data_size + 5, sizeof(char));
+			if (NULL != temp_sound_data->data) {
+				memcpy(temp_sound_data->data, data, data_size);
+				temp_sound_data->data_size = data_size;
+				SLOG(LOG_ERROR, get_tag(), "[DEBUG][free] uid(%d), event(%d) sound_data(%p) data(%p) size(%d)", 
+					uid, event, temp_sound_data, temp_sound_data->data, temp_sound_data->data_size);
+			} else {
+				SLOG(LOG_ERROR, get_tag(), "Fail to allocate memory");
+			}
 		} else {
 			SLOG(LOG_ERROR, get_tag(), "Sound data is NULL");
 		}
 
-		temp_data.data_size = data_size;
-		temp_data.utt_id = uttid;
-		temp_data.event = event;
-		temp_data.audio_type = audio_type;
-		temp_data.rate = rate;
+		temp_sound_data->utt_id = uttid;
+		temp_sound_data->event = event;
+		temp_sound_data->audio_type = audio_type;
+		temp_sound_data->rate = rate;
 
-		if (0 != ttsd_data_add_sound_data(uid, temp_data)) {
-			SLOG(LOG_ERROR, get_tag(), "[SERVER ERROR] Fail to add sound data : uid(%d)", uid);
+		if (0 != ttsd_data_add_sound_data(uid, temp_sound_data)) {
+			SECURE_SLOG(LOG_ERROR, get_tag(), "[SERVER ERROR] Fail to add sound data : uid(%d)", uid);
 		}
 
 		if (event == TTSP_RESULT_EVENT_FINISH) {
@@ -218,8 +258,8 @@ int __synthesis_result_callback(ttsp_result_event_e event, const void* data, uns
 	}
 
 
-	SLOG(LOG_DEBUG, get_tag(), "===== SYNTHESIS RESULT CALLBACK END");
-	SLOG(LOG_DEBUG, get_tag(), "  ");
+	/*SLOG(LOG_DEBUG, get_tag(), "===== SYNTHESIS RESULT CALLBACK END");
+	SLOG(LOG_DEBUG, get_tag(), "  ");*/
 
 	return 0;
 }
@@ -402,6 +442,16 @@ int ttsd_initialize()
 
 int ttsd_finalize()
 {
+	GList *iter = NULL;
+	if (0 < g_list_length(g_proc_list)) {
+		iter = g_list_first(g_proc_list);
+		while (NULL != iter) {
+			g_proc_list = g_list_remove_link(g_proc_list, iter);
+			g_list_free(iter);
+			iter = g_list_first(g_proc_list);
+		}
+	}
+	
 	ttsd_config_finalize();
 
 	ttsd_player_release();
@@ -411,8 +461,70 @@ int ttsd_finalize()
 	return TTSD_ERROR_NONE;
 }
 
+static void __read_proc()
+{
+	DIR *dp = NULL;
+	struct dirent entry;
+	struct dirent *dirp = NULL;
+	int ret = -1;
+	int tmp;
+
+	GList *iter = NULL;
+	if (0 < g_list_length(g_proc_list)) {
+		iter = g_list_first(g_proc_list);
+		while (NULL != iter) {
+			g_proc_list = g_list_remove_link(g_proc_list, iter);
+			g_list_free(iter);
+			iter = g_list_first(g_proc_list);
+		}
+	}
+
+	dp = opendir("/proc");
+	if (NULL == dp) {
+		SLOG(LOG_ERROR, get_tag(), "[ERROR] Fail to open proc");
+	} else {
+		do {
+			ret = readdir_r(dp, &entry, &dirp);
+			if (0 != ret) {
+				SLOG(LOG_ERROR, get_tag(), "[ERROR] Fail to readdir");
+				break;
+			}
+
+			if (NULL != dirp) {
+				tmp = atoi(dirp->d_name);
+				if (0 >= tmp)	continue;
+				g_proc_list = g_list_append(g_proc_list, GINT_TO_POINTER(tmp));
+			}
+		} while (NULL != dirp);
+		closedir(dp);
+	}
+	return;
+}
+
 bool __get_client_for_clean_up(int pid, int uid, app_state_e state, void* user_data)
 {
+	bool exist = false;
+	int i = 0;
+	
+	GList *iter = NULL;
+	for (i = 0; i < g_list_length(g_proc_list); i++) {
+		iter = g_list_nth(g_proc_list, i);
+		if (NULL != iter) {
+			if (pid == GPOINTER_TO_INT(iter->data)) {
+				SLOG(LOG_DEBUG, get_tag(), "uid (%d) is running", uid);
+				exist = true;
+				break;
+			}
+		}
+	}
+	
+	if (false == exist) {
+		SLOG(LOG_ERROR, get_tag(), "uid (%d) should be removed", uid);
+		ttsd_server_finalize(uid);
+	}
+
+	return true;
+#if 0
 	char appid[128] = {0, };
 	if (0 != aul_app_get_appid_bypid(pid, appid, sizeof(appid))) {
 		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to get app id");
@@ -434,12 +546,14 @@ bool __get_client_for_clean_up(int pid, int uid, app_state_e state, void* user_d
 		}
 	}
 	return true;
+#endif
 }
 
 
 Eina_Bool ttsd_cleanup_client(void *data)
 {
 	SLOG(LOG_DEBUG, get_tag(), "===== CLEAN UP CLIENT START");
+	__read_proc();
 	ttsd_data_foreach_clients(__get_client_for_clean_up, NULL);
 	SLOG(LOG_DEBUG, get_tag(), "=====");
 	SLOG(LOG_DEBUG, get_tag(), "  ");
@@ -511,7 +625,8 @@ int ttsd_server_finalize(int uid)
 	}
 
 	ttsd_server_stop(uid);
-
+	ttsd_player_stop(uid);
+	
 	ttsd_player_destroy_instance(uid);
 
 	/* Need to unload voice when used voice is unregistered */
@@ -552,21 +667,38 @@ int ttsd_server_add_queue(int uid, const char* text, const char* lang, int voice
 		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to select valid voice : result lang is NULL");
 		return TTSD_ERROR_INVALID_VOICE;
 	}
+	
+	speak_data_s* speak_data = NULL;
+	speak_data = (speak_data_s*)calloc(1, sizeof(speak_data_s));
+	if (NULL == speak_data) {
+		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to allocate memory");
+		if (NULL != temp_lang)	free(temp_lang);
+		return TTSD_ERROR_OPERATION_FAILED;
+	}
 
-	speak_data_s data;
+	speak_data->lang = strdup(lang);
+	speak_data->vctype = voice_type;
 
-	data.lang = strdup(lang);
-	data.vctype = voice_type;
+	speak_data->speed = speed;
+	speak_data->utt_id = utt_id;
 
-	data.speed = speed;
-	data.utt_id = utt_id;
-
-	data.text = strdup(text);
+	speak_data->text = strdup(text);
 
 	/* if state is APP_STATE_READY , APP_STATE_PAUSED , only need to add speak data to queue*/
-	if (0 != ttsd_data_add_speak_data(uid, data)) {
+	if (0 != ttsd_data_add_speak_data(uid, speak_data)) {
 		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to add speak data");
 		if (NULL != temp_lang)	free(temp_lang);
+		if (NULL != speak_data) {
+			if (NULL != speak_data->lang)	free(speak_data->lang);
+			if (NULL != speak_data->text)	free(speak_data->text);
+
+			speak_data->lang = NULL;
+			speak_data->text = NULL;
+
+			free(speak_data);
+			speak_data = NULL;
+		}
+
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
@@ -638,6 +770,7 @@ int ttsd_server_play(int uid)
 	}
 
 	int current_uid = ttsd_data_get_current_playing();
+	SLOG(LOG_ERROR, get_tag(), "[Server] playing uid (%d)", current_uid);
 
 	if (uid != current_uid && -1 != current_uid) {
 		if (TTSD_MODE_DEFAULT != ttsd_get_mode()) {
@@ -647,6 +780,9 @@ int ttsd_server_play(int uid)
 			/* pause player */
 			if (0 != ttsd_server_stop(current_uid)) {
 				SLOG(LOG_WARN, get_tag(), "[Server ERROR] Fail to stop : uid (%d)", current_uid);
+			}
+			if (0 != ttsd_player_stop(current_uid)) {
+				SLOG(LOG_WARN, get_tag(), "[Server ERROR] Fail to player stop : uid (%d)", current_uid);
 			}
 
 			ecore_timer_add(0, __send_interrupt_client, (void*)current_uid);
@@ -714,7 +850,7 @@ int ttsd_server_stop(int uid)
 
 		__server_set_synth_control(TTSD_SYNTHESIS_CONTROL_EXPIRED);
 
-		if (0 != ttsd_player_stop(uid))
+		if (0 != ttsd_player_clear(uid))
 			SLOG(LOG_WARN, get_tag(), "[Server] Fail to ttsd_player_stop()");
 
 		ttsd_data_set_client_state(uid, APP_STATE_READY);

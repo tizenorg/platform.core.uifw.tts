@@ -199,7 +199,7 @@ int ttsd_dbus_server_get_support_voices(DBusConnection* conn, DBusMessage* msg)
 					}
 
 					voice_list = g_list_remove_link(voice_list, iter);
-
+					g_list_free(iter);
 					iter = g_list_first(voice_list);
 				}
 			}

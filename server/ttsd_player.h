@@ -47,6 +47,8 @@ int ttsd_player_play(int uid);
 
 int ttsd_player_stop(int uid);
 
+int ttsd_player_clear(int uid);
+
 int ttsd_player_pause(int uid);
 
 int ttsd_player_resume(int uid);

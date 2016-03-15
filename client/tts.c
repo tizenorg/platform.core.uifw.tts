@@ -31,6 +31,8 @@ static Ecore_Timer* g_connect_timer = NULL;
 
 static bool g_screen_reader;
 
+static int g_feature_enabled = -1;
+
 /* Function definition */
 static Eina_Bool __tts_notify_state_changed(void *data);
 static Eina_Bool __tts_notify_error(void *data);
@@ -38,6 +40,30 @@ static Eina_Bool __tts_notify_error(void *data);
 const char* tts_tag()
 {
 	return "ttsc";
+}
+
+static int __tts_get_feature_enabled()
+{
+	if (0 == g_feature_enabled) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] TTS feature NOT supported");
+		return TTS_ERROR_NOT_SUPPORTED;
+	} else if (-1 == g_feature_enabled) {
+		bool tts_supported = false;
+		if (0 == system_info_get_platform_bool(TTS_FEATURE_PATH, &tts_supported)) {
+			if (false == tts_supported) {
+				SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] TTS feature NOT supported");
+				g_feature_enabled = 0;
+				return TTS_ERROR_NOT_SUPPORTED;
+			}
+
+			g_feature_enabled = 1;
+		} else {
+			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to get feature value");
+			return TTS_ERROR_NOT_SUPPORTED;
+		}
+	}
+
+	return 0;
 }
 
 static const char* __tts_get_error_code(tts_error_e err)
@@ -80,7 +106,7 @@ static int __tts_convert_config_error_code(tts_config_error_e code)
 void __tts_config_voice_changed_cb(const char* before_lang, int before_voice_type, const char* language, int voice_type, bool auto_voice, void* user_data)
 {
 	SLOG(LOG_DEBUG, TAG_TTSC, "Voice changed : Before lang(%s) type(%d) , Current lang(%s), type(%d)",
-		 before_lang, before_voice_type, language, voice_type);
+		before_lang, before_voice_type, language, voice_type);
 
 	GList* client_list = NULL;
 	client_list = tts_client_get_client_list();
@@ -110,12 +136,8 @@ void __tts_config_voice_changed_cb(const char* before_lang, int before_voice_typ
 
 int tts_create(tts_h* tts)
 {
-	bool tts_supported = false;
-	if (0 == system_info_get_platform_bool(TTS_FEATURE_PATH, &tts_supported)) {
-		if (false == tts_supported) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] TTS NOT supported");
-			return TTS_ERROR_NOT_SUPPORTED;
-		}
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
 	}
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Create TTS");
@@ -168,12 +190,8 @@ int tts_create(tts_h* tts)
 
 int tts_destroy(tts_h tts)
 {
-	bool tts_supported = false;
-	if (0 == system_info_get_platform_bool(TTS_FEATURE_PATH, &tts_supported)) {
-		if (false == tts_supported) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] TTS NOT supported");
-			return TTS_ERROR_NOT_SUPPORTED;
-		}
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
 	}
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Destroy TTS");
@@ -266,12 +284,8 @@ void __tts_screen_reader_changed_cb(bool value)
 
 int tts_set_mode(tts_h tts, tts_mode_e mode)
 {
-	bool tts_supported = false;
-	if (0 == system_info_get_platform_bool(TTS_FEATURE_PATH, &tts_supported)) {
-		if (false == tts_supported) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] TTS NOT supported");
-			return TTS_ERROR_NOT_SUPPORTED;
-		}
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
 	}
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Set TTS mode");
@@ -325,12 +339,8 @@ int tts_set_mode(tts_h tts, tts_mode_e mode)
 
 int tts_get_mode(tts_h tts, tts_mode_e* mode)
 {
-	bool tts_supported = false;
-	if (0 == system_info_get_platform_bool(TTS_FEATURE_PATH, &tts_supported)) {
-		if (false == tts_supported) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] TTS NOT supported");
-			return TTS_ERROR_NOT_SUPPORTED;
-		}
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
 	}
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Get TTS mode");
@@ -435,12 +445,8 @@ static Eina_Bool __tts_connect_daemon(void *data)
 
 int tts_prepare(tts_h tts)
 {
-	bool tts_supported = false;
-	if (0 == system_info_get_platform_bool(TTS_FEATURE_PATH, &tts_supported)) {
-		if (false == tts_supported) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] TTS NOT supported");
-			return TTS_ERROR_NOT_SUPPORTED;
-		}
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
 	}
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Prepare TTS");
@@ -473,12 +479,8 @@ int tts_prepare(tts_h tts)
 
 int tts_unprepare(tts_h tts)
 {
-	bool tts_supported = false;
-	if (0 == system_info_get_platform_bool(TTS_FEATURE_PATH, &tts_supported)) {
-		if (false == tts_supported) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] TTS NOT supported");
-			return TTS_ERROR_NOT_SUPPORTED;
-		}
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
 	}
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Unprepare TTS");
@@ -559,12 +561,8 @@ bool __tts_supported_voice_cb(const char* engine_id, const char* language, int t
 
 int tts_foreach_supported_voices(tts_h tts, tts_supported_voice_cb callback, void* user_data)
 {
-	bool tts_supported = false;
-	if (0 == system_info_get_platform_bool(TTS_FEATURE_PATH, &tts_supported)) {
-		if (false == tts_supported) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] TTS NOT supported");
-			return TTS_ERROR_NOT_SUPPORTED;
-		}
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
 	}
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Foreach supported voices");
@@ -618,12 +616,8 @@ int tts_foreach_supported_voices(tts_h tts, tts_supported_voice_cb callback, voi
 
 int tts_get_default_voice(tts_h tts, char** lang, int* vctype)
 {
-	bool tts_supported = false;
-	if (0 == system_info_get_platform_bool(TTS_FEATURE_PATH, &tts_supported)) {
-		if (false == tts_supported) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] TTS NOT supported");
-			return TTS_ERROR_NOT_SUPPORTED;
-		}
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
 	}
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Get default voice");
@@ -662,12 +656,8 @@ int tts_get_default_voice(tts_h tts, char** lang, int* vctype)
 
 int tts_get_max_text_size(tts_h tts, unsigned int* size)
 {
-	bool tts_supported = false;
-	if (0 == system_info_get_platform_bool(TTS_FEATURE_PATH, &tts_supported)) {
-		if (false == tts_supported) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] TTS NOT supported");
-			return TTS_ERROR_NOT_SUPPORTED;
-		}
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
 	}
 
 	if (NULL == tts || NULL == size) {
@@ -695,12 +685,8 @@ int tts_get_max_text_size(tts_h tts, unsigned int* size)
 
 int tts_get_state(tts_h tts, tts_state_e* state)
 {
-	bool tts_supported = false;
-	if (0 == system_info_get_platform_bool(TTS_FEATURE_PATH, &tts_supported)) {
-		if (false == tts_supported) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] TTS NOT supported");
-			return TTS_ERROR_NOT_SUPPORTED;
-		}
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
 	}
 
 	if (NULL == tts || NULL == state) {
@@ -730,12 +716,8 @@ int tts_get_state(tts_h tts, tts_state_e* state)
 
 int tts_get_speed_range(tts_h tts, int* min, int* normal, int* max)
 {
-	bool tts_supported = false;
-	if (0 == system_info_get_platform_bool(TTS_FEATURE_PATH, &tts_supported)) {
-		if (false == tts_supported) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] TTS NOT supported");
-			return TTS_ERROR_NOT_SUPPORTED;
-		}
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
 	}
 
 	if (NULL == tts || NULL == min || NULL == normal || NULL == max) {
@@ -759,12 +741,18 @@ int tts_get_speed_range(tts_h tts, int* min, int* normal, int* max)
 
 int tts_add_text(tts_h tts, const char* text, const char* language, int voice_type, int speed, int* utt_id)
 {
-	bool tts_supported = false;
-	if (0 == system_info_get_platform_bool(TTS_FEATURE_PATH, &tts_supported)) {
-		if (false == tts_supported) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] TTS NOT supported");
-			return TTS_ERROR_NOT_SUPPORTED;
-		}
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
+	}
+
+	if( speed < 0 ) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Speed should not be negative(%d)", speed);
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+
+	if( voice_type < 0 ) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Voice type should not be negative(%d)", voice_type);
+		return TTS_ERROR_INVALID_PARAMETER;
 	}
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Add text");
@@ -887,12 +875,8 @@ int tts_add_text(tts_h tts, const char* text, const char* language, int voice_ty
 
 int tts_play(tts_h tts)
 {
-	bool tts_supported = false;
-	if (0 == system_info_get_platform_bool(TTS_FEATURE_PATH, &tts_supported)) {
-		if (false == tts_supported) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] TTS NOT supported");
-			return TTS_ERROR_NOT_SUPPORTED;
-		}
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
 	}
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Play tts");
@@ -962,12 +946,8 @@ int tts_play(tts_h tts)
 
 int tts_stop(tts_h tts)
 {
-	bool tts_supported = false;
-	if (0 == system_info_get_platform_bool(TTS_FEATURE_PATH, &tts_supported)) {
-		if (false == tts_supported) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] TTS NOT supported");
-			return TTS_ERROR_NOT_SUPPORTED;
-		}
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
 	}
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Stop tts");
@@ -1037,12 +1017,8 @@ int tts_stop(tts_h tts)
 
 int tts_pause(tts_h tts)
 {
-	bool tts_supported = false;
-	if (0 == system_info_get_platform_bool(TTS_FEATURE_PATH, &tts_supported)) {
-		if (false == tts_supported) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] TTS NOT supported");
-			return TTS_ERROR_NOT_SUPPORTED;
-		}
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
 	}
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "===== Pause tts");
@@ -1210,30 +1186,6 @@ int __tts_cb_set_state(int uid, int state)
 	return 0;
 }
 
-static Eina_Bool __tts_notify_utt_started(void *data)
-{
-	tts_h tts = (tts_h)data;
-
-	tts_client_s* client = tts_client_get(tts);
-
-	/* check handle */
-	if (NULL == client) {
-		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] Fail to notify utt started : A handle is not valid");
-		return EINA_FALSE;
-	}
-
-	if (NULL != client->utt_started_cb) {
-		SLOG(LOG_DEBUG, TAG_TTSC, "Call callback function of utterance started ");
-		tts_client_use_callback(client);
-		client->utt_started_cb(client->tts, client->utt_id, client->utt_started_user_data);
-		tts_client_not_use_callback(client);
-	} else {
-		SLOG(LOG_WARN, TAG_TTSC, "No registered callback function of utterance started ");
-	}
-
-	return EINA_FALSE;
-}
-
 int __tts_cb_utt_started(int uid, int utt_id)
 {
 	tts_client_s* client = tts_client_get_by_uid(uid);
@@ -1249,36 +1201,15 @@ int __tts_cb_utt_started(int uid, int utt_id)
 
 	/* call callback function */
 	if (NULL != client->utt_started_cb) {
-		ecore_timer_add(0, __tts_notify_utt_started, client->tts);
+		SLOG(LOG_DEBUG, TAG_TTSC, "Call callback function of utterance started ");
+		tts_client_use_callback(client);
+		client->utt_started_cb(client->tts, client->utt_id, client->utt_started_user_data);
+		tts_client_not_use_callback(client);
 	} else {
 		SLOG(LOG_WARN, TAG_TTSC, "No registered callback function of utterance started ");
 	}
 
 	return 0;
-}
-
-static Eina_Bool __tts_notify_utt_completed(void *data)
-{
-	tts_h tts = (tts_h)data;
-
-	tts_client_s* client = tts_client_get(tts);
-
-	/* check handle */
-	if (NULL == client) {
-		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] Fail to notify utt completed : A handle is not valid");
-		return EINA_FALSE;
-	}
-
-	if (NULL != client->utt_completeted_cb) {
-		SLOG(LOG_DEBUG, TAG_TTSC, "Call callback function of utterance completed ");
-		tts_client_use_callback(client);
-		client->utt_completeted_cb(client->tts, client->utt_id, client->utt_completed_user_data);
-		tts_client_not_use_callback(client);
-	} else {
-		SLOG(LOG_WARN, TAG_TTSC, "No registered callback function of utterance completed ");
-	}
-
-	return EINA_FALSE;
 }
 
 int __tts_cb_utt_completed(int uid, int utt_id)
@@ -1296,7 +1227,10 @@ int __tts_cb_utt_completed(int uid, int utt_id)
 
 	/* call callback function */
 	if (NULL != client->utt_completeted_cb) {
-		ecore_timer_add(0, __tts_notify_utt_completed, client->tts);
+		SLOG(LOG_DEBUG, TAG_TTSC, "Call callback function of utterance completed ");
+		tts_client_use_callback(client);
+		client->utt_completeted_cb(client->tts, client->utt_id, client->utt_completed_user_data);
+		tts_client_not_use_callback(client);
 	} else {
 		SLOG(LOG_WARN, TAG_TTSC, "No registered callback function of utterance completed ");
 	}
@@ -1306,12 +1240,8 @@ int __tts_cb_utt_completed(int uid, int utt_id)
 
 int tts_set_state_changed_cb(tts_h tts, tts_state_changed_cb callback, void* user_data)
 {
-	bool tts_supported = false;
-	if (0 == system_info_get_platform_bool(TTS_FEATURE_PATH, &tts_supported)) {
-		if (false == tts_supported) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] TTS NOT supported");
-			return TTS_ERROR_NOT_SUPPORTED;
-		}
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
 	}
 
 	if (NULL == tts || NULL == callback) {
@@ -1341,12 +1271,8 @@ int tts_set_state_changed_cb(tts_h tts, tts_state_changed_cb callback, void* use
 
 int tts_unset_state_changed_cb(tts_h tts)
 {
-	bool tts_supported = false;
-	if (0 == system_info_get_platform_bool(TTS_FEATURE_PATH, &tts_supported)) {
-		if (false == tts_supported) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] TTS NOT supported");
-			return TTS_ERROR_NOT_SUPPORTED;
-		}
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
 	}
 
 	if (NULL == tts) {
@@ -1376,12 +1302,8 @@ int tts_unset_state_changed_cb(tts_h tts)
 
 int tts_set_utterance_started_cb(tts_h tts, tts_utterance_started_cb callback, void* user_data)
 {
-	bool tts_supported = false;
-	if (0 == system_info_get_platform_bool(TTS_FEATURE_PATH, &tts_supported)) {
-		if (false == tts_supported) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] TTS NOT supported");
-			return TTS_ERROR_NOT_SUPPORTED;
-		}
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
 	}
 
 	if (NULL == tts || NULL == callback) {
@@ -1411,12 +1333,8 @@ int tts_set_utterance_started_cb(tts_h tts, tts_utterance_started_cb callback, v
 
 int tts_unset_utterance_started_cb(tts_h tts)
 {
-	bool tts_supported = false;
-	if (0 == system_info_get_platform_bool(TTS_FEATURE_PATH, &tts_supported)) {
-		if (false == tts_supported) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] TTS NOT supported");
-			return TTS_ERROR_NOT_SUPPORTED;
-		}
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
 	}
 
 	if (NULL == tts) {
@@ -1446,12 +1364,8 @@ int tts_unset_utterance_started_cb(tts_h tts)
 
 int tts_set_utterance_completed_cb(tts_h tts, tts_utterance_completed_cb callback, void* user_data)
 {
-	bool tts_supported = false;
-	if (0 == system_info_get_platform_bool(TTS_FEATURE_PATH, &tts_supported)) {
-		if (false == tts_supported) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] TTS NOT supported");
-			return TTS_ERROR_NOT_SUPPORTED;
-		}
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
 	}
 
 	if (NULL == tts || NULL == callback) {
@@ -1481,12 +1395,8 @@ int tts_set_utterance_completed_cb(tts_h tts, tts_utterance_completed_cb callbac
 
 int tts_unset_utterance_completed_cb(tts_h tts)
 {
-	bool tts_supported = false;
-	if (0 == system_info_get_platform_bool(TTS_FEATURE_PATH, &tts_supported)) {
-		if (false == tts_supported) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] TTS NOT supported");
-			return TTS_ERROR_NOT_SUPPORTED;
-		}
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
 	}
 
 	if (NULL == tts) {
@@ -1515,12 +1425,8 @@ int tts_unset_utterance_completed_cb(tts_h tts)
 
 int tts_set_error_cb(tts_h tts, tts_error_cb callback, void* user_data)
 {
-	bool tts_supported = false;
-	if (0 == system_info_get_platform_bool(TTS_FEATURE_PATH, &tts_supported)) {
-		if (false == tts_supported) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] TTS NOT supported");
-			return TTS_ERROR_NOT_SUPPORTED;
-		}
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
 	}
 
 	if (NULL == tts || NULL == callback) {
@@ -1550,12 +1456,8 @@ int tts_set_error_cb(tts_h tts, tts_error_cb callback, void* user_data)
 
 int tts_unset_error_cb(tts_h tts)
 {
-	bool tts_supported = false;
-	if (0 == system_info_get_platform_bool(TTS_FEATURE_PATH, &tts_supported)) {
-		if (false == tts_supported) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] TTS NOT supported");
-			return TTS_ERROR_NOT_SUPPORTED;
-		}
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
 	}
 
 	if (NULL == tts) {
@@ -1585,12 +1487,8 @@ int tts_unset_error_cb(tts_h tts)
 
 int tts_set_default_voice_changed_cb(tts_h tts, tts_default_voice_changed_cb callback, void* user_data)
 {
-	bool tts_supported = false;
-	if (0 == system_info_get_platform_bool(TTS_FEATURE_PATH, &tts_supported)) {
-		if (false == tts_supported) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] TTS NOT supported");
-			return TTS_ERROR_NOT_SUPPORTED;
-		}
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
 	}
 
 	if (NULL == tts || NULL == callback) {
@@ -1620,12 +1518,8 @@ int tts_set_default_voice_changed_cb(tts_h tts, tts_default_voice_changed_cb cal
 
 int tts_unset_default_voice_changed_cb(tts_h tts)
 {
-	bool tts_supported = false;
-	if (0 == system_info_get_platform_bool(TTS_FEATURE_PATH, &tts_supported)) {
-		if (false == tts_supported) {
-			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] TTS NOT supported");
-			return TTS_ERROR_NOT_SUPPORTED;
-		}
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
 	}
 
 	if (NULL == tts) {

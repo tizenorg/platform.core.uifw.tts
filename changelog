@@ -1,8 +1,14 @@
+tts (0.2.43) -- Wed, 29 Jul 2015
+  
+  * Update utt message to change method call to signal (Dongyeol Lee <dy3.lee@samsung.com>)
+  * Support dbus activation for daemon start (Dongyeol Lee <dy3.lee@samsung.com>)
+  * Move default config file to /usr/share/voice/tts (Dongyeol Lee <dy3.lee@samsung.com>)
+  * Move test program to /usr/share/voice/test (Dongyeol Lee <dy3.lee@samsung.com>)
+
 tts (0.2.42) -- Fri, 29 May 2015
 
   * Update utt message to change file message to dbus ipc (Dongyeol Lee <dy3.lee@samsung.com>)
   * Remove unused smack label (Kwangyoun Kim <ky85.kim@samsung.com>)
-  * Upgate utt message IPC based on signal (Dongyeol Lee <dy3.lee@samsung.com>)
 
 tts (0.2.41) -- Sat, 13 Aug 2014
 

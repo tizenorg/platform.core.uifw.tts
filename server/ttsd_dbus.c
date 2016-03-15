@@ -27,7 +27,7 @@ static DBusConnection* g_conn_listener = NULL;
 
 static Ecore_Fd_Handler* g_dbus_fd_handler = NULL;
 
-static int g_waiting_time = 3000;
+//static int g_waiting_time = 3000;
 
 static char *g_service_name = NULL;
 static char *g_service_object = NULL;
@@ -64,12 +64,10 @@ int ttsdc_send_hello(int pid, int uid)
 
 	char service_name[64];
 	memset(service_name, 0, 64);
-	/*snprintf(service_name, 64, "%s%d", TTS_CLIENT_SERVICE_NAME, pid); */
-	snprintf(service_name, 64, "%s", TTS_CLIENT_SERVICE_NAME);
+	snprintf(service_name, 64, "%s%d", TTS_CLIENT_SERVICE_NAME, pid);
 
 	char target_if_name[64];
-	/*snprintf(target_if_name, sizeof(target_if_name), "%s%d", TTS_CLIENT_SERVICE_INTERFACE, pid); */
-	snprintf(target_if_name, sizeof(target_if_name), "%s", TTS_CLIENT_SERVICE_INTERFACE);
+	snprintf(target_if_name, sizeof(target_if_name), "%s%d", TTS_CLIENT_SERVICE_INTERFACE, pid);
 
 	DBusMessage* msg;
 
@@ -129,16 +127,12 @@ int ttsdc_send_message(int pid, int uid, int data, const char *method)
 		return -1;
 	}
 
-	char target_if_name[64];
-	memset(target_if_name, 0, 64);
-	snprintf(target_if_name, sizeof(target_if_name), "%s", TTS_CLIENT_SERVICE_INTERFACE);
-
 	DBusMessage* msg = NULL;
 
-	/* create a message & check for errors */
+	/* create a message */
 	msg = dbus_message_new_signal(
 		TTS_CLIENT_SERVICE_OBJECT_PATH,	/* object name of the signal */
-		target_if_name,			/* interface name of the signal */
+		TTS_CLIENT_SERVICE_INTERFACE,	/* interface name of the signal */
 		method);			/* name of the signal */
 
 	if (NULL == msg) {
@@ -157,6 +151,8 @@ int ttsdc_send_message(int pid, int uid, int data, const char *method)
 		SLOG(LOG_DEBUG, get_tag(), "[Dbus] SUCCESS Send");
 		dbus_connection_flush(g_conn_sender);
 	}
+
+	dbus_message_unref(msg);
 
 	return 0;
 }
@@ -183,20 +179,13 @@ int ttsdc_send_error_message(int pid, int uid, int uttid, int reason)
 		return -1;
 	}
 
-	char service_name[64];
-	memset(service_name, 0, 64);
-	snprintf(service_name, 64, "%s%d", TTS_CLIENT_SERVICE_NAME, pid);
+	DBusMessage* msg = NULL;
 
-	char target_if_name[128];
-	snprintf(target_if_name, sizeof(target_if_name), "%s%d", TTS_CLIENT_SERVICE_INTERFACE, pid);
-
-	DBusMessage* msg;
-
-	msg = dbus_message_new_method_call(
-		service_name, 
-		TTS_CLIENT_SERVICE_OBJECT_PATH, 
-		target_if_name, 
-		TTSD_METHOD_ERROR);
+	/* create a message */
+	msg = dbus_message_new_signal(
+		TTS_CLIENT_SERVICE_OBJECT_PATH,	/* object name of the signal */
+		TTS_CLIENT_SERVICE_INTERFACE,	/* interface name of the signal */
+		TTSD_METHOD_ERROR);		/* name of the signal */
 
 	if (NULL == msg) {
 		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] Fail to create error message : uid(%d)", uid);
@@ -289,7 +278,7 @@ int ttsd_dbus_open_connection()
 	int ret;
 
 	/* Create connection for sender */
-	g_conn_sender = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
+	g_conn_sender = dbus_bus_get_private(DBUS_BUS_SYSTEM, &err);
 	if (dbus_error_is_set(&err)) {
 		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] Fail dbus_bus_get : %s", err.message);
 		dbus_error_free(&err);
@@ -301,10 +290,11 @@ int ttsd_dbus_open_connection()
 	}
 
 	/* connect to the bus and check for errors */
-	g_conn_listener = dbus_bus_get(DBUS_BUS_SYSTEM, &err);
+	g_conn_listener = dbus_bus_get_private(DBUS_BUS_SYSTEM, &err);
 	if (dbus_error_is_set(&err)) {
 		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] Fail dbus_bus_get : %s", err.message);
 		dbus_error_free(&err);
+		return -1;
 	}
 
 	if (NULL == g_conn_listener) {
@@ -391,6 +381,12 @@ int ttsd_dbus_close_connection()
 		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] dbus_bus_release_name() : %s", err.message);
 		dbus_error_free(&err);
 	}
+
+	dbus_connection_close(g_conn_sender);
+	dbus_connection_close(g_conn_listener);
+
+	dbus_connection_unref(g_conn_sender);
+	dbus_connection_unref(g_conn_listener);
 
 	g_conn_listener = NULL;
 	g_conn_sender = NULL;
