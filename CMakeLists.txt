@@ -26,9 +26,7 @@ SET(EXEC_PREFIX "${PREFIX}")
 SET(INCLUDEDIR "${PREFIX}/include")
 SET(VERSION 0.2.43)
 
-IF (LIBDIR MATCHES "/usr/lib64")
-SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DLIB64")
-ENDIF (LIBDIR)
+ADD_DEFINITIONS("-DTTS_LIBDIR=\"${LIBDIR}\"")
 
 ## Include common directory ##
 INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/common")
@@ -53,17 +51,17 @@ ADD_SUBDIRECTORY(client)
 ## Server daemon ##
 ADD_SUBDIRECTORY(server)
 
-INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE RENAME tts DESTINATION /usr/share/license)
+INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE RENAME tts DESTINATION ${TZ_SYS_RO_SHARE}/license)
 
 ## Config ##
-INSTALL(FILES ${CMAKE_SOURCE_DIR}/tts-config.xml DESTINATION ${LIBDIR}/voice/tts/1.0)
+INSTALL(FILES ${CMAKE_SOURCE_DIR}/tts-config.xml DESTINATION ${TZ_SYS_RO_SHARE}/voice/tts/1.0)
 
 INSTALL(FILES ${CMAKE_SOURCE_DIR}/tts-server.conf DESTINATION /etc/dbus-1/system.d)
 
 ## Dbus service ##
-INSTALL(FILES ${CMAKE_SOURCE_DIR}/org.tizen.voice.ttsserver.service DESTINATION /usr/share/dbus-1/system-services)
-INSTALL(FILES ${CMAKE_SOURCE_DIR}/org.tizen.voice.ttsnotiserver.service DESTINATION /usr/share/dbus-1/system-services)
-INSTALL(FILES ${CMAKE_SOURCE_DIR}/org.tizen.voice.ttssrserver.service DESTINATION /usr/share/dbus-1/system-services)
+INSTALL(FILES ${CMAKE_SOURCE_DIR}/org.tizen.voice.ttsserver.service DESTINATION ${TZ_SYS_RO_SHARE}/dbus-1/system-services)
+INSTALL(FILES ${CMAKE_SOURCE_DIR}/org.tizen.voice.ttsnotiserver.service DESTINATION ${TZ_SYS_RO_SHARE}/dbus-1/system-services)
+INSTALL(FILES ${CMAKE_SOURCE_DIR}/org.tizen.voice.ttssrserver.service DESTINATION ${TZ_SYS_RO_SHARE}/dbus-1/system-services)
 
 ## Sample application ##
 ADD_SUBDIRECTORY(test)

@@ -504,44 +504,6 @@ static int __internal_update_engine_list()
 		closedir(dp);
 	}
 
-	dp = opendir(TTS_DOWNLOAD_ENGINE);
-
-	if (dp != NULL) {
-		do {
-			ret = readdir_r(dp, &entry, &dirp);
-			if (0 != ret) {
-				SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Fail to read directory");
-				break;
-			}
-
-			if (NULL != dirp) {
-				ttsengine_info_s* info;
-				char* filepath = NULL;
-				int file_size;
-
-				file_size = strlen(TTS_DOWNLOAD_ENGINE) + strlen(dirp->d_name) + 5;
-				filepath = (char*)calloc(file_size, sizeof(char));
-
-				if (NULL != filepath) {
-					snprintf(filepath, file_size, "%s/%s", TTS_DOWNLOAD_ENGINE, dirp->d_name);
-				} else {
-					SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not enough memory!!" );
-					continue;
-				}
-
-				/* get its info and update engine list */
-				if (0 == __internal_get_engine_info(filepath, &info)) {
-					/* add engine info to g_engine_list */
-					g_engine_list = g_list_append(g_engine_list, info);
-				}
-
-				if (NULL != filepath)	free(filepath);
-			}
-		} while (NULL != dirp);
-
-		closedir(dp);
-	}
-
 	if (g_list_length(g_engine_list) <= 0) {
 		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] No Engine");
 		return TTSD_ERROR_OPERATION_FAILED;

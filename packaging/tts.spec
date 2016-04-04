@@ -68,13 +68,15 @@ export CXXFLAGS="$CXXFLAGS -DTIZEN_DEBUG_ENABLE"
 export FFLAGS="$FFLAGS -DTIZEN_DEBUG_ENABLE"
 
 
-cmake . -DCMAKE_INSTALL_PREFIX=%{_prefix} -DLIBDIR=%{_libdir} -DINCLUDEDIR=%{_includedir}
+cmake . -DCMAKE_INSTALL_PREFIX=%{_prefix} -DLIBDIR=%{_libdir} -DINCLUDEDIR=%{_includedir} \
+        -DTZ_SYS_RO_SHARE=%TZ_SYS_RO_SHARE -DTZ_SYS_BIN=%TZ_SYS_BIN
+
 make %{?jobs:-j%jobs}
 
 %install
 rm -rf %{buildroot}
-mkdir -p %{buildroot}/usr/share/license
-install LICENSE %{buildroot}/usr/share/license/%{name}
+mkdir -p %{buildroot}%{TZ_SYS_RO_SHARE}/license
+install LICENSE %{buildroot}%{TZ_SYS_RO_SHARE}/license/%{name}
 
 %make_install
 
@@ -83,14 +85,7 @@ install LICENSE %{buildroot}/usr/share/license/%{name}
 
 mkdir -p %{_libdir}/voice
 
-mkdir -p /usr/share/voice/test
-
-mkdir -p /opt/usr/data/voice/tts/1.0/engine-info
-
-chown 5000:5000 /opt/usr/data/voice
-chown 5000:5000 /opt/usr/data/voice/tts
-chown 5000:5000 /opt/usr/data/voice/tts/1.0
-chown 5000:5000 /opt/usr/data/voice/tts/1.0/engine-info
+mkdir -p %{TZ_SYS_RO_SHARE}/voice/test
 
 %postun -p /sbin/ldconfig
 
@@ -98,12 +93,12 @@ chown 5000:5000 /opt/usr/data/voice/tts/1.0/engine-info
 %manifest %{name}.manifest
 %defattr(-,root,root,-)
 %{_libdir}/lib*.so
-%{_libdir}/voice/tts/1.0/tts-config.xml
 %{_bindir}/tts-daemon*
-/usr/share/dbus-1/system-services/org.tizen.voice*
+%{TZ_SYS_RO_SHARE}/voice/tts/1.0/tts-config.xml
+%{TZ_SYS_RO_SHARE}/dbus-1/system-services/org.tizen.voice*
+%{TZ_SYS_RO_SHARE}/voice/test/tts-test
+%{TZ_SYS_RO_SHARE}/license/%{name}
 /etc/dbus-1/system.d/tts-server.conf
-/usr/share/voice/test/tts-test
-/usr/share/license/%{name}
 
 %files devel
 %manifest %{name}-devel.manifest

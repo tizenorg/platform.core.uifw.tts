@@ -765,62 +765,6 @@ int __tts_config_mgr_get_engine_info()
 		closedir(dp);
 	}
 
-	/* Get engine info from downloadable engine directory */
-	dp  = opendir(TTS_DOWNLOAD_ENGINE_INFO);
-	if (NULL == dp) {
-		SLOG(LOG_DEBUG, tts_tag(), "[CONFIG] No downloadable directory : %s", TTS_DOWNLOAD_ENGINE_INFO);
-	} else {
-		do {
-			ret = readdir_r(dp, &entry, &dirp);
-			if (0 != ret) {
-				SLOG(LOG_ERROR, tts_tag(), "[CONFIG] Fail to read directory");
-				break;
-			}
-
-			if (NULL != dirp) {
-				filesize = strlen(TTS_DOWNLOAD_ENGINE_INFO) + strlen(dirp->d_name) + 2;
-				if (filesize >= 512) {
-					SECURE_SLOG(LOG_ERROR, tts_tag(), "[CONFIG ERROR] File path is too long : %s", dirp->d_name);
-					closedir(dp);
-					return -1;
-				}
-
-				memset(filepath, '\0', 512);
-				snprintf(filepath, 512, "%s/%s", TTS_DOWNLOAD_ENGINE_INFO, dirp->d_name);
-
-				SECURE_SLOG(LOG_DEBUG, tts_tag(), "[CONFIG] Filepath(%s)", filepath);
-
-				if (0 == tts_parser_get_engine_info(filepath, &info)) {
-					/* Compare id */
-					GSList *iter = NULL;
-					tts_engine_info_s *engine_info = NULL;
-
-					/* Get a first item */
-					iter = g_slist_nth(g_engine_list, 0);
-
-					while (NULL != iter) {
-						engine_info = iter->data;
-
-						if (NULL != engine_info) {
-							/* Remove old engine info */
-							if (0 == strncmp(engine_info->uuid, info->uuid, strlen(engine_info->uuid))) {
-								SLOG(LOG_DEBUG, tts_tag(), "[CONFIG] Remove old engine : %s", engine_info->name);
-								g_engine_list = g_slist_remove(g_engine_list, engine_info);
-								tts_parser_free_engine_info(engine_info);
-								break;
-							}
-						}
-						iter = iter->next;
-					}
-
-					g_engine_list = g_slist_append(g_engine_list, info);
-				}
-			}
-		} while (NULL != dirp);
-
-		closedir(dp);
-	}
-
 	if (0 >= g_slist_length(g_engine_list)) {
 		SLOG(LOG_ERROR, tts_tag(), "[ERROR] No engine");
 		return -1;
@@ -888,7 +832,8 @@ static int __tts_config_mgr_register_engine_config_updated_event()
 		return -1;
 	}
 
-	g_dir_wd = inotify_add_watch(g_dir_fd, TTS_OPT_BASE"/engine-info/", IN_CLOSE_WRITE);
+	 /* FIX_ME *//* It doesn't need check engine directory, because daemon will change engine-process */
+	g_dir_wd = inotify_add_watch(g_dir_fd, TTS_DEFAULT_ENGINE_INFO, IN_CLOSE_WRITE);
 	if (g_dir_wd < 0) {
 		SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to add watch");
 		return -1;

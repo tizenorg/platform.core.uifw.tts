@@ -68,26 +68,12 @@ extern "C" {
 * Defines for configuration
 *******************************************************************************************/
 
-#ifdef LIB64
-#define TTS_USR_BASE			"/usr/lib64/voice/tts/1.0"
-#else
-#define TTS_USR_BASE			"/usr/lib/voice/tts/1.0"
-#endif
-#define TTS_OPT_BASE			"/opt/usr/data/voice/tts/1.0"
+#define TTS_CONFIG			tzplatform_mkpath(TZ_USER_HOME, "/share/.voice/tts-config.xml")
+#define TTS_DEFAULT_CONFIG		tzplatform_mkpath(TZ_SYS_RO_SHARE, "/voice/tts/1.0/tts-config.xml")
 
-#define TTS_DEFAULT_CONFIG		TTS_USR_BASE"/tts-config.xml"
-#define TTS_CONFIG			tzplatform_mkpath(TZ_USER_HOME, ".voice/tts-config.xml")
-
-#define MESSAGE_FILE_PATH_ROOT		tzplatform_mkpath(TZ_USER_HOME, ".voice/")
-
-#define TTS_DEFAULT_ENGINE		TTS_USR_BASE"/engine"
-#define TTS_DOWNLOAD_ENGINE		TTS_OPT_BASE"/engine"
-
-#define TTS_DEFAULT_ENGINE_INFO		TTS_USR_BASE"/engine-info"
-#define TTS_DOWNLOAD_ENGINE_INFO	TTS_OPT_BASE"/engine-info"
-
-#define TTS_DEFAULT_ENGINE_SETTING	TTS_USR_BASE"/engine-setting"
-#define TTS_DOWNLOAD_ENGINE_SETTING	TTS_OPT_BASE"/engine-setting"
+#define TTS_DEFAULT_ENGINE		tzplatform_mkpath(TZ_SYS_RO_SHARE, "/voice/tts/1.0/engine")
+#define TTS_DEFAULT_ENGINE_INFO		tzplatform_mkpath(TZ_SYS_RO_SHARE, "/voice/tts/1.0/engine-info")
+#define TTS_DEFAULT_ENGINE_SETTING	tzplatform_mkpath(TZ_SYS_RO_SHARE, "/voice/tts/1.0/engine-setting")
 
 #define TTS_BASE_LANGUAGE		"en_US"
 
