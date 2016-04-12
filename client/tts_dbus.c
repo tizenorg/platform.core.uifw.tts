@@ -151,7 +151,7 @@ int tts_dbus_open_connection()
 	dbus_error_init(&err);
 
 	/* connect to the DBUS system bus, and check for errors */
-	g_conn_sender = dbus_bus_get_private(DBUS_BUS_SYSTEM, &err);
+	g_conn_sender = dbus_bus_get_private(DBUS_BUS_SESSION, &err);
 	if (dbus_error_is_set(&err)) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Dbus Connection Error (%s)", err.message);
 		dbus_error_free(&err);
@@ -164,7 +164,7 @@ int tts_dbus_open_connection()
 
 	dbus_connection_set_exit_on_disconnect(g_conn_sender, false);
 
-	g_conn_listener = dbus_bus_get_private(DBUS_BUS_SYSTEM, &err);
+	g_conn_listener = dbus_bus_get_private(DBUS_BUS_SESSION, &err);
 	if (dbus_error_is_set(&err)) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Dbus Connection Error (%s)", err.message);
 		dbus_error_free(&err);

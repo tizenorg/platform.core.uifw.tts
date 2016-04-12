@@ -278,7 +278,7 @@ int ttsd_dbus_open_connection()
 	int ret;
 
 	/* Create connection for sender */
-	g_conn_sender = dbus_bus_get_private(DBUS_BUS_SYSTEM, &err);
+	g_conn_sender = dbus_bus_get_private(DBUS_BUS_SESSION, &err);
 	if (dbus_error_is_set(&err)) {
 		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] Fail dbus_bus_get : %s", err.message);
 		dbus_error_free(&err);
@@ -290,7 +290,7 @@ int ttsd_dbus_open_connection()
 	}
 
 	/* connect to the bus and check for errors */
-	g_conn_listener = dbus_bus_get_private(DBUS_BUS_SYSTEM, &err);
+	g_conn_listener = dbus_bus_get_private(DBUS_BUS_SESSION, &err);
 	if (dbus_error_is_set(&err)) {
 		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] Fail dbus_bus_get : %s", err.message);
 		dbus_error_free(&err);
