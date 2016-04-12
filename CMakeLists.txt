@@ -59,9 +59,9 @@ INSTALL(FILES ${CMAKE_SOURCE_DIR}/tts-config.xml DESTINATION ${TZ_SYS_RO_SHARE}/
 INSTALL(FILES ${CMAKE_SOURCE_DIR}/tts-server.conf DESTINATION /etc/dbus-1/system.d)
 
 ## Dbus service ##
-INSTALL(FILES ${CMAKE_SOURCE_DIR}/org.tizen.voice.ttsserver.service DESTINATION ${TZ_SYS_RO_SHARE}/dbus-1/system-services)
-INSTALL(FILES ${CMAKE_SOURCE_DIR}/org.tizen.voice.ttsnotiserver.service DESTINATION ${TZ_SYS_RO_SHARE}/dbus-1/system-services)
-INSTALL(FILES ${CMAKE_SOURCE_DIR}/org.tizen.voice.ttssrserver.service DESTINATION ${TZ_SYS_RO_SHARE}/dbus-1/system-services)
+INSTALL(FILES ${CMAKE_SOURCE_DIR}/org.tizen.voice.ttsserver.service DESTINATION ${TZ_SYS_RO_SHARE}/dbus-1/services)
+INSTALL(FILES ${CMAKE_SOURCE_DIR}/org.tizen.voice.ttsnotiserver.service DESTINATION ${TZ_SYS_RO_SHARE}/dbus-1/services)
+INSTALL(FILES ${CMAKE_SOURCE_DIR}/org.tizen.voice.ttssrserver.service DESTINATION ${TZ_SYS_RO_SHARE}/dbus-1/services)
 
 ## Sample application ##
 ADD_SUBDIRECTORY(test)

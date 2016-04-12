@@ -95,7 +95,7 @@ mkdir -p %{TZ_SYS_RO_SHARE}/voice/test
 %{_libdir}/lib*.so
 %{_bindir}/tts-daemon*
 %{TZ_SYS_RO_SHARE}/voice/tts/1.0/tts-config.xml
-%{TZ_SYS_RO_SHARE}/dbus-1/system-services/org.tizen.voice*
+%{TZ_SYS_RO_SHARE}/dbus-1/services/org.tizen.voice*
 %{TZ_SYS_RO_SHARE}/voice/test/tts-test
 %{TZ_SYS_RO_SHARE}/license/%{name}
 /etc/dbus-1/system.d/tts-server.conf
