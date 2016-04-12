@@ -63,6 +63,8 @@ static int g_sampling_rate;
 
 static audio_out_h g_audio_h;
 
+static sound_stream_info_h g_stream_info_h;
+
 /*
 * Internal Interfaces
 */
@@ -92,32 +94,46 @@ player_s* __player_get_item(int uid)
 	return NULL;
 }
 
-void __player_audio_io_interrupted_cb(audio_io_interrupted_code_e code, void *user_data)
+void __player_focus_state_cb(sound_stream_info_h stream_info, sound_stream_focus_change_reason_e reason_for_change, const char *extra_info, void *user_data)
 {
-	SLOG(LOG_DEBUG, get_tag(), "===== INTERRUPTED CALLBACK");
+	SLOG(LOG_DEBUG, get_tag(), "===== Focus state changed cb");
 
-	SLOG(LOG_WARN, get_tag(), "[Player] code : %d", (int)code);
-
-	g_audio_state = AUDIO_STATE_READY;
-
-	if (NULL == g_playing_info) {
-		SLOG(LOG_WARN, get_tag(), "[Player WARNING] No current player");
+	int ret;
+	sound_stream_focus_state_e state_for_playback ;
+	ret = sound_manager_get_focus_state(g_stream_info_h, &state_for_playback, NULL);
+	if (SOUND_MANAGER_ERROR_NONE != ret) {
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail to get focus state");
 		return;
 	}
 
-	if (APP_STATE_PLAYING == g_playing_info->state) {
-		g_playing_info->state = APP_STATE_PAUSED;
+	SLOG(LOG_WARN, get_tag(), "[Player] focus state changed to (%d) with reason(%d)", (int)state_for_playback, (int)reason_for_change);
 
-		ttsd_data_set_client_state(g_playing_info->uid, APP_STATE_PAUSED);
+	if (AUDIO_STATE_PLAY == g_audio_state && SOUND_STREAM_FOCUS_STATE_RELEASED == state_for_playback) {
+		if (TTSD_MODE_DEFAULT == ttsd_get_mode()) {
+			g_audio_state = AUDIO_STATE_READY;
+	
+			if (NULL == g_playing_info) {
+				SLOG(LOG_WARN, get_tag(), "[Player WARNING] No current player");
+				return;
+			}
 
-		int pid = ttsd_data_get_pid(g_playing_info->uid);
+			if (APP_STATE_PLAYING == g_playing_info->state) {
+				g_playing_info->state = APP_STATE_PAUSED;
+	
+				ttsd_data_set_client_state(g_playing_info->uid, APP_STATE_PAUSED);
 
-		/* send message to client about changing state */
-		ttsdc_send_set_state_message(pid, g_playing_info->uid, APP_STATE_PAUSED);
+				int pid = ttsd_data_get_pid(g_playing_info->uid);
+
+				/* send message to client about changing state */
+				ttsdc_send_set_state_message(pid, g_playing_info->uid, APP_STATE_PAUSED);
+			}
+		} else {
+			SLOG(LOG_DEBUG, get_tag(), "[Player] Ignore focus state cb - mode(%d)", ttsd_get_mode());
+		}
 	}
 
 	SLOG(LOG_DEBUG, get_tag(), "=====");
-	SLOG(LOG_DEBUG, get_tag(), "  ");
+	SLOG(LOG_DEBUG, get_tag(), "");
 
 	return;
 }
@@ -133,7 +149,7 @@ static int __create_audio_out(ttsp_audio_type_e type, int rate)
 		sample_type = AUDIO_SAMPLE_TYPE_U8;
 	}
 
-	ret = audio_out_create(rate, AUDIO_CHANNEL_MONO, sample_type, SOUND_TYPE_VOICE, &g_audio_h);
+	ret = audio_out_create_new(rate, AUDIO_CHANNEL_MONO, sample_type, &g_audio_h);
 	if (AUDIO_IO_ERROR_NONE != ret) {
 		g_audio_state = AUDIO_STATE_NONE;
 		g_audio_h = NULL;
@@ -141,24 +157,6 @@ static int __create_audio_out(ttsp_audio_type_e type, int rate)
 		return -1;
 	} else {
 		SLOG(LOG_DEBUG, get_tag(), "[Player SUCCESS] Create audio");
-	}
-
-	if (TTSD_MODE_DEFAULT != ttsd_get_mode()) {
-		ret = audio_out_ignore_session(g_audio_h);
-		if (AUDIO_IO_ERROR_NONE != ret) {
-			g_audio_state = AUDIO_STATE_NONE;
-			g_audio_h = NULL;
-			SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail to set ignore session");
-			return -1;
-		}
-	}
-
-	ret = audio_out_set_interrupted_cb(g_audio_h, __player_audio_io_interrupted_cb, NULL);
-	if (AUDIO_IO_ERROR_NONE != ret) {
-		g_audio_state = AUDIO_STATE_NONE;
-		g_audio_h = NULL;
-		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail to set callback function");
-		return -1;
 	}
 
 	g_audio_type = type;
@@ -201,9 +199,23 @@ static void __end_play_thread(void *data, Ecore_Thread *thread)
 
 static void __set_volume_using_voice_policy(int volume)
 {
+	/* Set stream info */
+	int ret;
+	if (TTSD_MODE_DEFAULT == ttsd_get_mode()) {
+		ret = sound_manager_acquire_focus(g_stream_info_h, SOUND_STREAM_FOCUS_FOR_PLAYBACK, NULL);
+		if (SOUND_MANAGER_ERROR_NONE != ret) {
+			SLOG(LOG_WARN, get_tag(), "[Player WARNING] Fail to acquire focus");
+		}
+		ret = audio_out_set_stream_info(g_audio_h, g_stream_info_h);
+		if (AUDIO_IO_ERROR_NONE != ret) {
+			SLOG(LOG_WARN, get_tag(), "[Player WARNING] Fail to set stream info");
+		}
+	}
+
+	/* Set volume policy */
 /*
 	SLOG(LOG_WARN, get_tag(), "[Player WARNING] set volume policy");
-	int ret = sound_manager_set_volume_voice_policy(volume);
+	ret = sound_manager_set_volume_voice_policy(volume);
 	if (SOUND_MANAGER_ERROR_NONE != ret) {
 		SLOG(LOG_WARN, get_tag(), "[Player WARNING] Fail to set volume policy");
 	}
@@ -213,13 +225,23 @@ static void __set_volume_using_voice_policy(int volume)
 
 static void __unset_volume_using_voice_policy()
 {
+	int ret;
+	/* Unset volume policy */
 /*
 	SLOG(LOG_WARN, get_tag(), "[Player WARNING] unset volume policy");
-	int ret = sound_manager_unset_volume_voice_policy();
+	ret = sound_manager_unset_volume_voice_policy();
 	if (SOUND_MANAGER_ERROR_NONE != ret) {
 		SLOG(LOG_WARN, get_tag(), "[Player WARNING] Fail to unset volume policy");
 	}
 */
+	/* Unset stream info */
+	if (TTSD_MODE_DEFAULT == ttsd_get_mode()) {
+		ret = sound_manager_release_focus(g_stream_info_h, SOUND_STREAM_FOCUS_FOR_PLAYBACK, NULL);
+		if (SOUND_MANAGER_ERROR_NONE != ret) {
+			SLOG(LOG_WARN, get_tag(), "[Player WARNING] Fail to release focus");
+		}
+	}
+
 	return;
 }
 
@@ -536,21 +558,15 @@ int ttsd_player_init()
 
 	int ret;
 
-	if (TTSD_MODE_DEFAULT == ttsd_get_mode()) {
-		ret = sound_manager_set_session_type(SOUND_SESSION_TYPE_MEDIA);
-		if (0 != ret) {
-			SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail to set session type");
-		}
-
-		ret = sound_manager_set_media_session_option(SOUND_SESSION_OPTION_PAUSE_OTHERS_WHEN_START, SOUND_SESSION_OPTION_INTERRUPTIBLE_DURING_PLAY);
-		if (0 != ret) {
-			SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail set media session option");
-		} else {
-			SLOG(LOG_DEBUG, get_tag(), "[Player SUCCESS] set media session option");
-		}
-	}
-
 	ecore_thread_max_set(1);
+
+	ret = sound_manager_create_stream_information(SOUND_STREAM_TYPE_VOICE_INFORMATION, __player_focus_state_cb, NULL, &g_stream_info_h);
+	if (SOUND_MANAGER_ERROR_NONE != ret) {
+		SLOG(LOG_ERROR, get_tag(), "[Player ERROR] Fail to create stream info");
+		return -1;
+	} else {
+		SLOG(LOG_DEBUG, get_tag(), "[Player SUCCESS] Create stream info");
+	}
 
 	ret = __create_audio_out(TTSP_AUDIO_TYPE_RAW_S16, 16000);
 	if (0 != ret)
@@ -594,6 +610,13 @@ int ttsd_player_release(void)
 	ret = __destroy_audio_out();
 	if (0 != ret)
 		return -1;
+
+	ret = sound_manager_destroy_stream_information(g_stream_info_h);
+	if (SOUND_MANAGER_ERROR_NONE != ret) {
+		SLOG(LOG_WARN, get_tag(), "[Player WARNING] Fail to destroy stream info");
+	} else {
+		SLOG(LOG_DEBUG, get_tag(), "[Player SUCCESS] Destroy stream info");
+	}
 
 	/* clear g_player_list */
 	g_playing_info = NULL;
