@@ -873,6 +873,105 @@ int tts_add_text(tts_h tts, const char* text, const char* language, int voice_ty
 	return ret;
 }
 
+static void __tts_play_async(void *data)
+{
+	tts_h tts = (tts_h)data;
+	tts_client_s* client = tts_client_get(tts);
+
+	/* check handle */
+	if (NULL == client) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] A handle is not valid");
+		return;
+	}
+
+	int ret = -1;
+	int count = 0;
+	while (0 != ret) {
+		ret = tts_dbus_request_play(client->uid);
+		if (0 != ret) {
+			if (TTS_ERROR_TIMED_OUT != ret) {
+				SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] result : %s", __tts_get_error_code(ret));
+				break;
+			} else {
+				SLOG(LOG_WARN, TAG_TTSC, "[WARNING] retry play : %s", __tts_get_error_code(ret));
+				usleep(10000);
+				count++;
+				if (TTS_RETRY_COUNT == count) {
+					SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to request");
+					break;
+				}
+			}
+		}
+	}
+
+	if (0 != ret) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to play tts : %s", __tts_get_error_code(ret));
+
+		client->reason = ret;
+		client->utt_id = -1;
+
+		ecore_timer_add(0, __tts_notify_error, client->tts);
+		return;
+	}
+
+	client->before_state = client->current_state;
+	client->current_state = TTS_STATE_PLAYING;
+
+	if (NULL != client->state_changed_cb) {
+		tts_client_use_callback(client);
+		client->state_changed_cb(client->tts, client->before_state, client->current_state, client->state_changed_user_data);
+		tts_client_not_use_callback(client);
+		SLOG(LOG_DEBUG, TAG_TTSC, "State changed callback is called");
+	}
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+	SLOG(LOG_DEBUG, TAG_TTSC, " ");
+
+	return;
+}
+
+int tts_play_async(tts_h tts)
+{
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
+	}
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "===== Play tts");
+
+	if (NULL == tts) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input handle is null.");
+		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+		SLOG(LOG_DEBUG, TAG_TTSC, " ");
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+
+	tts_client_s* client = tts_client_get(tts);
+
+	if (NULL == client) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] A handle is not valid.");
+		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+		SLOG(LOG_DEBUG, TAG_TTSC, " ");
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+
+	if (TTS_STATE_PLAYING == client->current_state || TTS_STATE_CREATED == client->current_state) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] The current state is invalid.");
+		return TTS_ERROR_INVALID_STATE;
+	}
+
+	if (false == g_screen_reader && TTS_MODE_SCREEN_READER == client->mode) {
+		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] Screen reader option is NOT available. Ignore this request");
+		return TTS_ERROR_INVALID_STATE;
+	}
+
+	ecore_main_loop_thread_safe_call_async(__tts_play_async, (void*)tts);
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+	SLOG(LOG_DEBUG, TAG_TTSC, " ");
+
+	return TTS_ERROR_NONE;
+}
+
 int tts_play(tts_h tts)
 {
 	if (0 != __tts_get_feature_enabled()) {
@@ -943,6 +1042,104 @@ int tts_play(tts_h tts)
 	return TTS_ERROR_NONE;
 }
 
+static void __tts_stop_async(void *data)
+{
+	tts_h tts = (tts_h)data;
+	tts_client_s* client = tts_client_get(tts);
+
+	/* check handle */
+	if (NULL == client) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] A handle is not valid");
+		return;
+	}
+
+	int ret = -1;
+	int count = 0;
+	while (0 != ret) {
+		ret = tts_dbus_request_stop(client->uid);
+		if (0 != ret) {
+			if (TTS_ERROR_TIMED_OUT != ret) {
+				SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] result : %s", __tts_get_error_code(ret));
+				break;
+			} else {
+				SLOG(LOG_WARN, TAG_TTSC, "[WARNING] retry stop : %s", __tts_get_error_code(ret));
+				usleep(10000);
+				count++;
+				if (TTS_RETRY_COUNT == count) {
+					SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to request");
+					break;
+				}
+			}
+		}
+	}
+
+	if (0 != ret) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to stop tts : %s", __tts_get_error_code(ret));
+
+		client->reason = ret;
+		client->utt_id = -1;
+
+		ecore_timer_add(0, __tts_notify_error, client->tts);
+		return;
+	}
+
+	client->before_state = client->current_state;
+	client->current_state = TTS_STATE_READY;
+
+	if (NULL != client->state_changed_cb) {
+		tts_client_use_callback(client);
+		client->state_changed_cb(client->tts, client->before_state, client->current_state, client->state_changed_user_data);
+		tts_client_not_use_callback(client);
+		SLOG(LOG_DEBUG, TAG_TTSC, "State changed callback is called");
+	}
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+	SLOG(LOG_DEBUG, TAG_TTSC, " ");
+
+	return;
+}
+
+int tts_stop_aync(tts_h tts)
+{
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
+	}
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "===== Stop tts");
+
+	if (NULL == tts) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input handle is null");
+		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+		SLOG(LOG_DEBUG, TAG_TTSC, " ");
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+
+	tts_client_s* client = tts_client_get(tts);
+
+	if (NULL == client) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] A handle is not valid");
+		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+		SLOG(LOG_DEBUG, TAG_TTSC, " ");
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+
+	if (TTS_STATE_CREATED == client->current_state) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Current state is 'CREATED'.");
+		return TTS_ERROR_INVALID_STATE;
+	}
+
+	if (false == g_screen_reader && TTS_MODE_SCREEN_READER == client->mode) {
+		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] Screen reader option is NOT available. Ignore this request");
+		return TTS_ERROR_INVALID_STATE;
+	}
+
+	ecore_main_loop_thread_safe_call_async(__tts_stop_async, (void*)tts);
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+	SLOG(LOG_DEBUG, TAG_TTSC, " ");
+
+	return TTS_ERROR_NONE;
+}
 
 int tts_stop(tts_h tts)
 {
@@ -1014,6 +1211,106 @@ int tts_stop(tts_h tts)
 	return TTS_ERROR_NONE;
 }
 
+static void __tts_pause_async(void *data)
+{
+	tts_h tts = (tts_h)data;
+	tts_client_s* client = tts_client_get(tts);
+
+	/* check handle */
+	if (NULL == client) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] A handle is not valid");
+		return;
+	}
+
+	int ret = -1;
+	int count = 0;
+	while (0 != ret) {
+		ret = tts_dbus_request_pause(client->uid);
+		if (0 != ret) {
+			if (TTS_ERROR_TIMED_OUT != ret) {
+				SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] result : %s", __tts_get_error_code(ret));
+				break;
+			} else {
+				SLOG(LOG_WARN, TAG_TTSC, "[WARNING] retry pause : %s", __tts_get_error_code(ret));
+				usleep(10000);
+				count++;
+				if (TTS_RETRY_COUNT == count) {
+					SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to request");
+					break;
+				}
+			}
+		}
+	}
+
+	if (0 != ret) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to pause tts : %s", __tts_get_error_code(ret));
+
+		client->reason = ret;
+		client->utt_id = -1;
+
+		ecore_timer_add(0, __tts_notify_error, client->tts);
+		return;
+	}
+
+	client->before_state = client->current_state;
+	client->current_state = TTS_STATE_PAUSED;
+
+	if (NULL != client->state_changed_cb) {
+		tts_client_use_callback(client);
+		client->state_changed_cb(client->tts, client->before_state, client->current_state, client->state_changed_user_data);
+		tts_client_not_use_callback(client);
+		SLOG(LOG_DEBUG, TAG_TTSC, "State changed callback is called");
+	}
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+	SLOG(LOG_DEBUG, TAG_TTSC, " ");
+
+	return;
+}
+
+int tts_pause_async(tts_h tts)
+{
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
+	}
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "===== Pause tts");
+
+	if (NULL == tts) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input handle is null");
+		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+		SLOG(LOG_DEBUG, TAG_TTSC, " ");
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+
+	tts_client_s* client = tts_client_get(tts);
+
+	if (NULL == client) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] A handle is not valid");
+		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+		SLOG(LOG_DEBUG, TAG_TTSC, " ");
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+
+	if (TTS_STATE_PLAYING != client->current_state) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[Error] The Current state is NOT 'playing'. So this request should be not running.");
+		SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+		SLOG(LOG_DEBUG, TAG_TTSC, " ");
+		return TTS_ERROR_INVALID_STATE;
+	}
+
+	if (false == g_screen_reader && TTS_MODE_SCREEN_READER == client->mode) {
+		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] Screen reader option is NOT available. Ignore this request");
+		return TTS_ERROR_INVALID_STATE;
+	}
+
+	ecore_main_loop_thread_safe_call_async(__tts_pause_async, (void*)tts);
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+	SLOG(LOG_DEBUG, TAG_TTSC, " ");
+
+	return TTS_ERROR_NONE;
+}
 
 int tts_pause(tts_h tts)
 {
