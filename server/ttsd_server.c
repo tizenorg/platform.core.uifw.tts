@@ -734,7 +734,8 @@ int ttsd_server_add_queue(int uid, const char* text, const char* lang, int voice
 
 Eina_Bool __send_interrupt_client(void *data)
 {
-	int uid = (int)data;
+	intptr_t puid = (intptr_t)data;
+	int uid = (int)puid;
 
 	int pid = ttsd_data_get_pid(uid);
 
@@ -785,7 +786,8 @@ int ttsd_server_play(int uid)
 				SLOG(LOG_WARN, get_tag(), "[Server ERROR] Fail to player stop : uid (%d)", current_uid);
 			}
 
-			ecore_timer_add(0, __send_interrupt_client, (void*)current_uid);
+			intptr_t pcurrent_uid = (intptr_t)current_uid;
+			ecore_timer_add(0, __send_interrupt_client, (void*)pcurrent_uid);
 		} else {
 			/* Default mode policy of interrupt is "Pause" */
 
@@ -800,7 +802,8 @@ int ttsd_server_play(int uid)
 			/* change state */
 			ttsd_data_set_client_state(current_uid, APP_STATE_PAUSED);
 
-			ecore_timer_add(0, __send_interrupt_client, (void*)current_uid);
+			intptr_t pcurrent_uid = (intptr_t)current_uid;
+			ecore_timer_add(0, __send_interrupt_client, (void*)pcurrent_uid);
 		}
 	}
 

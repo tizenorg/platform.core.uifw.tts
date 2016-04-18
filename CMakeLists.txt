@@ -27,6 +27,7 @@ SET(INCLUDEDIR "${PREFIX}/include")
 SET(VERSION 0.2.43)
 
 ADD_DEFINITIONS("-DTTS_LIBDIR=\"${LIBDIR}\"")
+ADD_DEFINITIONS("-Werror")
 
 ## Include common directory ##
 INCLUDE_DIRECTORIES("${CMAKE_SOURCE_DIR}/common")
