@@ -487,7 +487,7 @@ static int __internal_update_engine_list()
 				if (NULL != filepath) {
 					snprintf(filepath, file_size, "%s/%s", TTS_DEFAULT_ENGINE, dirp->d_name);
 				} else {
-					SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not enough memory!!" );
+					SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not enough memory!!");
 					continue;
 				}
 

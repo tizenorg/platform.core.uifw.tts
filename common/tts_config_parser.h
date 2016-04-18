@@ -28,12 +28,12 @@ typedef enum {
 	TTS_CONFIG_VOICE_TYPE_FEMALE = 2,	/**< Female */
 	TTS_CONFIG_VOICE_TYPE_CHILD = 3,	/**< Child */
 	TTS_CONFIG_VOICE_TYPE_USER_DEFINED = 4	/**< Engine defined */
-}tts_config_voice_type_e;
+} tts_config_voice_type_e;
 
 typedef struct {
 	char*	language;
 	int	type;
-}tts_config_voice_s;
+} tts_config_voice_s;
 
 typedef struct {
 	char*	name;
@@ -41,7 +41,7 @@ typedef struct {
 	char*	setting;
 	GSList*	voices;
 	bool	pitch_support;
-}tts_engine_info_s;
+} tts_engine_info_s;
 
 typedef struct {
 	char*	engine_id;
@@ -51,7 +51,7 @@ typedef struct {
 	int	type;
 	int	speech_rate;
 	int	pitch;
-}tts_config_s;
+} tts_config_s;
 
 
 /* Get engine information */

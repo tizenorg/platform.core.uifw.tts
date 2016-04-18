@@ -26,19 +26,17 @@ typedef enum {
 	APP_STATE_READY,
 	APP_STATE_PLAYING,
 	APP_STATE_PAUSED
-}app_state_e;
+} app_state_e;
 
-typedef struct 
-{
+typedef struct {
 	int	utt_id;	
 	char*	text;
 	char*	lang;
 	int	vctype;
 	int	speed;
-}speak_data_s;
+} speak_data_s;
 
-typedef struct 
-{
+typedef struct {
 	int		utt_id;
 	void*		data;
 	unsigned int 	data_size;
@@ -47,7 +45,7 @@ typedef struct
 	ttsp_audio_type_e	audio_type;
 	int			rate;
 	int			channels;
-}sound_data_s;
+} sound_data_s;
 
 typedef void (* ttsd_used_voice_cb)(const char* lang, int type);
 

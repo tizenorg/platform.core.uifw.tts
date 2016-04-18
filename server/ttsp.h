@@ -39,7 +39,7 @@ typedef enum {
 	TTSP_ERROR_INVALID_STATE	= -0x0100021,	/**< Invalid state */
 	TTSP_ERROR_INVALID_VOICE	= -0x0100022,	/**< Invalid voice */
 	TTSP_ERROR_OPERATION_FAILED	= -0x0100025	/**< Operation failed */
-}ttsp_error_e;
+} ttsp_error_e;
 
 /**
 * @brief Enumerations of audio type.
@@ -48,7 +48,7 @@ typedef enum {
 	TTSP_AUDIO_TYPE_RAW_S16 = 0,	/**< Signed 16-bit audio sample */
 	TTSP_AUDIO_TYPE_RAW_U8,		/**< Unsigned 8-bit audio sample */
 	TTSP_AUDIO_TYPE_MAX
-}ttsp_audio_type_e;
+} ttsp_audio_type_e;
 
 /**
 * @brief Enumerations of result event type.
@@ -58,7 +58,7 @@ typedef enum {
 	TTSP_RESULT_EVENT_START		= 1,  /**< event when the sound data is first data by callback function */
 	TTSP_RESULT_EVENT_CONTINUE	= 2,  /**< event when the next sound data exist, not first and not last */
 	TTSP_RESULT_EVENT_FINISH	= 3   /**< event when the sound data is last data or sound data is only one result */
-}ttsp_result_event_e;
+} ttsp_result_event_e;
 
 /**
 * @brief Enumerations of TTS mode.
@@ -67,7 +67,7 @@ typedef enum {
 	TTSP_MODE_DEFAULT	= 0,	/**< Default mode for normal application */
 	TTSP_MODE_NOTIFICATION	= 1,	/**< Notification mode */
 	TTSP_MODE_SCREEN_READER	= 2	/**< Accessibiliity mode */
-}ttsp_mode_e;
+} ttsp_mode_e;
 
 /** 
 * @brief Defines of voice type.
@@ -125,7 +125,7 @@ typedef bool (*ttspe_supported_voice_cb)(const char* language, int type, void* u
 * 
 * @see ttspe_deinitialize()
 */
-typedef int (* ttspe_initialize)(ttspe_result_cb callback);
+typedef int (*ttspe_initialize)(ttspe_result_cb callback);
 
 /**
 * @brief Deinitializes the engine.
@@ -136,7 +136,7 @@ typedef int (* ttspe_initialize)(ttspe_result_cb callback);
 * 
 * @see ttspe_initialize()
 */
-typedef int (* ttspe_deinitialize)(void);
+typedef int (*ttspe_deinitialize)(void);
 
 /**
 * @brief Retrieves all supported voices of the engine using callback function.
@@ -153,7 +153,7 @@ typedef int (* ttspe_deinitialize)(void);
 *
 * @see ttspe_supported_voice_cb()
 */
-typedef int (* ttspe_foreach_supported_voices)(ttspe_supported_voice_cb callback, void* user_data);
+typedef int (*ttspe_foreach_supported_voices)(ttspe_supported_voice_cb callback, void* user_data);
 
 /**
 * @brief Checks whether the voice is valid or not.
@@ -165,7 +165,7 @@ typedef int (* ttspe_foreach_supported_voices)(ttspe_supported_voice_cb callback
 *
 * @see ttspe_foreach_supported_voices()
 */
-typedef bool (* ttspe_is_valid_voice)(const char* language, int type);
+typedef bool (*ttspe_is_valid_voice)(const char* language, int type);
 
 /**
 * @brief Sets default pitch.
@@ -178,7 +178,7 @@ typedef bool (* ttspe_is_valid_voice)(const char* language, int type);
 * @retval #TTSP_ERROR_INVALID_STATE Not initialized
 * @retval #TTSP_ERROR_OPERATION_FAILED Fail
 */
-typedef int (* ttspe_set_pitch)(int pitch);
+typedef int (*ttspe_set_pitch)(int pitch);
 
 /**
 * @brief Load voice of the engine.
@@ -196,7 +196,7 @@ typedef int (* ttspe_set_pitch)(int pitch);
 *
 * @see ttspe_unload_voice()
 */
-typedef int (* ttspe_load_voice)(const char* language, int type);
+typedef int (*ttspe_load_voice)(const char* language, int type);
 
 /**
 * @brief Unload voice of the engine.
@@ -213,7 +213,7 @@ typedef int (* ttspe_load_voice)(const char* language, int type);
 *
 * @see ttspe_load_voice()
 */
-typedef int (* ttspe_unload_voice)(const char* language, int type);
+typedef int (*ttspe_unload_voice)(const char* language, int type);
 
 /**
 * @brief Starts voice synthesis, asynchronously.
@@ -237,7 +237,7 @@ typedef int (* ttspe_unload_voice)(const char* language, int type);
 * @see ttspe_result_cb()
 * @see ttspe_cancel_synthesis()
 */
-typedef int (* ttspe_start_synthesis)(const char* language, int type, const char* text, int speed, void* user_data);
+typedef int (*ttspe_start_synthesis)(const char* language, int type, const char* text, int speed, void* user_data);
 
 /**
 * @brief Cancels voice synthesis.
@@ -250,7 +250,7 @@ typedef int (* ttspe_start_synthesis)(const char* language, int type, const char
 *
 * @see ttspe_start_synthesis()
 */
-typedef int (* ttspe_cancel_synthesis)(void);
+typedef int (*ttspe_cancel_synthesis)(void);
 
 
 /**
@@ -263,7 +263,7 @@ typedef int (* ttspe_cancel_synthesis)(void);
 * @retval #TTSP_ERROR_INVALID_PARAMETER Invalid parameter
 *
 */
-typedef int (* ttspd_get_mode)(ttsp_mode_e* mode);
+typedef int (*ttspd_get_mode)(ttsp_mode_e* mode);
 
 /**
 * @brief Gets the speed range.
@@ -277,7 +277,7 @@ typedef int (* ttspd_get_mode)(ttsp_mode_e* mode);
 * @retval #TTSP_ERROR_INVALID_PARAMETER Invalid parameter
 *
 */
-typedef int (* ttspd_get_speed_range)(int* min, int* normal, int* max);
+typedef int (*ttspd_get_speed_range)(int* min, int* normal, int* max);
 
 /**
 * @brief Gets the pitch range.
@@ -291,7 +291,7 @@ typedef int (* ttspd_get_speed_range)(int* min, int* normal, int* max);
 * @retval #TTSP_ERROR_INVALID_PARAMETER Invalid parameter
 *
 */
-typedef int (* ttspd_get_pitch_range)(int* min, int* normal, int* max);
+typedef int (*ttspd_get_pitch_range)(int* min, int* normal, int* max);
 
 /**
 * @brief A structure of the engine functions
@@ -327,7 +327,7 @@ typedef struct {
 	ttspd_get_mode			get_mode;		/**< Get mode */
 	ttspd_get_speed_range		get_speed_range;	/**< Get speed range */
 	ttspd_get_pitch_range		get_pitch_range;	/**< Get pitch range */
-}ttspd_funcs_s;
+} ttspd_funcs_s;
 
 /**
 * @brief Loads the engine by the daemon.

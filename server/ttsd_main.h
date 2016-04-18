@@ -50,29 +50,29 @@ typedef enum {
 	TTSD_ERROR_ENGINE_NOT_FOUND	= TIZEN_ERROR_TTS | 0x03,	/**< No available engine */
 	TTSD_ERROR_OPERATION_FAILED	= TIZEN_ERROR_TTS | 0x04,	/**< Operation failed */
 	TTSD_ERROR_AUDIO_POLICY_BLOCKED	= TIZEN_ERROR_TTS | 0x05	/**< Audio policy blocked */
-}ttsd_error_e;
+} ttsd_error_e;
 
 typedef enum {
 	TTSD_MODE_DEFAULT = 0,		/**< Default mode for normal application */
 	TTSD_MODE_NOTIFICATION,		/**< Notification mode */
 	TTSD_MODE_SCREEN_READER		/**< Screen reader mode */
-}ttsd_mode_e;
+} ttsd_mode_e;
 
 typedef enum {
 	TTSD_INTERRUPTED_PAUSED = 0,	/**< Current state change 'Pause' */
 	TTSD_INTERRUPTED_STOPPED	/**< Current state change 'Ready' */
-}ttsd_interrupted_code_e;
+} ttsd_interrupted_code_e;
 
 typedef struct {
 	char* engine_id;
 	char* engine_name;
 	char* ug_name;
-}engine_s;
+} engine_s;
 
 typedef struct {
 	char* language;
 	int type;
-}voice_s;
+} voice_s;
 
 /* get daemon mode : default, notification or screen reader */
 ttsd_mode_e ttsd_get_mode();

@@ -61,7 +61,7 @@ typedef enum {
 	TTS_MODE_DEFAULT	= 0,	/**< Default mode for normal application */
 	TTS_MODE_NOTIFICATION	= 1,	/**< Notification mode */
 	TTS_MODE_SCREEN_READER	= 2	/**< Accessibiliity mode */
-}tts_mode_e;
+} tts_mode_e;
 
 /** 
  * @brief Enumerations for state.
@@ -72,7 +72,7 @@ typedef enum {
 	TTS_STATE_READY		= 1,	/**< 'READY' state */
 	TTS_STATE_PLAYING	= 2,	/**< 'PLAYING' state */
 	TTS_STATE_PAUSED	= 3	/**< 'PAUSED' state*/
-}tts_state_e;
+} tts_state_e;
 
 /** 
  * @brief Definitions for automatic speaking speed.

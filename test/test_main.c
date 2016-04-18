@@ -188,7 +188,7 @@ static void __tts_test_utt_completed_cb(tts_h tts, int utt_id, void* user_data)
 	return;
 }
 
-int main (int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	if (1 == argc || 5 < argc) {
 		SLOG(LOG_DEBUG, tts_tag(), "Please check parameter");
@@ -203,7 +203,7 @@ int main (int argc, char *argv[])
 
 	while (NULL != argv[n]) {
 
-		if(!strcmp("-h", argv[n])) {
+		if (!strcmp("-h", argv[n])) {
 			SLOG(LOG_DEBUG, tts_tag(), " ==========================================");
 			SLOG(LOG_DEBUG, tts_tag(), "  TTS test usage");
 			SLOG(LOG_DEBUG, tts_tag(), " ==========================================");
@@ -230,7 +230,7 @@ int main (int argc, char *argv[])
 		else if (!strcmp("-f", argv[n])) {
 			src_path = TTS_STRDUP(argv[n+1]);
 			SLOG(LOG_ERROR, tts_tag(), "File path : %s", src_path);
-			if(!__tts_test_get_text_from_file(src_path, &g_text)) {
+			if (!__tts_test_get_text_from_file(src_path, &g_text)) {
 				return 0;
 			}
 		}

@@ -26,7 +26,7 @@ typedef enum {
 	TTS_CONFIG_TYPE_VOICE,
 	TTS_CONFIG_TYPE_SPEED,
 	TTS_CONFIG_TYPE_PITCH
-}tts_config_type_e;
+} tts_config_type_e;
 
 typedef void (*ttsd_config_changed_cb)(tts_config_type_e type, const char* str_param, int int_param);
 

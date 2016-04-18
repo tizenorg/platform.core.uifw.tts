@@ -745,12 +745,12 @@ int tts_add_text(tts_h tts, const char* text, const char* language, int voice_ty
 		return TTS_ERROR_NOT_SUPPORTED;
 	}
 
-	if( speed < 0 ) {
+	if (speed < 0) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Speed should not be negative(%d)", speed);
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
 
-	if( voice_type < 0 ) {
+	if (voice_type < 0) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Voice type should not be negative(%d)", voice_type);
 		return TTS_ERROR_INVALID_PARAMETER;
 	}

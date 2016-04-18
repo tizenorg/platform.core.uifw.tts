@@ -55,7 +55,7 @@ typedef struct {
 	/* callback data */
 	int		utt_id;
 	int		reason;
-}tts_client_s;
+} tts_client_s;
 
 int tts_client_new(tts_h* tts);
 

@@ -43,7 +43,7 @@ typedef enum {
 	TTS_CONFIG_SPEED_FAST		= 11,	/**< Fast */
 	TTS_CONFIG_SPEED_VERY_FAST	= 14,	/**< Very fast */
 	TTS_CONFIG_SPEED_MAX		= 15	/**< Max value */
-}tts_config_speed_e;
+} tts_config_speed_e;
 
 
 typedef bool (*tts_config_supported_engine_cb)(const char* engine_id, const char* engine_name, const char* setting, void* user_data);

@@ -23,13 +23,13 @@ typedef enum {
 	PLAYER_END_OF_PLAYING,
 	PLAYER_EMPTY_SOUND_QUEUE,
 	PLAYER_ERROR
-}player_event_e;
+} player_event_e;
 
 typedef enum {
 	TTSD_PLAYER_STATE_NULL,
 	TTSD_PLAYER_STATE_PAUSED,
 	TTSD_PLAYER_STATE_PLAYING
-}ttsd_player_state_e;
+} ttsd_player_state_e;
 
 /*
 * TTSD Player Interfaces 

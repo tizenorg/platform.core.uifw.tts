@@ -41,7 +41,7 @@ typedef struct {
 	bool			is_paused_data;
 	int			idx;
 	sound_data_s*		paused_data;
-}player_s;
+} player_s;
 
 #define SOUND_BUFFER_LENGTH	2048
 
