@@ -911,6 +911,15 @@ int tts_config_mgr_initialize(int uid)
 		g_config_client_list = g_slist_append(g_config_client_list, temp_client);
 	}
 
+	if (0 != access(TTS_CONFIG_BASE, F_OK)) {		
+		if (0 != mkdir(TTS_CONFIG_BASE, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)) {
+			SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to make directory : %s", TTS_CONFIG_BASE);
+			return -1;
+		} else {
+			SLOG(LOG_DEBUG, tts_tag(), "Success to make directory : %s", TTS_CONFIG_BASE);
+		}
+	}
+
 	if (0 != __tts_config_mgr_get_engine_info()) {
 		SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to get engine info");
 		__tts_config_release_client(uid);
