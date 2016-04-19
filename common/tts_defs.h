@@ -68,6 +68,7 @@ extern "C" {
 * Defines for configuration
 *******************************************************************************************/
 
+#define TTS_CONFIG_BASE			tzplatform_mkpath(TZ_USER_HOME, "/share/.voice")
 #define TTS_CONFIG			tzplatform_mkpath(TZ_USER_HOME, "/share/.voice/tts-config.xml")
 #define TTS_DEFAULT_CONFIG		tzplatform_mkpath(TZ_SYS_RO_SHARE, "/voice/tts/1.0/tts-config.xml")
 
