@@ -77,6 +77,8 @@ int tts_client_new(tts_h* tts)
 
 	client->cb_ref_count = 0;
 
+	client->conn_timer = NULL;
+
 	g_client_list = g_list_append(g_client_list, client);
 
 	*tts = temp;

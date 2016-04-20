@@ -15,6 +15,8 @@
 #ifndef __TTS_CLIENT_H_
 #define __TTS_CLIENT_H_
 
+#include <Ecore.h>
+
 #include "tts.h"
 #include "tts_config_mgr.h"
 #include "tts_main.h"
@@ -55,6 +57,9 @@ typedef struct {
 	/* callback data */
 	int		utt_id;
 	int		reason;
+
+	/* connection */
+	Ecore_Timer*	conn_timer;
 } tts_client_s;
 
 int tts_client_new(tts_h* tts);

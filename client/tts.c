@@ -27,8 +27,6 @@
 #include "tts_main.h"
 
 
-static Ecore_Timer* g_connect_timer = NULL;
-
 static bool g_screen_reader;
 
 static int g_feature_enabled = -1;
@@ -251,9 +249,10 @@ int tts_destroy(tts_h tts)
 		client->current_state = TTS_STATE_CREATED;
 
 	case TTS_STATE_CREATED:
-		if (NULL != g_connect_timer) {
+		if (NULL != client->conn_timer) {
 			SLOG(LOG_DEBUG, TAG_TTSC, "Connect Timer is deleted");
-			ecore_timer_del(g_connect_timer);
+			ecore_timer_del(client->conn_timer);
+			client->conn_timer = NULL;
 		}
 		/* Free resources */
 		tts_client_destroy(tts);
@@ -384,7 +383,6 @@ static Eina_Bool __tts_connect_daemon(void *data)
 	/* check handle */
 	if (NULL == client) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] A handle is not valid");
-		g_connect_timer = NULL;
 		return EINA_FALSE;
 	}
 
@@ -406,7 +404,7 @@ static Eina_Bool __tts_connect_daemon(void *data)
 		client->utt_id = -1;
 
 		ecore_timer_add(0, __tts_notify_error, (void*)client->tts);
-		g_connect_timer = NULL;
+		client->conn_timer = NULL;
 		return EINA_FALSE;
 
 	} else if (TTS_ERROR_NONE != ret) {
@@ -417,7 +415,7 @@ static Eina_Bool __tts_connect_daemon(void *data)
 		/* success to connect tts-daemon */
 	}
 
-	g_connect_timer = NULL;
+	client->conn_timer = NULL;
 
 	client = tts_client_get(tts);
 	/* check handle */
@@ -469,7 +467,7 @@ int tts_prepare(tts_h tts)
 		return TTS_ERROR_INVALID_STATE;
 	}
 
-	g_connect_timer = ecore_timer_add(0, __tts_connect_daemon, (void*)tts);
+	client->conn_timer = ecore_timer_add(0, __tts_connect_daemon, (void*)tts);
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
 	SLOG(LOG_DEBUG, TAG_TTSC, " ");
