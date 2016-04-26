@@ -208,10 +208,10 @@ int ttsd_config_save_error(int uid, int uttid, const char* lang, int vctype, con
 
 	SLOG(LOG_ERROR, get_tag(), "uid(%d) uttid(%d)", uid, uttid);
 	
-	if (NULL != func) 	SLOG(LOG_ERROR, get_tag(), "Function(%s) Line(%d)", func, line);
-	if (NULL != message) 	SLOG(LOG_ERROR, get_tag(), "Message(%s)", message);
-	if (NULL != lang) 	SLOG(LOG_ERROR, get_tag(), "Lang(%s), type(%d)", lang, vctype);
-	if (NULL != text) 	SLOG(LOG_ERROR, get_tag(), "Text(%s)", text);
+	if (NULL != func)	SLOG(LOG_ERROR, get_tag(), "Function(%s) Line(%d)", func, line);
+	if (NULL != message)	SLOG(LOG_ERROR, get_tag(), "Message(%s)", message);
+	if (NULL != lang)	SLOG(LOG_ERROR, get_tag(), "Lang(%s), type(%d)", lang, vctype);
+	if (NULL != text)	SLOG(LOG_ERROR, get_tag(), "Text(%s)", text);
 
 	SLOG(LOG_ERROR, get_tag(), "==================================================");
 

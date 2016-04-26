@@ -39,7 +39,7 @@ typedef struct {
 typedef struct {
 	int		utt_id;
 	void*		data;
-	unsigned int 	data_size;
+	unsigned int	data_size;
 
 	ttsp_result_event_e	event;
 	ttsp_audio_type_e	audio_type;

@@ -52,7 +52,7 @@ int __data_show_list()
 
 	SLOG(LOG_DEBUG, get_tag(), "----- client list -----");
 
-	for (int i=0; i<vsize; i++) {
+	for (int i=0; i < vsize; i++) {
 		SECURE_SLOG(LOG_DEBUG, get_tag(), "[%dth] pid(%d), uid(%d), state(%d)", i, g_app_list[i].pid, g_app_list[i].uid, g_app_list[i].state);
 	}
 
@@ -141,7 +141,7 @@ int ttsd_data_new_client(int pid, int uid)
 	app.utt_id_stopped = 0;
 	app.state = APP_STATE_READY;
 
-	g_app_list.insert( g_app_list.end(), app);
+	g_app_list.insert(g_app_list.end(), app);
 
 #ifdef DATA_DEBUG
 	__data_show_list();
@@ -177,7 +177,7 @@ int ttsd_data_is_client(int uid)
 {
 	int vsize = g_app_list.size();
 
-	for (int i=0; i<vsize; i++) {
+	for (int i = 0; i < vsize; i++) {
 		if(g_app_list[i].uid == uid) {
 			return i;		
 		}
@@ -511,7 +511,7 @@ int ttsd_data_set_client_state(int uid, app_state_e state)
 	/* The client of playing state of all clients is only one. need to check state. */
 	if (APP_STATE_PLAYING == state) {
 		int vsize = g_app_list.size();
-		for (int i=0 ; i<vsize ; i++) {
+		for (int i = 0; i < vsize; i++) {
 			if(g_app_list[i].state == APP_STATE_PLAYING) {
 				SLOG(LOG_ERROR, get_tag(), "[DATA ERROR] A playing client has already existed.");	
 				return -1;
@@ -528,7 +528,7 @@ int ttsd_data_get_current_playing()
 {
 	int vsize = g_app_list.size();
 
-	for (int i=0; i<vsize; i++) {
+	for (int i = 0; i < vsize; i++) {
 		if (APP_STATE_PLAYING == g_app_list[i].state) {
 			SLOG(LOG_DEBUG, get_tag(), "[DATA] uid(%d) is playing", g_app_list[i].uid);
 			return g_app_list[i].uid;
@@ -598,7 +598,7 @@ int ttsd_data_is_current_playing()
 {
 	int vsize = g_app_list.size();
 
-	for (int i=0; i<vsize; i++) {
+	for (int i = 0; i < vsize; i++) {
 		if(g_app_list[i].state == APP_STATE_PLAYING) {
 			return g_app_list[i].uid;		
 		}

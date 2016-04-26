@@ -11,7 +11,7 @@
 *  limitations under the License.
 */
 
- 
+
 #ifndef __TTS_CONFIG_PARSER_H_
 #define __TTS_CONFIG_PARSER_H_
 

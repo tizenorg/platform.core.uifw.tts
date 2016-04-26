@@ -702,11 +702,11 @@ int tts_get_state(tts_h tts, tts_state_e* state)
 	*state = client->current_state;
 
 	switch (*state) {
-		case TTS_STATE_CREATED:	SLOG(LOG_DEBUG, TAG_TTSC, "Current state is 'Created'");	break;
-		case TTS_STATE_READY:	SLOG(LOG_DEBUG, TAG_TTSC, "Current state is 'Ready'");		break;
-		case TTS_STATE_PLAYING:	SLOG(LOG_DEBUG, TAG_TTSC, "Current state is 'Playing'");	break;
-		case TTS_STATE_PAUSED:	SLOG(LOG_DEBUG, TAG_TTSC, "Current state is 'Paused'");		break;
-		default:		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Invalid value");		break;
+	case TTS_STATE_CREATED:	SLOG(LOG_DEBUG, TAG_TTSC, "Current state is 'Created'");	break;
+	case TTS_STATE_READY:	SLOG(LOG_DEBUG, TAG_TTSC, "Current state is 'Ready'");		break;
+	case TTS_STATE_PLAYING:	SLOG(LOG_DEBUG, TAG_TTSC, "Current state is 'Playing'");	break;
+	case TTS_STATE_PAUSED:	SLOG(LOG_DEBUG, TAG_TTSC, "Current state is 'Paused'");		break;
+	default:		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Invalid value");		break;
 	}
 
 	return TTS_ERROR_NONE;

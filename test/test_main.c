@@ -17,7 +17,7 @@
 #include <tts.h>
 #include <dlog.h>
 
-#define TTS_STRDUP(src) 		((src != NULL) ? strdup(src) : NULL)
+#define TTS_STRDUP(src)		((src != NULL) ? strdup(src) : NULL)
 
 static tts_h g_tts;
 static char* g_text = NULL;

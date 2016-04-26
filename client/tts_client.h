@@ -11,7 +11,7 @@
 *  limitations under the License.
 */
 
- 
+
 #ifndef __TTS_CLIENT_H_
 #define __TTS_CLIENT_H_
 
