@@ -92,6 +92,10 @@ int __tts_config_mgr_check_engine_is_valid(const char* engine_id)
 	iter = g_slist_nth(g_engine_list, 0);
 	engine_info = iter->data;
 
+	if (NULL == g_config_info) {
+		return TTS_CONFIG_ERROR_OPERATION_FAILED;
+	}
+
 	if (NULL != g_config_info->engine_id)	free(g_config_info->engine_id);
 	if (NULL != g_config_info->setting)	free(g_config_info->setting);
 
@@ -112,7 +116,7 @@ int __tts_config_mgr_check_engine_is_valid(const char* engine_id)
 		/*Get handle data from list*/
 		voice = iter_voice->data;
 
-		if (NULL != voice && NULL != g_config_info) {
+		if (NULL != voice) {
 			if (NULL != voice->language && NULL != g_config_info->language) {
 				if (0 == strcmp(voice->language, g_config_info->language)) {
 					if (voice->type == g_config_info->type) {
