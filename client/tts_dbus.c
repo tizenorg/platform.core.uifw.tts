@@ -32,7 +32,7 @@ static DBusConnection* g_conn_listener = NULL;
 static Ecore_Fd_Handler* g_dbus_fd_handler = NULL;
 
 
-extern int __tts_cb_error(int uid, tts_error_e reason, int utt_id);
+extern int __tts_cb_error(int uid, tts_error_e reason, int utt_id, char *err_msg);
 
 extern int __tts_cb_set_state(int uid, int state);
 
@@ -115,20 +115,22 @@ static Eina_Bool listener_event_callback(void* data, Ecore_Fd_Handler *fd_handle
 		int uid;
 		int uttid;
 		int reason;
+		char* err_msg;
 
 		dbus_message_get_args(msg, &err,
 			DBUS_TYPE_INT32, &uid,
 			DBUS_TYPE_INT32, &uttid,
 			DBUS_TYPE_INT32, &reason,
+			DBUS_TYPE_INT32, &err_msg,
 			DBUS_TYPE_INVALID);
 
 		if (dbus_error_is_set(&err)) {
 			SLOG(LOG_ERROR, TAG_TTSC, "<<<< Get Error message - Get arguments error (%s)", err.message);
 			dbus_error_free(&err);
-		}
+		} else { 
+			SLOG(LOG_ERROR, TAG_TTSC, "<<<< Get Error message : uid(%d), error(%d), uttid(%d), err_msg(%s)", uid, reason, uttid, (NULL == err_msg) ? "NULL" : err_msg);
+			__tts_cb_error(uid, reason, uttid, err_msg);
 
-		if (0 == __tts_cb_error(uid, reason, uttid)) {
-			SLOG(LOG_ERROR, TAG_TTSC, "<<<< Get Error message : uid(%d), error(%d), uttid(%d)", uid, reason, uttid);
 		}
 	} /* TTSD_SIGNAL_ERROR */
 

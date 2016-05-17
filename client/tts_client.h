@@ -57,6 +57,7 @@ typedef struct {
 	/* callback data */
 	int		utt_id;
 	int		reason;
+	char*		err_msg;
 
 	/* connection */
 	Ecore_Timer*	conn_timer;

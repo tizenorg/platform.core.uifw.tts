@@ -172,7 +172,7 @@ int ttsdc_send_set_state_message(int pid, int uid, int state)
 	return ttsdc_send_message(pid, uid, state, TTSD_METHOD_SET_STATE);
 }
 
-int ttsdc_send_error_message(int pid, int uid, int uttid, int reason)
+int ttsdc_send_error_message(int pid, int uid, int uttid, int reason, char* err_msg)
 {
 	if (NULL == g_conn_sender) {
 		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] Dbus connection is not available");
@@ -193,9 +193,10 @@ int ttsdc_send_error_message(int pid, int uid, int uttid, int reason)
 	}
 
 	dbus_message_append_args(msg,
-		DBUS_TYPE_INT32, &uid, 
-		DBUS_TYPE_INT32, &uttid, 
-		DBUS_TYPE_INT32, &reason, 
+		DBUS_TYPE_INT32, &uid,
+		DBUS_TYPE_INT32, &uttid,
+		DBUS_TYPE_INT32, &reason,
+		DBUS_TYPE_INT32, &err_msg,
 		DBUS_TYPE_INVALID);
 
 	dbus_message_set_no_reply(msg, TRUE);
@@ -203,8 +204,8 @@ int ttsdc_send_error_message(int pid, int uid, int uttid, int reason)
 	if (!dbus_connection_send(g_conn_sender, msg, NULL)) {
 		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] <<<< error message : Out Of Memory !");
 	} else {
-		SLOG(LOG_DEBUG, get_tag(), "<<<< Send error message : uid(%d), reason(%s), uttid(%d)",
-			 uid, __ttsd_get_error_code(reason), uttid);
+		SLOG(LOG_DEBUG, get_tag(), "<<<< Send error message : uid(%d), reason(%s), uttid(%d), err_msg(%d)",
+			 uid, __ttsd_get_error_code(reason), uttid, (NULL == err_msg) ? "NULL" : err_msg);
 		dbus_connection_flush(g_conn_sender);
 	}
 
