@@ -29,7 +29,7 @@ int ttsdc_send_utt_start_message(int pid, int uid, int uttid);
 
 int ttsdc_send_utt_finish_message(int pid, int uid, int uttid);
 
-int ttsdc_send_error_message(int pid, int uid, int uttid, int reason);
+int ttsdc_send_error_message(int pid, int uid, int uttid, int reason, char* err_msg);
 
 int ttsdc_send_set_state_message(int pid, int uid, int state);
 

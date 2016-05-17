@@ -31,6 +31,8 @@ static bool g_screen_reader;
 
 static int g_feature_enabled = -1;
 
+static bool g_err_callback_status = false;
+
 /* Function definition */
 static Eina_Bool __tts_notify_state_changed(void *data);
 static Eina_Bool __tts_notify_error(void *data);
@@ -737,6 +739,37 @@ int tts_get_speed_range(tts_h tts, int* min, int* normal, int* max)
 	return TTS_ERROR_NONE;
 }
 
+int tts_get_error_message(tts_h tts, char** err_msg)
+{
+	if(0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
+	}
+
+	if (NULL == tts || NULL == err_msg) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input parameter is null");
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+
+	tts_client_s* client = tts_client_get(tts);
+
+	if (NULL == client) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Get state : A handle is not valid");
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+
+	if (NULL != client->err_msg) {
+		*err_msg = strdup(client->err_msg);
+		SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Error msg (%s)", *err_msg);
+	} else {
+		SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Error msg (NULL)");
+	}
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+	SLOG(LOG_DEBUG, TAG_TTSC, " ");
+
+	return TTS_ERROR_NONE;
+}
+
 int tts_add_text(tts_h tts, const char* text, const char* language, int voice_type, int speed, int* utt_id)
 {
 	if (0 != __tts_get_feature_enabled()) {
@@ -1399,7 +1432,9 @@ static Eina_Bool __tts_notify_error(void *data)
 	if (NULL != client->error_cb) {
 		SLOG(LOG_DEBUG, TAG_TTSC, "Call callback function of error");
 		tts_client_use_callback(client);
+		g_err_callback_status = true;
 		client->error_cb(client->tts, client->utt_id, client->reason, client->error_user_data);
+		g_err_callback_status = false;
 		tts_client_not_use_callback(client);
 	} else {
 		SLOG(LOG_WARN, TAG_TTSC, "No registered callback function of error ");
@@ -1408,7 +1443,7 @@ static Eina_Bool __tts_notify_error(void *data)
 	return EINA_FALSE;
 }
 
-int __tts_cb_error(int uid, tts_error_e reason, int utt_id)
+int __tts_cb_error(int uid, tts_error_e reason, int utt_id, char* err_msg)
 {
 	tts_client_s* client = tts_client_get_by_uid(uid);
 
@@ -1419,6 +1454,11 @@ int __tts_cb_error(int uid, tts_error_e reason, int utt_id)
 
 	client->utt_id = utt_id;
 	client->reason = reason;
+	if (NULL != client->err_msg) {
+		free(client->err_msg);
+		client->err_msg = NULL;
+	}
+	client->err_msg = strdup(err_msg);
 
 	/* call callback function */
 	if (NULL != client->error_cb) {
