@@ -432,6 +432,27 @@ int tts_get_state(tts_h tts, tts_state_e* state);
 int tts_get_speed_range(tts_h tts, int* min, int* normal, int* max);
 
 /**
+ * @brief Gets the current error message.
+ * @since_tizen 3.0
+ * @privlevel public
+ * @remarks This function should be called during an tts error callback. If not, the error as operation failure will be returned. \n
+ * If the function succeeds, @a err_msg must be released using free() when it is no longer required.
+ *
+ * @param[in] tts The TTS handle
+ * @param[out] err_msg The current error message
+ *
+ * @return 0 on success, otherwise a negative error value
+ * @retval #TTS_ERROR_NONE Successful
+ * @retval #TTS_ERROR_INVALID_PARAMETER Invalid parameter
+ * @retval #TTS_ERROR_NOT_SUPPORTED TTS NOT supported
+ * @retval #TTS_ERROR_OPERATION_FAILED Operation failure
+ *
+ * @see tts_set_error_cb()
+ * @see tts_unset_error_cb()
+*/
+int tts_get_error_message(tts_h tts, char** err_msg);
+
+/**
  * @brief Adds a text to the queue.
  * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
