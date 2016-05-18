@@ -1,3 +1,12 @@
+tts (0.2.44) -- Wed, 18 May 2016
+
+  * Add function to set/get private data and to get error message (Wonnam Jang <wn.jang@samsung.com>)
+  * Apply sound manager stream for session managing (Kwangyoun Kim <ky85.kim@samsung.com>)
+  * Add error handling logic for player (Kwangyoun Kim <ky85.kim@samsung.com>)
+  * Update directory path to relative path (Wonnam Jang <wn.jang@samsung.com>)
+  * Change dbus connection to private (Kwangyoun Kim <ky85.kim@samsung.com>)
+  * Update cleanup client logic (Kwangyoun Kim <ky85.kim@samsung.com>)
+
 tts (0.2.43) -- Wed, 29 Jul 2015
   
   * Update utt message to change method call to signal (Dongyeol Lee <dy3.lee@samsung.com>)

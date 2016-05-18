@@ -1,6 +1,6 @@
 Name:       tts
 Summary:    Text To Speech client library and daemon
-Version:    0.2.43
+Version:    0.2.44
 Release:    1
 Group:      Graphics & UI Framework/Voice Framework
 License:    Apache-2.0
