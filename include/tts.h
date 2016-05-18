@@ -373,6 +373,50 @@ int tts_foreach_supported_voices(tts_h tts, tts_supported_voice_cb callback, voi
 int tts_get_default_voice(tts_h tts, char** language, int* voice_type);
 
 /**
+ * @brief Sets the private data to tts engine.
+ * @since_tizen 3.0
+ *
+ * @param[in] tts The TTS handle
+ * @param[in] key The field name of private data
+ * @param[in] data The data for set
+ *
+ * @return 0 on success, otherwise a negative error value
+ * @retval #TTS_ERROR_NONE Successful
+ * @retval #TTS_ERROR_INVALID_PARAMETER Invalid parameter
+ * @retval #TTS_ERROR_INVALID_STATE Invalid state
+ * @retval #TTS_ERROR_ENGINE_NOT_FOUND Engine not found
+ * @retval #TTS_ERROR_OPERATION_FAILED Operation failure
+ * @retval #TTS_ERROR_NOT_SUPPORTED TTS NOT supported
+ *
+ * @pre The state should be #TTS_STATE_READY.
+ *
+ * @see tts_get_private_data()
+*/
+int tts_set_private_data(tts_h tts, const char* key, const char* data);
+
+/**
+ * @brief Gets the private data from tts engine.
+ * @since_tizen 3.0
+ *
+ * @param[in] tts The TTS handle
+ * @param[in] key The field name of private data
+ * @param[out] data The data
+ *
+ * @return 0 on success, otherwise a negative error value
+ * @retval #TTS_ERROR_NONE Successful
+ * @retval #TTS_ERROR_INVALID_STATE Invalid state
+ * @retval #TTS_ERROR_INVALID_PARAMETER Invalid parameter
+ * @retval #TTS_ERROR_ENGINE_NOT_FOUND Engine not found
+ * @retval #TTS_ERROR_OPERATION_FAILED Operation failure
+ * @retval #TTS_ERROR_NOT_SUPPORTED TTS NOT supported
+ *
+ * @pre The state should be #TTS_STATE_READY.
+ *
+ * @see tts_set_private_data()
+*/
+int tts_get_private_data(tts_h tts, const char* key, char** data);
+
+/**
  * @brief Gets the maximum byte size for text.
  * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *

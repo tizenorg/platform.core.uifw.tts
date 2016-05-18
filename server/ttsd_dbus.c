@@ -261,6 +261,12 @@ static Eina_Bool listener_event_callback(void* data, Ecore_Fd_Handler *fd_handle
 	} else if (dbus_message_is_method_call(msg, g_service_interface, TTS_METHOD_PAUSE)) {
 		ttsd_dbus_server_pause(g_conn_listener, msg);
 
+	} else if (dbus_message_is_method_call(msg, g_service_interface, TTS_METHOD_SET_PRIVATE_DATA)) {
+		ttsd_dbus_server_set_private_data(g_conn_listener, msg);
+
+	} else if (dbus_message_is_method_call(msg, g_service_interface, TTS_METHOD_GET_PRIVATE_DATA)) {
+		ttsd_dbus_server_get_private_data(g_conn_listener, msg);
+
 	} else {
 		/* Invalid method */
 	}

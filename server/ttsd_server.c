@@ -928,3 +928,49 @@ int ttsd_server_get_current_voice(int uid, char** language, int* voice_type)
 
 	return TTSD_ERROR_NONE;
 }
+
+int ttsd_server_set_private_data(int uid, const char* key, const char* data)
+{
+	app_state_e state;
+	if (0 > ttsd_data_get_client_state(uid, &state)) {
+		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] uid(%d) is NOT valid", uid);
+		return TTSD_ERROR_INVALID_PARAMETER;
+	}
+
+	if (APP_STATE_READY != state) {
+		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Current state(%d) is NOT 'READY'", uid);
+		return TTSD_ERROR_INVALID_STATE;
+	}
+
+	int ret = ttsd_engine_set_private_data(key, data);
+	if (0 != ret) {
+		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to set private data");
+	} else {
+		SLOG(LOG_DEBUG, get_tag(), "[Server] Set private data");
+	}
+
+	return ret;
+}
+
+int ttsd_server_get_private_data(int uid, const char* key, char** data)
+{
+	app_state_e state;
+	if (0 > ttsd_data_get_client_state(uid, &state)) {
+		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] uid(%d) is NOT valid", uid);
+		return TTSD_ERROR_INVALID_PARAMETER;
+	}
+
+	if (APP_STATE_READY != state) {
+		SLOG(LOG_WARN, get_tag(), "[Server ERROR] Current state(%d) is NOT 'READY'", uid);
+		return TTSD_ERROR_INVALID_STATE;
+	}
+
+	int ret = ttsd_engine_get_private_data(key, data);
+	if (0 != ret) {
+		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to get private data");
+	} else {
+		SLOG(LOG_DEBUG, get_tag(), "[Server] Get private data");
+	}
+
+	return ret;
+}

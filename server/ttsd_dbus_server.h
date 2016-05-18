@@ -43,6 +43,9 @@ int ttsd_dbus_server_stop(DBusConnection* conn, DBusMessage* msg);
 
 int ttsd_dbus_server_pause(DBusConnection* conn, DBusMessage* msg);
 
+int ttsd_dbus_server_set_private_data(DBusConnection* conn, DBusMessage* msg);
+
+int ttsd_dbus_server_get_private_data(DBusConnection* conn, DBusMessage* msg);
 
 #ifdef __cplusplus
 }

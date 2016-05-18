@@ -489,3 +489,114 @@ int ttsd_dbus_server_pause(DBusConnection* conn, DBusMessage* msg)
 
 	return 0;
 }
+
+int ttsd_dbus_server_set_private_data(DBusConnection* conn, DBusMessage* msg)
+{
+	DBusError err;
+	dbus_error_init(&err);
+
+	int uid;
+	char* key;
+	char* data;
+	int ret = 0;
+	dbus_message_get_args(msg, &err,
+		DBUS_TYPE_INT32, &uid,
+		DBUS_TYPE_STRING, &key,
+		DBUS_TYPE_STRING, &data,
+		DBUS_TYPE_INVALID);
+
+	SLOG(LOG_DEBUG, get_tag(), ">>>>> TTS set private data");
+
+	if (dbus_error_is_set(&err)) {
+		SLOG(LOG_ERROR, get_tag(), "[IN ERROR] Fail to get arguments (%s)", err.message);
+		dbus_error_free(&err);
+		ret = TTSD_ERROR_OPERATION_FAILED;
+	} else {
+		SLOG(LOG_DEBUG, get_tag(), "[IN] tts set private data(%d)", uid);
+		ret = ttsd_server_set_private_data(uid, key, data);
+	}
+
+	DBusMessage* reply;
+	reply = dbus_message_new_method_return(msg);
+
+	if (NULL != reply) {
+		dbus_message_append_args(reply,
+			DBUS_TYPE_INT32, &ret,
+			DBUS_TYPE_INVALID);
+
+		if (0 == ret) {
+			SLOG(LOG_DEBUG, get_tag(), "[OUT] tts set private data : (%d)", ret);
+		} else {
+			SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts set private data : (%d)", ret);
+		}
+
+		if (!dbus_connection_send(conn, reply, NULL)) {
+			SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] Fail to send reply");
+		}
+
+		dbus_connection_flush(conn);
+		dbus_message_unref(reply);
+	} else {
+		SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] Fail to create reply message");
+	}
+
+	SLOG(LOG_DEBUG, get_tag(), "<<<<<");
+	SLOG(LOG_DEBUG, get_tag(), "");
+
+	return 0;
+}
+
+int ttsd_dbus_server_get_private_data(DBusConnection* conn, DBusMessage* msg)
+{
+	DBusError err;
+	dbus_error_init(&err);
+
+	int uid;
+	char* key;
+	char* data;
+	int ret = 0;
+	dbus_message_get_args(msg, &err,
+		DBUS_TYPE_INT32, &uid,
+		DBUS_TYPE_STRING, &key,
+		DBUS_TYPE_INVALID);
+
+	SLOG(LOG_DEBUG, get_tag(), ">>>>> TTS get private data");
+
+	if (dbus_error_is_set(&err)) {
+		SLOG(LOG_ERROR, get_tag(), "[IN ERROR] Fail to get arguments (%s)", err.message);
+		dbus_error_free(&err);
+		ret = TTSD_ERROR_OPERATION_FAILED;
+	} else {
+		SLOG(LOG_DEBUG, get_tag(), "[IN] tts get private data(%d)", uid);
+		ret = ttsd_server_get_private_data(uid, key, &data);
+	}
+
+	DBusMessage* reply;
+	reply = dbus_message_new_method_return(msg);
+
+	if (NULL != reply) {
+		dbus_message_append_args(reply,
+			DBUS_TYPE_INT32, &ret,
+			DBUS_TYPE_INVALID);
+
+		if (0 == ret) {
+			SLOG(LOG_DEBUG, get_tag(), "[OUT] tts get private data : (%d)", ret);
+		} else {
+			SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts get private data : (%d)", ret);
+		}
+
+		if (!dbus_connection_send(conn, reply, NULL)) {
+			SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] Fail to send reply");
+		}
+
+		dbus_connection_flush(conn);
+		dbus_message_unref(reply);
+	} else {
+		SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] Fail to create reply message");
+	}
+
+	SLOG(LOG_DEBUG, get_tag(), "<<<<<");
+	SLOG(LOG_DEBUG, get_tag(), "");
+
+	return 0;
+}

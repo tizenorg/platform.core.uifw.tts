@@ -57,6 +57,9 @@ extern "C" {
 #define TTS_METHOD_STOP			"tts_method_stop"
 #define TTS_METHOD_PAUSE		"tts_method_pause"
 
+#define TTS_METHOD_SET_PRIVATE_DATA	"tts_method_set_private_data"
+#define TTS_METHOD_GET_PRIVATE_DATA	"tts_method_get_private_data"
+
 #define TTSD_METHOD_HELLO		"ttsd_method_hello"
 #define TTSD_METHOD_UTTERANCE_STARTED	"ttsd_method_utterance_started"
 #define TTSD_METHOD_UTTERANCE_COMPLETED	"ttsd_method_utterance_completed"

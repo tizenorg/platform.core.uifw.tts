@@ -1415,6 +1415,128 @@ int tts_pause(tts_h tts)
 	return TTS_ERROR_NONE;
 }
 
+int tts_set_private_data(tts_h tts, const char* key, const char* data)
+{
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
+	}
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "===== Set private data");
+
+	if (NULL == tts) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input handle is null");
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+	
+	if (NULL == key || NULL == data) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Invalid parameter");
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+
+	tts_client_s* client = tts_client_get(tts);
+
+	if (NULL == client) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] A handle is not valid");
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+
+	if (TTS_STATE_READY != client->current_state) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Invalid state : Current state is NOT 'READY'");
+		return TTS_ERROR_INVALID_STATE;
+	}
+
+	if (false == g_screen_reader && TTS_MODE_SCREEN_READER == client->mode) {
+		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] Screen reader option is NOT available. Ignore this request");
+		return TTS_ERROR_INVALID_STATE;
+	}
+
+	int ret = -1;
+	int count = 0;
+	while (0 != ret) {
+		ret = tts_dbus_request_set_private_data(client->uid, key, data);
+		if (0 != ret) {
+			if (TTS_ERROR_TIMED_OUT != ret) {
+				SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] result : %s", __tts_get_error_code(ret));
+				return ret;
+			} else {
+				SLOG(LOG_WARN, TAG_TTSC, "[WARNING] retry : %s", __tts_get_error_code(ret));
+				usleep(10000);
+				count++;
+				if (TTS_RETRY_COUNT == count) {
+					SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to request");
+					return ret;
+				}
+			}
+		}
+	}
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+	SLOG(LOG_DEBUG, TAG_TTSC, "");
+
+	return 0;
+}
+
+int tts_get_private_data(tts_h tts, const char* key, char** data)
+{
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
+	}
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "===== Get private data");
+
+	if (NULL == tts) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input handle is null");
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+	
+	if (NULL == key || NULL == data) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Invalid parameter");
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+
+	tts_client_s* client = tts_client_get(tts);
+
+	if (NULL == client) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] A handle is not valid");
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+
+	if (TTS_STATE_READY != client->current_state) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Invalid state : Current state is NOT 'READY'");
+		return TTS_ERROR_INVALID_STATE;
+	}
+
+	if (false == g_screen_reader && TTS_MODE_SCREEN_READER == client->mode) {
+		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] Screen reader option is NOT available. Ignore this request");
+		return TTS_ERROR_INVALID_STATE;
+	}
+
+	int ret = -1;
+	int count = 0;
+	while (0 != ret) {
+		ret = tts_dbus_request_get_private_data(client->uid, key, data);
+		if (0 != ret) {
+			if (TTS_ERROR_TIMED_OUT != ret) {
+				SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] result : %s", __tts_get_error_code(ret));
+				return ret;
+			} else {
+				SLOG(LOG_WARN, TAG_TTSC, "[WARNING] retry : %s", __tts_get_error_code(ret));
+				usleep(10000);
+				count++;
+				if (TTS_RETRY_COUNT == count) {
+					SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to request");
+					return ret;
+				}
+			}
+		}
+	}
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+	SLOG(LOG_DEBUG, TAG_TTSC, "");
+
+	return 0;
+}
+
 static Eina_Bool __tts_notify_error(void *data)
 {
 	tts_h tts = (tts_h)data;

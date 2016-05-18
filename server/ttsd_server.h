@@ -51,6 +51,9 @@ int ttsd_server_stop(int uid);
 
 int ttsd_server_pause(int uid, int* utt_id);
 
+int ttsd_server_set_private_data(int uid, const char* key, const char* data);
+
+int ttsd_server_get_private_data(int uid, const char* key, char** data);
 
 #ifdef __cplusplus
 }

@@ -1565,6 +1565,69 @@ int ttsd_engine_get_default_voice(char** lang, int* vctype)
 	return 0;
 }
 
+int ttsd_engine_set_private_data(const char* key, const char* data)
+{
+	if (false == g_agent_init) {
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized");
+		return TTSD_ERROR_OPERATION_FAILED;
+	}
+
+	if (false == g_cur_engine.is_loaded) {
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] No loaded engine");
+		return TTSD_ERROR_ENGINE_NOT_FOUND;
+	}
+
+	if (NULL == key) {
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Invalid parameter");
+		return TTSD_ERROR_INVALID_PARAMETER;
+	}
+
+	if (NULL == g_cur_engine.pefuncs->set_private_data) {
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not supported feature");
+		return TTSD_ERROR_NOT_SUPPORTED_FEATURE;
+	}
+
+	int ret = 0;
+	ret = g_cur_engine.pefuncs->set_private_data(key, data);
+	if (0 != ret) {
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Fail to set private data(%d)", ret);
+	}
+
+	return ret;
+}
+
+int ttsd_engine_get_private_data(const char* key, char** data)
+{
+	if (false == g_agent_init) {
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized");
+		return TTSD_ERROR_OPERATION_FAILED;
+	}
+
+	if (false == g_cur_engine.is_loaded) {
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] No loaded engine");
+		return TTSD_ERROR_ENGINE_NOT_FOUND;
+	}
+
+	if (NULL == key || NULL == data) {
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Invalid parameter");
+		return TTSD_ERROR_INVALID_PARAMETER;
+	}
+
+	if (NULL == g_cur_engine.pefuncs->get_private_data) {
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not supported feature");
+		return TTSD_ERROR_NOT_SUPPORTED_FEATURE;
+	}
+
+	int ret = 0;
+	ret = g_cur_engine.pefuncs->get_private_data(key, data);
+	if (0 != ret) {
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Fail to get private data(%d)", ret);
+	}
+
+	return ret;
+}
+
+
 void __free_voice_list(GList* voice_list)
 {
 	GList *iter = NULL;

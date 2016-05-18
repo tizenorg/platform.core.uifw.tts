@@ -42,6 +42,9 @@ int tts_dbus_request_stop(int uid);
 
 int tts_dbus_request_pause(int uid);
 
+int tts_dbus_request_set_private_data(int uid, const char* key, const char* data);
+
+int tts_dbus_request_get_private_data(int uid, const char* key, char** data);
 
 #ifdef __cplusplus
 }

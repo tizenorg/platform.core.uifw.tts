@@ -516,6 +516,146 @@ int tts_dbus_request_add_text(int uid, const char* text, const char* lang, int v
 	return result;
 }
 
+int tts_dbus_request_set_private_data(int uid, const char* key, const char* data)
+{
+	if (NULL == key || NULL == data) {
+		SLOG(LOG_ERROR, TAG_TTSC, "Input parameter is NULL");
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+
+	DBusMessage* msg;
+	DBusError err;
+	dbus_error_init(&err);
+
+	msg = __tts_dbus_make_message(uid, TTS_METHOD_SET_PRIVATE_DATA);
+
+	if (NULL == msg) {
+		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts set private data : Fail to make message");
+		return TTS_ERROR_OPERATION_FAILED;
+	} else {
+		SLOG(LOG_DEBUG, TAG_TTSC, ">>>> Request tts set private data : uid(%d)", uid);
+	}
+
+	if (true != dbus_message_append_args(msg,
+		DBUS_TYPE_INT32, &uid,
+		DBUS_TYPE_STRING, &key,
+		DBUS_TYPE_STRING, &data,
+		DBUS_TYPE_INVALID)) {
+		dbus_message_unref(msg);
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to append args");
+
+		return TTS_ERROR_OPERATION_FAILED;
+	}
+
+	DBusMessage* result_msg;
+	int result = TTS_ERROR_OPERATION_FAILED;
+
+	result_msg = dbus_connection_send_with_reply_and_block(g_conn_sender, msg, WAITING_TIME, &err);
+	dbus_message_unref(msg);
+	if (dbus_error_is_set(&err)) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Send error (%s)", err.message);
+		dbus_error_free(&err);
+	}
+
+	if (NULL != result_msg) {
+		dbus_message_get_args(result_msg, &err,
+			DBUS_TYPE_INT32, &result,
+			DBUS_TYPE_INVALID);
+
+		if (dbus_error_is_set(&err)) {
+			SLOG(LOG_ERROR, TAG_TTSC, "<<<< tts set private data : Get arguments error (%s)", err.message);
+			dbus_error_free(&err);
+			result = TTS_ERROR_OPERATION_FAILED;
+		}
+		dbus_message_unref(result_msg);
+
+		if (0 == result) {
+			SLOG(LOG_DEBUG, TAG_TTSC, "<<<< tts set private data : result(%d)", result);
+		} else {
+			SLOG(LOG_ERROR, TAG_TTSC, "<<<< tts set private data : result(%d)", result);
+		}
+	} else {
+		SLOG(LOG_ERROR, TAG_TTSC, "<<<< Result message is NULL ");
+		tts_dbus_reconnect();
+		result = TTS_ERROR_TIMED_OUT;
+	}
+
+	return result;
+}
+
+int tts_dbus_request_get_private_data(int uid, const char* key, char** data)
+{
+	if (NULL == key || NULL == data) {
+		SLOG(LOG_ERROR, TAG_TTSC, "Input parameter is NULL");
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+
+	DBusMessage* msg;
+	DBusError err;
+	dbus_error_init(&err);
+
+	msg = __tts_dbus_make_message(uid, TTS_METHOD_GET_PRIVATE_DATA);
+
+	if (NULL == msg) {
+		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts get private data : Fail to make message");
+		return TTS_ERROR_OPERATION_FAILED;
+	} else {
+		SLOG(LOG_DEBUG, TAG_TTSC, ">>>> Request tts get private data : uid(%d)", uid);
+	}
+
+	if (true != dbus_message_append_args(msg,
+		DBUS_TYPE_INT32, &uid,
+		DBUS_TYPE_STRING, &key,
+		DBUS_TYPE_INVALID)) {
+		dbus_message_unref(msg);
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to append args");
+
+		return TTS_ERROR_OPERATION_FAILED;
+	}
+
+	DBusMessage* result_msg;
+	int result = TTS_ERROR_OPERATION_FAILED;
+
+	result_msg = dbus_connection_send_with_reply_and_block(g_conn_sender, msg, WAITING_TIME, &err);
+	dbus_message_unref(msg);
+	if (dbus_error_is_set(&err)) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Send error (%s)", err.message);
+		dbus_error_free(&err);
+	}
+
+	char* temp = NULL;
+	if (NULL != result_msg) {
+		dbus_message_get_args(result_msg, &err,
+			DBUS_TYPE_INT32, &result,
+			DBUS_TYPE_STRING, &temp,
+			DBUS_TYPE_INVALID);
+
+		if (dbus_error_is_set(&err)) {
+			SLOG(LOG_ERROR, TAG_TTSC, "<<<< tts get private data : Get arguments error (%s)", err.message);
+			dbus_error_free(&err);
+			result = TTS_ERROR_OPERATION_FAILED;
+		}
+		dbus_message_unref(result_msg);
+
+		if (0 == result) {
+			SLOG(LOG_DEBUG, TAG_TTSC, "<<<< tts get private data : result(%d)", result);
+			if (NULL != temp) {
+				*data = strdup(temp);
+				free(temp);
+				temp = NULL;
+			}
+		} else {
+			SLOG(LOG_ERROR, TAG_TTSC, "<<<< tts get private data : result(%d)", result);
+		}
+	} else {
+		SLOG(LOG_ERROR, TAG_TTSC, "<<<< Result message is NULL ");
+		tts_dbus_reconnect();
+		result = TTS_ERROR_TIMED_OUT;
+	}
+
+	return result;
+}
+
 int tts_dbus_request_play(int uid)
 {
 	DBusMessage* msg;

@@ -60,6 +60,10 @@ int ttsd_engine_agent_set_default_speed(int speed);
 
 int ttsd_engine_agent_set_default_pitch(int pitch);
 
+int ttsd_engine_set_private_data(const char* key, const char* data);
+
+int ttsd_engine_get_private_data(const char* key, char** data);
+
 /*
 * TTS Engine Interfaces for client
 */

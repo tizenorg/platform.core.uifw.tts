@@ -252,6 +252,38 @@ typedef int (*ttspe_start_synthesis)(const char* language, int type, const char*
 */
 typedef int (*ttspe_cancel_synthesis)(void);
 
+/**
+* @brief Set private data.
+* @since_tizen 3.0
+*
+* @param[in] key Key field of private data.
+* @param[in] data Data field of private data.
+*
+* @return 0 on success, otherwise a negative error value
+* @retval #TTSE_ERROR_NONE Successful
+* @retval #TTSE_ERROR_INVALID_PARAMETER Invalid parameter
+* @retval #TTSE_ERROR_OPERATION_FAILED Operation failed
+*
+* @see ttse_get_private_data()
+*/
+typedef int (* ttspe_set_private_data)(const char* key, const char* data);
+
+/**
+* @brief Get private data.
+* @since_tizen 3.0
+*
+* @param[out] key Key field of private data.
+* @param[out] data Data field of private data.
+*
+* @return 0 on success, otherwise a negative error value
+* @retval #TTSE_ERROR_NONE Successful
+* @retval #TTSE_ERROR_INVALID_PARAMETER Invalid parameter
+* @retval #TTSE_ERROR_OPERATION_FAILED Operation failed
+*
+* @see ttse_set_private_data()
+*/
+typedef int (* ttspe_get_private_data)(const char* key, char** data);
+
 
 /**
 * @brief Gets the mode.
@@ -315,6 +347,8 @@ typedef struct {
 	/* Control synthesis */
 	ttspe_start_synthesis		start_synth;		/**< Start synthesis */
 	ttspe_cancel_synthesis		cancel_synth;		/**< Cancel synthesis */
+	ttspe_set_private_data		set_private_data;	/**< Set private data */
+	ttspe_get_private_data		get_private_data;	/**< Get private data */
 } ttspe_funcs_s;
 
 /**
