@@ -660,8 +660,6 @@ int tts_dbus_request_get_private_data(int uid, const char* key, char** data)
 			SLOG(LOG_DEBUG, TAG_TTSC, "<<<< tts get private data : result(%d)", result);
 			if (NULL != temp) {
 				*data = strdup(temp);
-				free(temp);
-				temp = NULL;
 			}
 		} else {
 			SLOG(LOG_ERROR, TAG_TTSC, "<<<< tts get private data : result(%d)", result);

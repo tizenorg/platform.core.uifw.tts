@@ -609,5 +609,7 @@ int ttsd_dbus_server_get_private_data(DBusConnection* conn, DBusMessage* msg)
 	SLOG(LOG_DEBUG, get_tag(), "<<<<<");
 	SLOG(LOG_DEBUG, get_tag(), "");
 
+	if (NULL != data)	free(data);
+
 	return 0;
 }
