@@ -377,6 +377,37 @@ int tts_get_mode(tts_h tts, tts_mode_e* mode)
 	return TTS_ERROR_NONE;
 }
 
+int tts_set_credential(tts_h tts, const char* credential)
+{
+	if(0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
+	}
+
+	if (NULL == tts || NULL == credential) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input parameter is null");
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+
+	tts_client_s* client = tts_client_get(tts);
+
+	if (NULL == client) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Get state : A handle is not valid");
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+
+	if (TTS_STATE_CREATED != client->current_state && TTS_STATE_READY != client->current_state) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] The current state is invalid (%d).", client->current_state);
+		return TTS_ERROR_INVALID_STATE;
+	}
+
+	client->credential = strdup(credential);
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
+	SLOG(LOG_DEBUG, TAG_TTSC, " ");
+
+	return TTS_ERROR_NONE;
+}
+
 static Eina_Bool __tts_connect_daemon(void *data)
 {
 	tts_h tts = (tts_h)data;
@@ -397,7 +428,9 @@ static Eina_Bool __tts_connect_daemon(void *data)
 
 	/* do request initialize */
 	int ret = -1;
-	ret = tts_dbus_request_initialize(client->uid);
+	bool credential_needed = false;
+
+	ret = tts_dbus_request_initialize(client->uid, &credential_needed);
 
 	if (TTS_ERROR_ENGINE_NOT_FOUND == ret) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to initialize : %s", __tts_get_error_code(ret));
@@ -415,6 +448,8 @@ static Eina_Bool __tts_connect_daemon(void *data)
 
 	} else {
 		/* success to connect tts-daemon */
+		client->credential_needed = credential_needed;
+		SLOG(LOG_ERROR, TAG_TTSC, "Supported options : credential(%s)", credential_needed ? "need" : "no need");
 	}
 
 	client->conn_timer = NULL;
@@ -828,6 +863,11 @@ int tts_add_text(tts_h tts, const char* text, const char* language, int voice_ty
 		return TTS_ERROR_INVALID_STATE;
 	}
 
+	if (true == client->credential_needed && NULL == client->credential) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Do not have app credential for this engine");
+		return TTS_ERROR_PERMISSION_DENIED;
+	}
+
 	/* check valid utf8 */
 	iconv_t *ict;
 	ict = iconv_open("utf-8", "");
@@ -877,7 +917,7 @@ int tts_add_text(tts_h tts, const char* text, const char* language, int voice_ty
 	int ret = -1;
 	int count = 0;
 	while (0 != ret) {
-		ret = tts_dbus_request_add_text(client->uid, out_buf, temp, voice_type, speed, client->current_utt_id);
+		ret = tts_dbus_request_add_text(client->uid, out_buf, temp, voice_type, speed, client->current_utt_id, client->credential);
 		if (0 != ret) {
 			if (TTS_ERROR_TIMED_OUT != ret) {
 				SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] result : %s", __tts_get_error_code(ret));
@@ -918,7 +958,7 @@ static void __tts_play_async(void *data)
 	int ret = -1;
 	int count = 0;
 	while (0 != ret) {
-		ret = tts_dbus_request_play(client->uid);
+		ret = tts_dbus_request_play(client->uid, client->credential);
 		if (0 != ret) {
 			if (TTS_ERROR_TIMED_OUT != ret) {
 				SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] result : %s", __tts_get_error_code(ret));
@@ -995,6 +1035,11 @@ int tts_play_async(tts_h tts)
 		return TTS_ERROR_INVALID_STATE;
 	}
 
+	if (true == client->credential_needed && NULL == client->credential) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Do not have app credential for this engine");
+		return TTS_ERROR_PERMISSION_DENIED;
+	}
+
 	ecore_main_loop_thread_safe_call_async(__tts_play_async, (void*)tts);
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
@@ -1037,10 +1082,15 @@ int tts_play(tts_h tts)
 		return TTS_ERROR_INVALID_STATE;
 	}
 
+	if (true == client->credential_needed && NULL == client->credential) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Do not have app credential for this engine");
+		return TTS_ERROR_PERMISSION_DENIED;
+	}
+
 	int ret = -1;
 	int count = 0;
 	while (0 != ret) {
-		ret = tts_dbus_request_play(client->uid);
+		ret = tts_dbus_request_play(client->uid, client->credential);
 		if (0 != ret) {
 			if (TTS_ERROR_TIMED_OUT != ret) {
 				SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] result : %s", __tts_get_error_code(ret));

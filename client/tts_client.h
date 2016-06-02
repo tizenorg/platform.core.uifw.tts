@@ -61,6 +61,10 @@ typedef struct {
 
 	/* connection */
 	Ecore_Timer*	conn_timer;
+
+	/* options */
+	char*		credential;
+	bool		credential_needed;
 } tts_client_s;
 
 int tts_client_new(tts_h* tts);

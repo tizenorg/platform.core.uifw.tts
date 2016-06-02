@@ -17,6 +17,7 @@
 
 #include <errno.h>
 #include <stdbool.h>
+#include <tizen.h>
 
 /**
 * @addtogroup TTS_ENGINE_MODULE
@@ -28,17 +29,22 @@ extern "C" {
 #endif
 
 /** 
-* @brief Enumerations of error codes.
+ * @brief Enumeration for error code.
 */
 typedef enum {
-	TTSP_ERROR_NONE			= 0,		/**< Successful */
-	TTSP_ERROR_OUT_OF_MEMORY	= -ENOMEM,	/**< Out of Memory */
-	TTSP_ERROR_IO_ERROR		= -EIO,		/**< I/O error */
-	TTSP_ERROR_INVALID_PARAMETER	= -EINVAL,	/**< Invalid parameter */
-	TTSP_ERROR_OUT_OF_NETWORK	= -ENETDOWN,	/**< Out of network */
-	TTSP_ERROR_INVALID_STATE	= -0x0100021,	/**< Invalid state */
-	TTSP_ERROR_INVALID_VOICE	= -0x0100022,	/**< Invalid voice */
-	TTSP_ERROR_OPERATION_FAILED	= -0x0100025	/**< Operation failed */
+	TTSP_ERROR_NONE			= TIZEN_ERROR_NONE,		/**< Successful */
+	TTSP_ERROR_OUT_OF_MEMORY	= TIZEN_ERROR_OUT_OF_MEMORY,	/**< Out of Memory */
+	TTSP_ERROR_IO_ERROR		= TIZEN_ERROR_IO_ERROR,		/**< I/O error */
+	TTSP_ERROR_INVALID_PARAMETER	= TIZEN_ERROR_INVALID_PARAMETER,/**< Invalid parameter */
+	TTSP_ERROR_OUT_OF_NETWORK	= TIZEN_ERROR_NETWORK_DOWN,	/**< Network is down */
+	TTSP_ERROR_TIMED_OUT		= TIZEN_ERROR_TIMED_OUT,	/**< No answer from the daemon */
+	TTSP_ERROR_PERMISSION_DENIED	= TIZEN_ERROR_PERMISSION_DENIED,/**< Permission denied */
+	TTSP_ERROR_NOT_SUPPORTED	= TIZEN_ERROR_NOT_SUPPORTED,	/**< TTS NOT supported */
+	TTSP_ERROR_INVALID_STATE	= TIZEN_ERROR_TTS | 0x01,	/**< Invalid state */
+	TTSP_ERROR_INVALID_VOICE	= TIZEN_ERROR_TTS | 0x02,	/**< Invalid voice */
+	TTSP_ERROR_ENGINE_NOT_FOUND	= TIZEN_ERROR_TTS | 0x03,	/**< No available engine */
+	TTSP_ERROR_OPERATION_FAILED	= TIZEN_ERROR_TTS | 0x04,	/**< Operation failed */
+	TTSP_ERROR_AUDIO_POLICY_BLOCKED	= TIZEN_ERROR_TTS | 0x05	/**< Audio policy blocked */
 } ttsp_error_e;
 
 /**
@@ -181,6 +187,14 @@ typedef bool (*ttspe_is_valid_voice)(const char* language, int type);
 typedef int (*ttspe_set_pitch)(int pitch);
 
 /**
+* @brief Gets credential necessity.
+*
+* @return @c true to be needed app credential, \n @c false not to be needed app credential.
+*
+*/
+typedef	bool (*ttspe_need_app_credential)(void);
+
+/**
 * @brief Load voice of the engine.
 *
 * @param[in] language language
@@ -222,6 +236,7 @@ typedef int (*ttspe_unload_voice)(const char* language, int type);
 * @param[in] type A voice type
 * @param[in] text Texts
 * @param[in] speed A speaking speed
+* @parma[in] credential The app credential to allow recognition
 * @param[in] user_data The user data to be passed to the callback function
 *
 * @return 0 on success, otherwise a negative error value
@@ -231,13 +246,14 @@ typedef int (*ttspe_unload_voice)(const char* language, int type);
 * @retval #TTSP_ERROR_INVALID_VOICE Invalid voice
 * @retval #TTSP_ERROR_OPERATION_FAILED Operation failed
 * @retval #TTSP_ERROR_OUT_OF_NETWORK Out of network
+* @retval #TTSP_ERROR_PERMISSION_DENIED Permission denied
 *
 * @post This function invokes ttspe_result_cb().
 * 
 * @see ttspe_result_cb()
 * @see ttspe_cancel_synthesis()
 */
-typedef int (*ttspe_start_synthesis)(const char* language, int type, const char* text, int speed, void* user_data);
+typedef int (*ttspe_start_synthesis)(const char* language, int type, const char* text, int speed, const char* credential, void* user_data);
 
 /**
 * @brief Cancels voice synthesis.
@@ -343,6 +359,7 @@ typedef struct {
 	/* Load / Unload voice */
 	ttspe_load_voice		load_voice;		/**< Load voice */
 	ttspe_unload_voice		unload_voice;		/**< Unload voice */
+	ttspe_need_app_credential	need_app_credential;	/**< Get app credential necessity*/
 
 	/* Control synthesis */
 	ttspe_start_synthesis		start_synth;		/**< Start synthesis */

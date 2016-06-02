@@ -27,16 +27,16 @@ int tts_dbus_close_connection();
 
 int tts_dbus_request_hello(int uid);
 
-int tts_dbus_request_initialize(int uid);
+int tts_dbus_request_initialize(int uid, bool* credential_needed);
 
 int tts_dbus_request_finalize(int uid);
 
 int tts_dbus_set_sound_type(int uid, int type);
 
 
-int tts_dbus_request_add_text(int uid, const char* text, const char* lang, int vctype, int speed, int uttid); 
+int tts_dbus_request_add_text(int uid, const char* text, const char* lang, int vctype, int speed, int uttid, const char* credential);
 
-int tts_dbus_request_play(int uid) ;
+int tts_dbus_request_play(int uid, const char* credential);
 
 int tts_dbus_request_stop(int uid);
 

@@ -1281,6 +1281,37 @@ int ttsd_engine_agent_set_default_pitch(int pitch)
 	return 0;
 }
 
+int ttsd_engine_agent_is_credential_needed(int uid, bool* credential_needed)
+{
+	if (NULL == credential_needed) {
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Invalid Parameter");
+		return TTSP_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false == g_agent_init) {
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized");
+		return TTSD_ERROR_OPERATION_FAILED;
+	}
+
+	if (false == g_cur_engine.is_loaded) {
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not loaded engine");
+		return TTSD_ERROR_OPERATION_FAILED;
+	}
+
+	if (NULL == g_cur_engine.pefuncs->need_app_credential) {
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not support to check app credential");
+		return TTSD_ERROR_OPERATION_FAILED;
+	}
+
+	bool result = false;
+	result = g_cur_engine.pefuncs->need_app_credential();
+	*credential_needed = result;
+
+	SLOG(LOG_ERROR, get_tag(), "#### test #### result = %d", result);
+
+	return TTSP_ERROR_NONE;
+}
+
 /******************************************************************************************
 * TTS Engine Interfaces for client
 *******************************************************************************************/
@@ -1410,7 +1441,7 @@ int ttsd_engine_unload_voice(const char* lang, const int vctype)
 	return 0;
 }
 
-int ttsd_engine_start_synthesis(const char* lang, int vctype, const char* text, int speed, void* user_param)
+int ttsd_engine_start_synthesis(const char* lang, int vctype, const char* text, int speed, const char* credential, void* user_param)
 {
 	if (false == g_agent_init) {
 		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not Initialized");
@@ -1430,8 +1461,8 @@ int ttsd_engine_start_synthesis(const char* lang, int vctype, const char* text, 
 		if (NULL != temp_lang)	free(temp_lang);
 		return TTSD_ERROR_INVALID_VOICE;
 	} else {
-		SECURE_SLOG(LOG_DEBUG, get_tag(), "[Engine Agent] Start synthesis : language(%s), type(%d), speed(%d), text(%s)", 
-			temp_lang, temp_type, speed, text);
+		SECURE_SLOG(LOG_DEBUG, get_tag(), "[Engine Agent] Start synthesis : language(%s), type(%d), speed(%d), text(%s), credential(%s)", 
+			temp_lang, temp_type, speed, text, credential);
 	}
 
 	if (NULL == g_cur_engine.pefuncs->start_synth) {
@@ -1450,13 +1481,13 @@ int ttsd_engine_start_synthesis(const char* lang, int vctype, const char* text, 
 
 	/* synthesize text */
 	int ret = 0;
-	ret = g_cur_engine.pefuncs->start_synth(temp_lang, temp_type, text, temp_speed, user_param);
+	ret = g_cur_engine.pefuncs->start_synth(temp_lang, temp_type, text, temp_speed, credential, user_param);
 	if (0 != ret) {
 		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] ***************************************");
 		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] * synthesize error : %s *", __ttsd_get_engine_error_code(ret));
 		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] ***************************************");
 		if (NULL != temp_lang)	free(temp_lang);
-		return TTSD_ERROR_OPERATION_FAILED;
+		return ret;
 	}
 
 	if (NULL != temp_lang)	free(temp_lang);
