@@ -1647,11 +1647,14 @@ int ttsd_engine_get_private_data(const char* key, char** data)
 		return TTSD_ERROR_NOT_SUPPORTED_FEATURE;
 	}
 
+	char* temp = NULL;
 	int ret = 0;
-	ret = g_cur_engine.pefuncs->get_private_data(key, data);
+	ret = g_cur_engine.pefuncs->get_private_data(key, &temp);
 	if (0 != ret) {
 		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Fail to get private data(%d)", ret);
 	}
+
+	*data = strdup(temp);
 
 	return ret;
 }

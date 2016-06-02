@@ -417,6 +417,8 @@ int tts_set_private_data(tts_h tts, const char* key, const char* data);
  * @brief Gets the private data from tts engine.
  * @since_tizen 3.0
  *
+ * @remarks data must be released using free() when it is no longer required.
+ *
  * @param[in] tts The TTS handle
  * @param[in] key The field name of private data
  * @param[out] data The data
