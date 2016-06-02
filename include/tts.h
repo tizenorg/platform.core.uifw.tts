@@ -292,6 +292,25 @@ int tts_set_mode(tts_h tts, tts_mode_e mode);
 int tts_get_mode(tts_h tts, tts_mode_e* mode);
 
 /**
+ * @brief Sets the app credential.
+ * @since_tizen 3.0
+ * @privlevel public
+ *
+ * @param[in] tts The TTS handle
+ * @param[in] credential The app credential
+ *
+ * @return 0 on success, otherwise a negative error value
+ * @retval #TTS_ERROR_NONE Success
+ * @retval #TTS_ERROR_INVALID_STATE Invalid state
+ * @retval #TTS_ERROR_INVALID_PARAMETER Invalid parameter
+ *
+ * @pre The state should be #TTS_STATE_CREATED or #TTS_STATE_READY.
+ *
+ * @see tts_play()
+*/
+int tts_set_credential(tts_h tts, const char* credential);
+
+/**
  * @brief Connects the daemon asynchronously.
  * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
  *
@@ -516,9 +535,11 @@ int tts_get_error_message(tts_h tts, char** err_msg);
  * @retval #TTS_ERROR_INVALID_VOICE Invalid voice about language, voice type
  * @retval #TTS_ERROR_OPERATION_FAILED Operation failure
  * @retval #TTS_ERROR_NOT_SUPPORTED TTS NOT supported
+ * @retval #TTS_ERROR_PERMISSION_DENIED Permission denied 
  *
  * @pre The state should be #TTS_STATE_READY, #TTS_STATE_PLAYING or #TTS_STATE_PAUSED.
  * @see tts_get_max_text_size()
+ * @see tts_set_credential()
 */
 int tts_add_text(tts_h tts, const char* text, const char* language, int voice_type, int speed, int* utt_id);
 
@@ -535,6 +556,7 @@ int tts_add_text(tts_h tts, const char* text, const char* language, int voice_ty
  * @retval #TTS_ERROR_INVALID_STATE Invalid state
  * @retval #TTS_ERROR_OPERATION_FAILED Operation failure
  * @retval #TTS_ERROR_NOT_SUPPORTED TTS NOT supported
+ * @retval #TTS_ERROR_PERMISSION_DENIED Permission denied 
  *
  * @pre The current state should be #TTS_STATE_READY or #TTS_STATE_PAUSED.
  * @post If this function succeeds, the TTS state will be #TTS_STATE_PLAYING.
@@ -545,6 +567,7 @@ int tts_add_text(tts_h tts, const char* text, const char* language, int voice_ty
  * @see tts_utterance_started_cb()
  * @see tts_utterance_completed_cb()
  * @see tts_error_cb()
+ * @see tts_set_credential()
 */
 int tts_play(tts_h tts);
 

@@ -49,6 +49,7 @@ int ttsd_dbus_server_initialize(DBusConnection* conn, DBusMessage* msg)
 	dbus_error_init(&err);
 
 	int pid, uid;
+	bool credential_needed = 0;
 	int ret = 0;
 
 	dbus_message_get_args(msg, &err,
@@ -65,17 +66,22 @@ int ttsd_dbus_server_initialize(DBusConnection* conn, DBusMessage* msg)
 	} else {
 
 		SECURE_SLOG(LOG_DEBUG, get_tag(), "[IN] tts initialize : pid(%d), uid(%d)", pid , uid);
-		ret =  ttsd_server_initialize(pid, uid);
+		ret =  ttsd_server_initialize(pid, uid, &credential_needed);
 	}
 
 	DBusMessage* reply;
 	reply = dbus_message_new_method_return(msg);
 
+	int temp = (int)credential_needed;
+	SLOG(LOG_DEBUG, get_tag(), "[OUT] tts initialize : result(%d), credential_needed(%d)", ret, (int)credential_needed);
 	if (NULL != reply) {
-		dbus_message_append_args(reply, DBUS_TYPE_INT32, &ret, DBUS_TYPE_INVALID);
+		dbus_message_append_args(reply,
+			DBUS_TYPE_INT32, &ret,
+			DBUS_TYPE_INT32, &temp,
+			DBUS_TYPE_INVALID);
 
 		if (0 == ret) {
-			SLOG(LOG_DEBUG, get_tag(), "[OUT] tts initialize : result(%d)", ret);
+			SLOG(LOG_DEBUG, get_tag(), "[OUT] tts initialize : result(%d), credential_needed(%d)", ret, credential_needed);
 		} else {
 			SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts initialize : result(%d)", ret);
 		}
@@ -283,7 +289,7 @@ int ttsd_dbus_server_add_text(DBusConnection* conn, DBusMessage* msg)
 	dbus_error_init(&err);
 
 	int uid, voicetype, speed, uttid;
-	char *text, *lang;
+	char *text, *lang, *credential;
 	int ret = 0;
 
 	dbus_message_get_args(msg, &err,
@@ -293,6 +299,7 @@ int ttsd_dbus_server_add_text(DBusConnection* conn, DBusMessage* msg)
 		DBUS_TYPE_INT32, &voicetype,
 		DBUS_TYPE_INT32, &speed,
 		DBUS_TYPE_INT32, &uttid,
+		DBUS_TYPE_STRING, &credential,
 		DBUS_TYPE_INVALID);
 
 	SLOG(LOG_DEBUG, get_tag(), ">>>>> TTS ADD TEXT");
@@ -303,9 +310,9 @@ int ttsd_dbus_server_add_text(DBusConnection* conn, DBusMessage* msg)
 		ret = TTSD_ERROR_OPERATION_FAILED;
 	} else {
 		
-		SECURE_SLOG(LOG_DEBUG, get_tag(), "[IN] tts add text : uid(%d), text(%s), lang(%s), type(%d), speed(%d), uttid(%d)", 
-			uid, text, lang, voicetype, speed, uttid); 
-		ret =  ttsd_server_add_queue(uid, text, lang, voicetype, speed, uttid);
+		SECURE_SLOG(LOG_DEBUG, get_tag(), "[IN] tts add text : uid(%d), text(%s), lang(%s), type(%d), speed(%d), uttid(%d), credential(%s)", 
+			uid, text, lang, voicetype, speed, uttid, credential); 
+		ret =  ttsd_server_add_queue(uid, text, lang, voicetype, speed, uttid, credential);
 	}
 
 	DBusMessage* reply;
@@ -342,9 +349,13 @@ int ttsd_dbus_server_play(DBusConnection* conn, DBusMessage* msg)
 	dbus_error_init(&err);
 
 	int uid;
+	char* credential;
 	int ret = 0;
 
-	dbus_message_get_args(msg, &err, DBUS_TYPE_INT32, &uid, DBUS_TYPE_INVALID);
+	dbus_message_get_args(msg, &err,
+		DBUS_TYPE_INT32, &uid,
+		DBUS_TYPE_STRING, &credential,
+		DBUS_TYPE_INVALID);
 
 	SLOG(LOG_DEBUG, get_tag(), ">>>>> TTS PLAY");
 
@@ -353,8 +364,8 @@ int ttsd_dbus_server_play(DBusConnection* conn, DBusMessage* msg)
 		dbus_error_free(&err);
 		ret = TTSD_ERROR_OPERATION_FAILED;
 	} else {
-		SECURE_SLOG(LOG_DEBUG, get_tag(), "[IN] tts play : uid(%d)", uid);
-		ret =  ttsd_server_play(uid);
+		SECURE_SLOG(LOG_DEBUG, get_tag(), "[IN] tts play : uid(%d), credential(%s)", uid, credential);
+		ret =  ttsd_server_play(uid, credential);
 	}
 
 	DBusMessage* reply;

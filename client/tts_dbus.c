@@ -327,7 +327,7 @@ int tts_dbus_request_hello(int uid)
 	return result;
 }
 
-int tts_dbus_request_initialize(int uid)
+int tts_dbus_request_initialize(int uid, bool* credential_needed)
 {
 	DBusMessage* msg;
 	DBusError err;
@@ -360,9 +360,11 @@ int tts_dbus_request_initialize(int uid)
 		dbus_error_free(&err);
 	}
 
+	int temp = 0;
 	if (NULL != result_msg) {
 		dbus_message_get_args(result_msg, &err,
 				  DBUS_TYPE_INT32, &result,
+				  DBUS_TYPE_INT32, &temp,
 				  DBUS_TYPE_INVALID);
 
 		if (dbus_error_is_set(&err)) {
@@ -374,7 +376,8 @@ int tts_dbus_request_initialize(int uid)
 		dbus_message_unref(result_msg);
 
 		if (0 == result) {
-			SLOG(LOG_DEBUG, TAG_TTSC, "<<<< tts initialize : result = %d", result);
+			*credential_needed = (bool)temp;
+			SLOG(LOG_DEBUG, TAG_TTSC, "<<<< tts initialize : result = %d, credential_needed(%d)", result, *credential_needed);
 		} else {
 			SLOG(LOG_ERROR, TAG_TTSC, "<<<< tts initialize : result = %d", result);
 		}
@@ -445,7 +448,7 @@ int tts_dbus_request_finalize(int uid)
 	return result;
 }
 
-int tts_dbus_request_add_text(int uid, const char* text, const char* lang, int vctype, int speed, int uttid)
+int tts_dbus_request_add_text(int uid, const char* text, const char* lang, int vctype, int speed, int uttid, const char* credential)
 {
 	if (NULL == text || NULL == lang) {
 		SLOG(LOG_ERROR, TAG_TTSC, "Input parameter is NULL");
@@ -462,8 +465,15 @@ int tts_dbus_request_add_text(int uid, const char* text, const char* lang, int v
 		SLOG(LOG_ERROR, TAG_TTSC, ">>>> Request tts add text : Fail to make message");
 		return TTS_ERROR_OPERATION_FAILED;
 	} else {
-		SLOG(LOG_DEBUG, TAG_TTSC, ">>>> Request tts add text : uid(%d), text(%s), lang(%s), type(%d), speed(%d), id(%d)",
-			 uid, text, lang, vctype, speed, uttid);
+		SLOG(LOG_DEBUG, TAG_TTSC, ">>>> Request tts add text : uid(%d), text(%s), lang(%s), type(%d), speed(%d), id(%d), credential(%s)",
+			 uid, text, lang, vctype, speed, uttid, (NULL == credential) ? "NULL" : credential);
+	}
+
+	char *temp = NULL;
+	if (NULL == credential) {
+		temp = strdup("NULL");
+	} else {
+		temp = strdup(credential);
 	}
 
 	if (true != dbus_message_append_args(msg,
@@ -473,10 +483,15 @@ int tts_dbus_request_add_text(int uid, const char* text, const char* lang, int v
 		DBUS_TYPE_INT32, &vctype,
 		DBUS_TYPE_INT32, &speed,
 		DBUS_TYPE_INT32, &uttid,
+		DBUS_TYPE_STRING, &temp,
 		DBUS_TYPE_INVALID)) {
 		dbus_message_unref(msg);
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to append args");
 
+		if (NULL != temp) {
+			free(temp);
+			temp = NULL;
+		}
 		return TTS_ERROR_OPERATION_FAILED;
 	}
 
@@ -513,6 +528,10 @@ int tts_dbus_request_add_text(int uid, const char* text, const char* lang, int v
 		result = TTS_ERROR_TIMED_OUT;
 	}
 
+	if (NULL != temp) {
+		free(temp);
+		temp = NULL;
+	}
 	return result;
 }
 
@@ -656,7 +675,7 @@ int tts_dbus_request_get_private_data(int uid, const char* key, char** data)
 	return result;
 }
 
-int tts_dbus_request_play(int uid)
+int tts_dbus_request_play(int uid, const char* credential)
 {
 	DBusMessage* msg;
 	DBusError err;
@@ -671,10 +690,24 @@ int tts_dbus_request_play(int uid)
 		SLOG(LOG_DEBUG, TAG_TTSC, ">>>> Request tts play : uid(%d)", uid);
 	}
 
-	if (true != dbus_message_append_args(msg, DBUS_TYPE_INT32, &uid, DBUS_TYPE_INVALID)) {
+	char *temp = NULL;
+	if (NULL == credential) {
+		temp = strdup("NULL");
+	} else {
+		temp = strdup(credential);
+	}
+
+	if (true != dbus_message_append_args(msg,
+		DBUS_TYPE_INT32, &uid,
+		DBUS_TYPE_STRING, &temp,
+		DBUS_TYPE_INVALID)) {
 		dbus_message_unref(msg);
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to append args");
 
+		if (NULL != temp) {
+			free(temp);
+			temp = NULL;
+		}
 		return TTS_ERROR_OPERATION_FAILED;
 	}
 
@@ -711,6 +744,10 @@ int tts_dbus_request_play(int uid)
 		result = TTS_ERROR_TIMED_OUT;
 	}
 
+	if (NULL != temp) {
+		free(temp);
+		temp = NULL;
+	}
 	return result;
 }
 

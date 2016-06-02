@@ -50,7 +50,7 @@ static utterance_t g_utt;
 static GList *g_proc_list = NULL;
 
 /* Function definitions */
-static int __synthesis(int uid);
+static int __synthesis(int uid, const char* credential);
 
 static int __server_set_synth_control(ttsd_synthesis_control_e control)
 {
@@ -66,6 +66,7 @@ static ttsd_synthesis_control_e __server_get_synth_control()
 static Eina_Bool __wait_synthesis(void *data)
 {
 	/* get current play */
+	char* credential = (char*)data;
 	int uid = ttsd_data_get_current_playing();
 
 	if (uid > 0) {
@@ -76,7 +77,7 @@ static Eina_Bool __wait_synthesis(void *data)
 			g_wait_timer = NULL;
 			if (TTSD_SYNTHESIS_CONTROL_DONE == __server_get_synth_control()) {
 				/* Start next synthesis */
-				__synthesis(uid);
+				__synthesis(uid, credential);
 			}
 		}
 	} else {
@@ -86,7 +87,7 @@ static Eina_Bool __wait_synthesis(void *data)
 	return EINA_FALSE;
 }
 
-static int __synthesis(int uid)
+static int __synthesis(int uid, const char* credential)
 {
 	SLOG(LOG_DEBUG, get_tag(), "===== SYNTHESIS  START");
 
@@ -124,11 +125,12 @@ static int __synthesis(int uid)
 		SECURE_SLOG(LOG_DEBUG, get_tag(), "ID : uid (%d), uttid(%d) ", g_utt.uid, g_utt.uttid);
 		SECURE_SLOG(LOG_DEBUG, get_tag(), "Voice : langauge(%s), type(%d), speed(%d)", speak_data->lang, speak_data->vctype, speak_data->speed);
 		SECURE_SLOG(LOG_DEBUG, get_tag(), "Text : %s", speak_data->text);
+		SECURE_SLOG(LOG_DEBUG, get_tag(), "Credential : %s", credential);
 		SLOG(LOG_DEBUG, get_tag(), "-----------------------------------------------------------");
 
 		int ret = 0;
 		__server_set_synth_control(TTSD_SYNTHESIS_CONTROL_DOING);
-		ret = ttsd_engine_start_synthesis(speak_data->lang, speak_data->vctype, speak_data->text, speak_data->speed, NULL);
+		ret = ttsd_engine_start_synthesis(speak_data->lang, speak_data->vctype, speak_data->text, speak_data->speed, credential, NULL);
 		if (0 != ret) {
 			SLOG(LOG_ERROR, get_tag(), "[Server ERROR] * FAIL to start SYNTHESIS !!!! * ");
 
@@ -139,7 +141,7 @@ static int __synthesis(int uid)
 			int pid = ttsd_data_get_pid(uid);
 			ttsdc_send_set_state_message(pid, uid, APP_STATE_READY);
 		} else {
-			g_wait_timer = ecore_timer_add(0, __wait_synthesis, NULL);
+			g_wait_timer = ecore_timer_add(0, __wait_synthesis, (void*)credential);
 		}
 
 		if (NULL != speak_data) {
@@ -565,7 +567,7 @@ Eina_Bool ttsd_cleanup_client(void *data)
 * TTS Server Functions for Client
 */
 
-int ttsd_server_initialize(int pid, int uid)
+int ttsd_server_initialize(int pid, int uid, bool* credential_needed)
 {
 	if (false == g_is_engine) {
 		if (0 != ttsd_engine_agent_initialize_current_engine()) {
@@ -590,6 +592,10 @@ int ttsd_server_initialize(int pid, int uid)
 		}
 	}
 
+	if (0 != ttsd_engine_agent_is_credential_needed(uid, credential_needed)) {
+		SLOG(LOG_ERROR, get_tag(), "Server ERROR] Fail to get credential necessity");
+		return TTSD_ERROR_OPERATION_FAILED;
+	}
 	if (0 != ttsd_data_new_client(pid, uid)) {
 		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to add client info");
 		return TTSD_ERROR_OPERATION_FAILED;
@@ -646,7 +652,7 @@ int ttsd_server_finalize(int uid)
 	return TTSD_ERROR_NONE;
 }
 
-int ttsd_server_add_queue(int uid, const char* text, const char* lang, int voice_type, int speed, int utt_id)
+int ttsd_server_add_queue(int uid, const char* text, const char* lang, int voice_type, int speed, int utt_id, const char* credential)
 {
 	app_state_e state;
 	if (0 > ttsd_data_get_client_state(uid, &state)) {
@@ -725,7 +731,7 @@ int ttsd_server_add_queue(int uid, const char* text, const char* lang, int voice
 		if (TTSD_SYNTHESIS_CONTROL_DOING == __server_get_synth_control()) {
 			SLOG(LOG_WARN, get_tag(), "[Server WARNING] Engine has already been running.");
 		} else {
-			__synthesis(uid);
+			__synthesis(uid, credential);
 		}
 	}
 
@@ -749,7 +755,7 @@ Eina_Bool __send_interrupt_client(void *data)
 	return EINA_FALSE;
 }
 
-int ttsd_server_play(int uid)
+int ttsd_server_play(int uid, const char* credential)
 {
 	app_state_e state;
 	if (0 > ttsd_data_get_client_state(uid, &state)) {
@@ -826,7 +832,7 @@ int ttsd_server_play(int uid)
 	if (TTSD_SYNTHESIS_CONTROL_DOING == __server_get_synth_control()) {
 		SLOG(LOG_WARN, get_tag(), "[Server WARNING] Engine has already been running.");
 	} else {
-		__synthesis(uid);
+		__synthesis(uid, credential);
 	}
 
 	return TTSD_ERROR_NONE;

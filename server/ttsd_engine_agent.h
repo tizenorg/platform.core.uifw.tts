@@ -60,6 +60,8 @@ int ttsd_engine_agent_set_default_speed(int speed);
 
 int ttsd_engine_agent_set_default_pitch(int pitch);
 
+int ttsd_engine_agent_is_credential_needed(int uid, bool* credential_needed);
+
 int ttsd_engine_set_private_data(const char* key, const char* data);
 
 int ttsd_engine_get_private_data(const char* key, char** data);
@@ -72,7 +74,7 @@ int ttsd_engine_load_voice(const char* lang, int vctype);
 
 int ttsd_engine_unload_voice(const char* lang, int vctype);
 
-int ttsd_engine_start_synthesis(const char* lang, int vctype, const char* text, int speed, void* user_param);
+int ttsd_engine_start_synthesis(const char* lang, int vctype, const char* text, int speed, const char* credential, void* user_param);
 
 int ttsd_engine_cancel_synthesis();
 
