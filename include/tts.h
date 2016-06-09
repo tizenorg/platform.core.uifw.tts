@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved
+ * Copyright (c) 2011-2016 Samsung Electronics Co., Ltd All Rights Reserved
  *
  * Licensed under the Apache License, Version 2.0 (the License);
  * you may not use this file except in compliance with the License.
@@ -50,7 +50,8 @@ typedef enum {
 	TTS_ERROR_INVALID_VOICE		= TIZEN_ERROR_TTS | 0x02,	/**< Invalid voice */
 	TTS_ERROR_ENGINE_NOT_FOUND	= TIZEN_ERROR_TTS | 0x03,	/**< No available engine */
 	TTS_ERROR_OPERATION_FAILED	= TIZEN_ERROR_TTS | 0x04,	/**< Operation failed */
-	TTS_ERROR_AUDIO_POLICY_BLOCKED	= TIZEN_ERROR_TTS | 0x05	/**< Audio policy blocked */
+	TTS_ERROR_AUDIO_POLICY_BLOCKED	= TIZEN_ERROR_TTS | 0x05,	/**< Audio policy blocked */
+	TTS_ERROR_NOT_SUPPORTED_FEATURE	= TIZEN_ERROR_TTS | 0x06	/**< Not supported feature of current engine*/
 } tts_error_e;
 
 /** 
@@ -537,7 +538,7 @@ int tts_get_error_message(tts_h tts, char** err_msg);
  * @retval #TTS_ERROR_INVALID_VOICE Invalid voice about language, voice type
  * @retval #TTS_ERROR_OPERATION_FAILED Operation failure
  * @retval #TTS_ERROR_NOT_SUPPORTED TTS NOT supported
- * @retval #TTS_ERROR_PERMISSION_DENIED Permission denied 
+ * @retval #TTS_ERROR_PERMISSION_DENIED Permission denied
  *
  * @pre The state should be #TTS_STATE_READY, #TTS_STATE_PLAYING or #TTS_STATE_PAUSED.
  * @see tts_get_max_text_size()
@@ -558,7 +559,7 @@ int tts_add_text(tts_h tts, const char* text, const char* language, int voice_ty
  * @retval #TTS_ERROR_INVALID_STATE Invalid state
  * @retval #TTS_ERROR_OPERATION_FAILED Operation failure
  * @retval #TTS_ERROR_NOT_SUPPORTED TTS NOT supported
- * @retval #TTS_ERROR_PERMISSION_DENIED Permission denied 
+ * @retval #TTS_ERROR_PERMISSION_DENIED Permission denied
  *
  * @pre The current state should be #TTS_STATE_READY or #TTS_STATE_PAUSED.
  * @post If this function succeeds, the TTS state will be #TTS_STATE_PLAYING.

@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved
+*  Copyright (c) 2011-2016 Samsung Electronics Co., Ltd All Rights Reserved
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -47,6 +47,7 @@ const char* __ttsd_get_error_code(ttsd_error_e err)
 	case TTSD_ERROR_TIMED_OUT:		return "TTS_ERROR_TIMED_OUT";
 	case TTSD_ERROR_OPERATION_FAILED:	return "TTS_ERROR_OPERATION_FAILED";
 	case TTSD_ERROR_AUDIO_POLICY_BLOCKED:	return "TTS_ERROR_AUDIO_POLICY_BLOCKED";
+	case TTSD_ERROR_NOT_SUPPORTED_FEATURE:	return "TTSD_ERROR_NOT_SUPPORTED_FEATURE";
 	default:
 		return "Invalid error code";
 	}

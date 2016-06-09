@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2011-2016 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -32,19 +32,20 @@ extern "C" {
  * @brief Enumeration for error code.
 */
 typedef enum {
-	TTSP_ERROR_NONE			= TIZEN_ERROR_NONE,		/**< Successful */
-	TTSP_ERROR_OUT_OF_MEMORY	= TIZEN_ERROR_OUT_OF_MEMORY,	/**< Out of Memory */
-	TTSP_ERROR_IO_ERROR		= TIZEN_ERROR_IO_ERROR,		/**< I/O error */
-	TTSP_ERROR_INVALID_PARAMETER	= TIZEN_ERROR_INVALID_PARAMETER,/**< Invalid parameter */
-	TTSP_ERROR_OUT_OF_NETWORK	= TIZEN_ERROR_NETWORK_DOWN,	/**< Network is down */
-	TTSP_ERROR_TIMED_OUT		= TIZEN_ERROR_TIMED_OUT,	/**< No answer from the daemon */
-	TTSP_ERROR_PERMISSION_DENIED	= TIZEN_ERROR_PERMISSION_DENIED,/**< Permission denied */
-	TTSP_ERROR_NOT_SUPPORTED	= TIZEN_ERROR_NOT_SUPPORTED,	/**< TTS NOT supported */
-	TTSP_ERROR_INVALID_STATE	= TIZEN_ERROR_TTS | 0x01,	/**< Invalid state */
-	TTSP_ERROR_INVALID_VOICE	= TIZEN_ERROR_TTS | 0x02,	/**< Invalid voice */
-	TTSP_ERROR_ENGINE_NOT_FOUND	= TIZEN_ERROR_TTS | 0x03,	/**< No available engine */
-	TTSP_ERROR_OPERATION_FAILED	= TIZEN_ERROR_TTS | 0x04,	/**< Operation failed */
-	TTSP_ERROR_AUDIO_POLICY_BLOCKED	= TIZEN_ERROR_TTS | 0x05	/**< Audio policy blocked */
+	TTSP_ERROR_NONE				= TIZEN_ERROR_NONE,		/**< Successful */
+	TTSP_ERROR_OUT_OF_MEMORY		= TIZEN_ERROR_OUT_OF_MEMORY,	/**< Out of Memory */
+	TTSP_ERROR_IO_ERROR			= TIZEN_ERROR_IO_ERROR,		/**< I/O error */
+	TTSP_ERROR_INVALID_PARAMETER		= TIZEN_ERROR_INVALID_PARAMETER,/**< Invalid parameter */
+	TTSP_ERROR_OUT_OF_NETWORK		= TIZEN_ERROR_NETWORK_DOWN,	/**< Network is down */
+	TTSP_ERROR_TIMED_OUT			= TIZEN_ERROR_TIMED_OUT,	/**< No answer from the daemon */
+	TTSP_ERROR_PERMISSION_DENIED		= TIZEN_ERROR_PERMISSION_DENIED,/**< Permission denied */
+	TTSP_ERROR_NOT_SUPPORTED		= TIZEN_ERROR_NOT_SUPPORTED,	/**< TTS NOT supported */
+	TTSP_ERROR_INVALID_STATE		= TIZEN_ERROR_TTS | 0x01,	/**< Invalid state */
+	TTSP_ERROR_INVALID_VOICE		= TIZEN_ERROR_TTS | 0x02,	/**< Invalid voice */
+	TTSP_ERROR_ENGINE_NOT_FOUND		= TIZEN_ERROR_TTS | 0x03,	/**< No available engine */
+	TTSP_ERROR_OPERATION_FAILED		= TIZEN_ERROR_TTS | 0x04,	/**< Operation failed */
+	TTSP_ERROR_AUDIO_POLICY_BLOCKED		= TIZEN_ERROR_TTS | 0x05,	/**< Audio policy blocked */
+	TTSP_ERROR_NOT_SUPPORTED_FEATURE	= TIZEN_ERROR_TTS | 0x06	/**< Not supported feature of current engine*/
 } ttsp_error_e;
 
 /**

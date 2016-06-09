@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved
+*  Copyright (c) 2011-2016 Samsung Electronics Co., Ltd All Rights Reserved
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -107,7 +107,7 @@ static bool __supported_voice_cb(const char* language, int type, void* user_data
 static void __free_voice_list(GList* voice_list);
 
 /** Callback function for engine info */
-static void __engine_info_cb(const char* engine_uuid, const char* engine_name, const char* setting_ug_name, 
+static void __engine_info_cb(const char* engine_uuid, const char* engine_name, const char* setting_ug_name,
 		      bool use_network, void* user_data);
 
 
@@ -149,7 +149,18 @@ int ttsd_engine_agent_init(synth_result_callback result_cb)
 	g_cur_engine.is_set = false;
 	g_cur_engine.handle = NULL;
 	g_cur_engine.pefuncs = (ttspe_funcs_s*)calloc(1, sizeof(ttspe_funcs_s));
+	if (NULL == g_cur_engine.pefuncs) {
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Fail to allocate memory");
+		return TTSP_ERROR_OUT_OF_MEMORY;
+	}
+
 	g_cur_engine.pdfuncs = (ttspd_funcs_s*)calloc(1, sizeof(ttspd_funcs_s));
+	if (NULL == g_cur_engine.pdfuncs) {
+		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Fail to allocate memory");
+		free(g_cur_engine.pefuncs);
+		g_cur_engine.pefuncs = NULL;
+		return TTSP_ERROR_OUT_OF_MEMORY;
+	}
 
 	g_agent_init = true;
 
@@ -787,64 +798,13 @@ int ttsd_engine_agent_load_current_engine()
 	if (NULL != g_cur_engine.pefuncs->set_pitch) {
 		ret = g_cur_engine.pefuncs->set_pitch(g_cur_engine.default_pitch);
 		if (0 != ret) {
-			SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Fail to set pitch : pitch(%d), result(%s)", 
+			SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Fail to set pitch : pitch(%d), result(%s)",
 				g_cur_engine.default_pitch, __ttsd_get_engine_error_code(ret));
 			return TTSD_ERROR_OPERATION_FAILED;
 		}
 		SLOG(LOG_DEBUG, get_tag(), "[Engine Agent SUCCESS] Set default pitch : pitch(%d)", g_cur_engine.default_pitch);
 	}
 
-#if 0
-	if (false == set_voice) {
-		/* get language list */
-		int ret;
-		GList* voice_list = NULL;
-
-		ret = g_cur_engine.pefuncs->foreach_voices(__supported_voice_cb, &voice_list);
-
-		if (0 == ret && 0 < g_list_length(voice_list)) {
-			GList *iter = NULL;
-			voice_s* voice = NULL;
-
-			iter = g_list_first(voice_list);
-
-			/* check english */
-			while (NULL != iter) {
-				voice = iter->data;
-
-				if (NULL != voice) {
-					if (0 == strcmp("en_US", voice->language))
-						break;
-				}
-
-				iter = g_list_next(iter);
-			}
-			if (NULL == voice) {
-				SLOG(LOG_ERROR, get_tag(), "[Engine ERROR] Fail to find voice in list");
-				return TTSD_ERROR_OPERATION_FAILED;
-			}
-
-			/* Set selected language and type */
-			if (true != g_cur_engine.pefuncs->is_valid_voice(voice->language, voice->type)) {
-				SLOG(LOG_ERROR, get_tag(), "[Engine ERROR] Fail voice is NOT valid");
-				return TTSD_ERROR_OPERATION_FAILED;
-			}
-
-			ttsd_config_set_default_voice(voice->language, (int)voice->type);
-
-			g_cur_engine.default_lang = strdup(voice->language);
-			g_cur_engine.default_vctype = voice->type;
-
-			SLOG(LOG_DEBUG, get_tag(), "[Engine Agent SUCCESS] Select default voice : lang(%s), type(%d)",
-				 voice->language,  voice->type);
-
-			__free_voice_list(voice_list);
-		} else {
-			SLOG(LOG_ERROR, get_tag(), "[Engine ERROR] Fail to get language list : result(%d)", ret);
-			return TTSD_ERROR_OPERATION_FAILED;
-		}
-	}
-#endif
 	g_cur_engine.is_loaded = true;
 
 	return 0;
@@ -1300,7 +1260,7 @@ int ttsd_engine_agent_is_credential_needed(int uid, bool* credential_needed)
 
 	if (NULL == g_cur_engine.pefuncs->need_app_credential) {
 		SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] Not support to check app credential");
-		return TTSD_ERROR_OPERATION_FAILED;
+		return TTSD_ERROR_NOT_SUPPORTED_FEATURE;
 	}
 
 	bool result = false;
