@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved
+*  Copyright (c) 2011-2016 Samsung Electronics Co., Ltd All Rights Reserved
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -82,6 +82,7 @@ static const char* __tts_get_error_code(tts_error_e err)
 	case TTS_ERROR_ENGINE_NOT_FOUND:	return "TTS_ERROR_ENGINE_NOT_FOUND";
 	case TTS_ERROR_OPERATION_FAILED:	return "TTS_ERROR_OPERATION_FAILED";
 	case TTS_ERROR_AUDIO_POLICY_BLOCKED:	return "TTS_ERROR_AUDIO_POLICY_BLOCKED";
+	case TTS_ERROR_NOT_SUPPORTED_FEATURE:	return "TTS_ERROR_NOT_SUPPORTED_FEATURE";
 	default:
 		return "Invalid error code";
 	}
@@ -98,7 +99,7 @@ static int __tts_convert_config_error_code(tts_config_error_e code)
 	if (code == TTS_CONFIG_ERROR_INVALID_VOICE)		return TTS_ERROR_INVALID_VOICE;
 	if (code == TTS_CONFIG_ERROR_ENGINE_NOT_FOUND)		return TTS_ERROR_ENGINE_NOT_FOUND;
 	if (code == TTS_CONFIG_ERROR_OPERATION_FAILED)		return TTS_ERROR_OPERATION_FAILED;
-	if (code == TTS_CONFIG_ERROR_NOT_SUPPORTED_FEATURE)	return TTS_ERROR_OPERATION_FAILED;
+	if (code == TTS_CONFIG_ERROR_NOT_SUPPORTED_FEATURE)	return TTS_ERROR_NOT_SUPPORTED_FEATURE;
 
 	return code;
 }
@@ -1477,7 +1478,7 @@ int tts_set_private_data(tts_h tts, const char* key, const char* data)
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input handle is null");
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
-	
+
 	if (NULL == key || NULL == data) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Invalid parameter");
 		return TTS_ERROR_INVALID_PARAMETER;
@@ -1492,11 +1493,6 @@ int tts_set_private_data(tts_h tts, const char* key, const char* data)
 
 	if (TTS_STATE_READY != client->current_state) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Invalid state : Current state is NOT 'READY'");
-		return TTS_ERROR_INVALID_STATE;
-	}
-
-	if (false == g_screen_reader && TTS_MODE_SCREEN_READER == client->mode) {
-		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] Screen reader option is NOT available. Ignore this request");
 		return TTS_ERROR_INVALID_STATE;
 	}
 
@@ -1538,7 +1534,7 @@ int tts_get_private_data(tts_h tts, const char* key, char** data)
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Input handle is null");
 		return TTS_ERROR_INVALID_PARAMETER;
 	}
-	
+
 	if (NULL == key || NULL == data) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Invalid parameter");
 		return TTS_ERROR_INVALID_PARAMETER;
@@ -1553,11 +1549,6 @@ int tts_get_private_data(tts_h tts, const char* key, char** data)
 
 	if (TTS_STATE_READY != client->current_state) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Invalid state : Current state is NOT 'READY'");
-		return TTS_ERROR_INVALID_STATE;
-	}
-
-	if (false == g_screen_reader && TTS_MODE_SCREEN_READER == client->mode) {
-		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] Screen reader option is NOT available. Ignore this request");
 		return TTS_ERROR_INVALID_STATE;
 	}
 

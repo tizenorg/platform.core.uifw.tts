@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved
+*  Copyright (c) 2011-2016 Samsung Electronics Co., Ltd All Rights Reserved
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -56,7 +56,7 @@ static bool __tts_test_get_text_from_file(const char* path, char** text)
 	temp = (char*)calloc(1, text_len+1);
 
 	if (temp == NULL) {
-		SLOG(LOG_ERROR, tts_tag(), "Fail to memory allocation");		
+		SLOG(LOG_ERROR, tts_tag(), "Fail to memory allocation");
 		fclose(fp);
 		return 0;
 	}

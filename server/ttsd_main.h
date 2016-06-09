@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2011-2014 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2011-2016 Samsung Electronics Co., Ltd All Rights Reserved 
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -50,7 +50,7 @@ typedef enum {
 	TTSD_ERROR_ENGINE_NOT_FOUND		= TIZEN_ERROR_TTS | 0x03,	/**< No available engine */
 	TTSD_ERROR_OPERATION_FAILED		= TIZEN_ERROR_TTS | 0x04,	/**< Operation failed */
 	TTSD_ERROR_AUDIO_POLICY_BLOCKED		= TIZEN_ERROR_TTS | 0x05,	/**< Audio policy blocked */
-	TTSD_ERROR_NOT_SUPPORTED_FEATURE	= TIZEN_ERROR_TTS | 0x06	/**< Not supported feature */
+	TTSD_ERROR_NOT_SUPPORTED_FEATURE	= TIZEN_ERROR_TTS | 0x06	/**< Not supported feature of current engine*/
 } ttsd_error_e;
 
 typedef enum {
