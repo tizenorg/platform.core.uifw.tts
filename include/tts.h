@@ -213,6 +213,20 @@ typedef bool(*tts_supported_voice_cb)(tts_h tts, const char* language, int voice
 */
 typedef void (*tts_default_voice_changed_cb)(tts_h tts, const char* previous_language, int previous_voice_type,
 				const char* current_language, int current_voice_type, void* user_data);
+/**
+ * @brief Called when the engine is changed.
+ * @since_tizen 3.0
+ *
+ * @param[in] tts The TTS handle
+ * @param[in] engine_id Engine id
+ * @param[in] language The default language
+ * @param[in] voice_type The voice type
+ * @param[in] need_credential necessity of credential
+ * @param[in] user_data The user data passed from the callback registration function
+ *
+ * @see tts_set_engine_changed_cb()
+*/
+typedef bool (*tts_engine_changed_cb)(tts_h tts, const char* engine_id, const char* language, int voice_type, bool need_credential, void* user_data);
 
 
 /**
@@ -813,6 +827,45 @@ int tts_set_default_voice_changed_cb(tts_h tts, tts_default_voice_changed_cb cal
  * @see tts_set_default_voice_changed_cb()
 */
 int tts_unset_default_voice_changed_cb(tts_h tts);
+
+ /**
+ * @brief Registers a callback function to detect the engine change.
+ * @since_tizen 3.0
+ *
+ * @param[in] tts The TTS handle
+ * @param]in] callback The callback function to register
+ * @param[in] user_data The user data to be passed to the callback function
+ *
+ * @return 0 on success, otherwise a negative error value
+ * @retval #TTS_ERROR_NONE Successful
+ * @retval #TTS_ERROR_INVALID_PARAMETER Invalid parameter
+ * @retval #TTS_ERROR_INVALID_STATE Invalid state
+ * @retval #TTS_ERROR_NOT_SUPPORTED TTS NOT supported
+ *
+ * @pre The state should be #TTS_STATE_CREATED.
+ *
+ * @see tts_engine_changed_cb()
+ * @see tts_unset_engine_changed_cb()
+*/
+int tts_set_engine_changed_cb(tts_h tts, tts_engine_changed_cb callback, void* user_data);
+
+/**
+ * @brief Unregisters the callback function.
+ * @since_tizen 3.0
+ *
+ * @param[in] tts The TTS handle
+ *
+ * @return 0 on success, otherwise a negative error value
+ * @retval #TTS_ERROR_NONE Successful
+ * @retval #TTS_ERROR_INVALID_PARAMETER Invalid parameter
+ * @retval #TTS_ERROR_INVALID_STATE Invalid state
+ * @retval #TTS_ERROR_NOT_SUPPORTED TTS NOT supported
+ *
+ * @pre The state should be #TTS_STATE_CREATED.
+ *
+ * @see tts_set_engine_changed_cb()
+*/
+int tts_unset_engine_changed_cb(tts_h tts);
 
 
 #ifdef __cplusplus
