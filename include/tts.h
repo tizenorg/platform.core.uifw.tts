@@ -11,7 +11,7 @@
  * distributed under the License is distributed on an AS IS BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License. 
+ * limitations under the License.
  */
 
 
@@ -33,7 +33,7 @@
 extern "C" {
 #endif
 
-/** 
+/**
  * @brief Enumeration for error code.
  * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
 */
@@ -51,10 +51,11 @@ typedef enum {
 	TTS_ERROR_ENGINE_NOT_FOUND	= TIZEN_ERROR_TTS | 0x03,	/**< No available engine */
 	TTS_ERROR_OPERATION_FAILED	= TIZEN_ERROR_TTS | 0x04,	/**< Operation failed */
 	TTS_ERROR_AUDIO_POLICY_BLOCKED	= TIZEN_ERROR_TTS | 0x05,	/**< Audio policy blocked */
-	TTS_ERROR_NOT_SUPPORTED_FEATURE	= TIZEN_ERROR_TTS | 0x06	/**< Not supported feature of current engine*/
+	TTS_ERROR_NOT_SUPPORTED_FEATURE	= TIZEN_ERROR_TTS | 0x06,	/**< Not supported feature of current engine*/
+	TTS_ERROR_SERVICE_RESET		= TIZEN_ERROR_TTS | 0x07	/**< Service reset */
 } tts_error_e;
 
-/** 
+/**
  * @brief Enumeration for TTS mode.
  * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
 */
@@ -64,7 +65,7 @@ typedef enum {
 	TTS_MODE_SCREEN_READER	= 2	/**< Accessibiliity mode */
 } tts_mode_e;
 
-/** 
+/**
  * @brief Enumerations for state.
  * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
 */
@@ -75,37 +76,37 @@ typedef enum {
 	TTS_STATE_PAUSED	= 3	/**< 'PAUSED' state*/
 } tts_state_e;
 
-/** 
+/**
  * @brief Definitions for automatic speaking speed.
  * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
 */
 #define TTS_SPEED_AUTO		0
 
-/** 
+/**
  * @brief Definitions for automatic voice type.
  * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
 */
 #define TTS_VOICE_TYPE_AUTO	0
 
-/** 
+/**
  * @brief Definitions for male voice type.
  * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
 */
 #define TTS_VOICE_TYPE_MALE	1
 
-/** 
+/**
  * @brief Definitions for female voice type.
  * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
 */
 #define TTS_VOICE_TYPE_FEMALE	2
 
-/** 
+/**
  * @brief Definitions for child voice type.
  * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
 */
 #define TTS_VOICE_TYPE_CHILD	3
 
-/** 
+/**
  * @brief The TTS handle.
  * @since_tizen @if MOBILE 2.3 @elseif WEARABLE 2.3.1 @endif
 */
@@ -213,6 +214,20 @@ typedef bool(*tts_supported_voice_cb)(tts_h tts, const char* language, int voice
 */
 typedef void (*tts_default_voice_changed_cb)(tts_h tts, const char* previous_language, int previous_voice_type,
 				const char* current_language, int current_voice_type, void* user_data);
+/**
+ * @brief Called when the engine is changed.
+ * @since_tizen @if MOBILE 3.0 @elseif WEARABLE 2.3.2 @endif
+ *
+ * @param[in] tts The TTS handle
+ * @param[in] engine_id Engine id
+ * @param[in] language The default language
+ * @param[in] voice_type The default voice type
+ * @param[in] need_credential The necessity of credential
+ * @param[in] user_data The user data passed from the callback registration function
+ *
+ * @see tts_set_engine_changed_cb()
+*/
+typedef bool (*tts_engine_changed_cb)(tts_h tts, const char* engine_id, const char* language, int voice_type, bool need_credential, void* user_data);
 
 
 /**
@@ -294,8 +309,7 @@ int tts_get_mode(tts_h tts, tts_mode_e* mode);
 
 /**
  * @brief Sets the app credential.
- * @since_tizen 3.0
- * @privlevel public
+ * @since_tizen @if MOBILE 3.0 @elseif WEARABLE 2.3.2 @endif
  *
  * @param[in] tts The TTS handle
  * @param[in] credential The app credential
@@ -304,6 +318,7 @@ int tts_get_mode(tts_h tts, tts_mode_e* mode);
  * @retval #TTS_ERROR_NONE Success
  * @retval #TTS_ERROR_INVALID_STATE Invalid state
  * @retval #TTS_ERROR_INVALID_PARAMETER Invalid parameter
+ * @retval #TTS_ERROR_NOT_SUPPORTED TTS NOT supported
  *
  * @pre The state should be #TTS_STATE_CREATED or #TTS_STATE_READY.
  *
@@ -394,7 +409,7 @@ int tts_get_default_voice(tts_h tts, char** language, int* voice_type);
 
 /**
  * @brief Sets the private data to tts engine.
- * @since_tizen 3.0
+ * @since_tizen @if MOBILE 3.0 @elseif WEARABLE 2.3.2 @endif
  *
  * @param[in] tts The TTS handle
  * @param[in] key The field name of private data
@@ -416,13 +431,13 @@ int tts_set_private_data(tts_h tts, const char* key, const char* data);
 
 /**
  * @brief Gets the private data from tts engine.
- * @since_tizen 3.0
+ * @since_tizen @if MOBILE 3.0 @elseif WEARABLE 2.3.2 @endif
  *
- * @remarks data must be released using free() when it is no longer required.
+ * @remarks The @a data must be released using free() when it is no longer required.
  *
  * @param[in] tts The TTS handle
  * @param[in] key The field name of private data
- * @param[out] data The data
+ * @param[out] data The data field of private data
  *
  * @return 0 on success, otherwise a negative error value
  * @retval #TTS_ERROR_NONE Successful
@@ -499,8 +514,8 @@ int tts_get_speed_range(tts_h tts, int* min, int* normal, int* max);
 
 /**
  * @brief Gets the current error message.
- * @since_tizen 3.0
- * @privlevel public
+ * @since_tizen @if MOBILE 3.0 @elseif WEARABLE 2.3.2 @endif
+ *
  * @remarks This function should be called during an tts error callback. If not, the error as operation failure will be returned. \n
  * If the function succeeds, @a err_msg must be released using free() when it is no longer required.
  *
@@ -813,6 +828,45 @@ int tts_set_default_voice_changed_cb(tts_h tts, tts_default_voice_changed_cb cal
  * @see tts_set_default_voice_changed_cb()
 */
 int tts_unset_default_voice_changed_cb(tts_h tts);
+
+ /**
+ * @brief Registers a callback function to detect the engine change.
+ * @since_tizen @if MOBILE 3.0 @elseif WEARABLE 2.3.2 @endif
+ *
+ * @param[in] tts The TTS handle
+ * @param]in] callback The callback function to register
+ * @param[in] user_data The user data to be passed to the callback function
+ *
+ * @return 0 on success, otherwise a negative error value
+ * @retval #TTS_ERROR_NONE Successful
+ * @retval #TTS_ERROR_INVALID_PARAMETER Invalid parameter
+ * @retval #TTS_ERROR_INVALID_STATE Invalid state
+ * @retval #TTS_ERROR_NOT_SUPPORTED TTS NOT supported
+ *
+ * @pre The state should be #TTS_STATE_CREATED.
+ *
+ * @see tts_engine_changed_cb()
+ * @see tts_unset_engine_changed_cb()
+*/
+int tts_set_engine_changed_cb(tts_h tts, tts_engine_changed_cb callback, void* user_data);
+
+/**
+ * @brief Unregisters the callback function.
+ * @since_tizen @if MOBILE 3.0 @elseif WEARABLE 2.3.2 @endif
+ *
+ * @param[in] tts The TTS handle
+ *
+ * @return 0 on success, otherwise a negative error value
+ * @retval #TTS_ERROR_NONE Successful
+ * @retval #TTS_ERROR_INVALID_PARAMETER Invalid parameter
+ * @retval #TTS_ERROR_INVALID_STATE Invalid state
+ * @retval #TTS_ERROR_NOT_SUPPORTED TTS NOT supported
+ *
+ * @pre The state should be #TTS_STATE_CREATED.
+ *
+ * @see tts_set_engine_changed_cb()
+*/
+int tts_unset_engine_changed_cb(tts_h tts);
 
 
 #ifdef __cplusplus
