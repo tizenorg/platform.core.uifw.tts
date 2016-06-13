@@ -563,8 +563,8 @@ int ttsd_dbus_server_get_private_data(DBusConnection* conn, DBusMessage* msg)
 	dbus_error_init(&err);
 
 	int uid;
-	char* key;
-	char* data;
+	char* key = NULL;
+	char* data = NULL;
 	int ret = 0;
 	dbus_message_get_args(msg, &err,
 		DBUS_TYPE_INT32, &uid,
