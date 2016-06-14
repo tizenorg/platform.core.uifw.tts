@@ -407,9 +407,38 @@ void __screen_reader_changed_cb(bool value)
 /*
 * Server APIs
 */
+static bool __send_reset_signal(int pid, int uid, app_state_e state, void* user_data)
+{
+	ttsdc_send_error_message(pid, uid, -1, TTSD_ERROR_SERVICE_RESET, "TTS service reset");
+	return true;
+}
+
+static void __sig_handler(int signo)
+{
+	/* restore signal handler */
+	signal(signo, SIG_DFL);
+
+	/* Send error signal via foreach clients */
+	ttsd_data_foreach_clients(__send_reset_signal, NULL);
+
+	/* invoke signal again */
+	raise(signo);
+}
+
+static void __register_sig_handler()
+{
+	signal(SIGSEGV, __sig_handler);
+	signal(SIGABRT, __sig_handler);
+	signal(SIGTERM, __sig_handler);
+	signal(SIGINT, __sig_handler);
+	signal(SIGQUIT, __sig_handler);
+}
 
 int ttsd_initialize()
 {
+	/* Register signal handler */
+	__register_sig_handler();
+	
 	if (ttsd_config_initialize(__config_changed_cb)) {
 		SLOG(LOG_ERROR, get_tag(), "[Server WARNING] Fail to initialize config.");
 	}

@@ -51,7 +51,8 @@ typedef enum {
 	TTS_ERROR_ENGINE_NOT_FOUND	= TIZEN_ERROR_TTS | 0x03,	/**< No available engine */
 	TTS_ERROR_OPERATION_FAILED	= TIZEN_ERROR_TTS | 0x04,	/**< Operation failed */
 	TTS_ERROR_AUDIO_POLICY_BLOCKED	= TIZEN_ERROR_TTS | 0x05,	/**< Audio policy blocked */
-	TTS_ERROR_NOT_SUPPORTED_FEATURE	= TIZEN_ERROR_TTS | 0x06	/**< Not supported feature of current engine*/
+	TTS_ERROR_NOT_SUPPORTED_FEATURE	= TIZEN_ERROR_TTS | 0x06,	/**< Not supported feature of current engine*/
+	TTS_ERROR_SERVICE_RESET		= TIZEN_ERROR_TTS | 0x07	/**< Service reset */
 } tts_error_e;
 
 /** 

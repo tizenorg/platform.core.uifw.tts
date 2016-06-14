@@ -121,7 +121,7 @@ static Eina_Bool listener_event_callback(void* data, Ecore_Fd_Handler *fd_handle
 			DBUS_TYPE_INT32, &uid,
 			DBUS_TYPE_INT32, &uttid,
 			DBUS_TYPE_INT32, &reason,
-			DBUS_TYPE_INT32, &err_msg,
+			DBUS_TYPE_STRING, &err_msg,
 			DBUS_TYPE_INVALID);
 
 		if (dbus_error_is_set(&err)) {

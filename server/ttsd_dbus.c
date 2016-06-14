@@ -48,6 +48,7 @@ const char* __ttsd_get_error_code(ttsd_error_e err)
 	case TTSD_ERROR_OPERATION_FAILED:	return "TTS_ERROR_OPERATION_FAILED";
 	case TTSD_ERROR_AUDIO_POLICY_BLOCKED:	return "TTS_ERROR_AUDIO_POLICY_BLOCKED";
 	case TTSD_ERROR_NOT_SUPPORTED_FEATURE:	return "TTSD_ERROR_NOT_SUPPORTED_FEATURE";
+	case TTSD_ERROR_SERVICE_RESET:		return "TTSD_ERROR_SERVICE_RESET";
 	default:
 		return "Invalid error code";
 	}
@@ -197,7 +198,7 @@ int ttsdc_send_error_message(int pid, int uid, int uttid, int reason, char* err_
 		DBUS_TYPE_INT32, &uid,
 		DBUS_TYPE_INT32, &uttid,
 		DBUS_TYPE_INT32, &reason,
-		DBUS_TYPE_INT32, &err_msg,
+		DBUS_TYPE_STRING, &err_msg,
 		DBUS_TYPE_INVALID);
 
 	dbus_message_set_no_reply(msg, TRUE);
@@ -205,7 +206,7 @@ int ttsdc_send_error_message(int pid, int uid, int uttid, int reason, char* err_
 	if (!dbus_connection_send(g_conn_sender, msg, NULL)) {
 		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] <<<< error message : Out Of Memory !");
 	} else {
-		SLOG(LOG_DEBUG, get_tag(), "<<<< Send error message : uid(%d), reason(%s), uttid(%d), err_msg(%d)",
+		SLOG(LOG_DEBUG, get_tag(), "<<<< Send error message : uid(%d), reason(%s), uttid(%d), err_msg(%s)",
 			 uid, __ttsd_get_error_code(reason), uttid, (NULL == err_msg) ? "NULL" : err_msg);
 		dbus_connection_flush(g_conn_sender);
 	}

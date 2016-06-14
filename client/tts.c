@@ -83,6 +83,7 @@ static const char* __tts_get_error_code(tts_error_e err)
 	case TTS_ERROR_OPERATION_FAILED:	return "TTS_ERROR_OPERATION_FAILED";
 	case TTS_ERROR_AUDIO_POLICY_BLOCKED:	return "TTS_ERROR_AUDIO_POLICY_BLOCKED";
 	case TTS_ERROR_NOT_SUPPORTED_FEATURE:	return "TTS_ERROR_NOT_SUPPORTED_FEATURE";
+	case TTS_ERROR_SERVICE_RESET:		return "TTS_ERROR_SERVICE_RESET";
 	default:
 		return "Invalid error code";
 	}
@@ -1628,6 +1629,15 @@ int __tts_cb_error(int uid, tts_error_e reason, int utt_id, char* err_msg)
 		ecore_timer_add(0, __tts_notify_error, client->tts);
 	} else {
 		SLOG(LOG_WARN, TAG_TTSC, "No registered callback function of error ");
+	}
+
+	if (TTS_ERROR_SERVICE_RESET == reason) {
+		SLOG(LOG_WARN, TAG_TTSC, "[WARNING] Service Reset");
+
+		client->current_state = TTS_STATE_CREATED;
+		if (0 != tts_prepare(client->tts)) {
+			SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to prepare");
+		}
 	}
 
 	return 0;
