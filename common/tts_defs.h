@@ -79,6 +79,9 @@ extern "C" {
 #define TTS_DEFAULT_ENGINE_INFO		tzplatform_mkpath(TZ_SYS_RO_SHARE, "/voice/tts/1.0/engine-info")
 #define TTS_DEFAULT_ENGINE_SETTING	tzplatform_mkpath(TZ_SYS_RO_SHARE, "/voice/tts/1.0/engine-setting")
 
+#define TTS_DOWNLOAD_BASE		tzplatform_mkpath(TZ_USER_HOME, "/share/.voice/tts")
+#define TTS_DOWNLOAD_ENGINE_INFO	tzplatform_mkpath(TZ_USER_HOME, "/share/.voice/tts/engine-info")
+
 #define TTS_BASE_LANGUAGE		"en_US"
 
 #define TTS_RETRY_COUNT		5

@@ -464,6 +464,37 @@ int tts_parser_unload_config(tts_config_s* config_info)
 	return 0;
 }
 
+
+int tts_parser_copy_xml(const char* original, const char* destination)
+{
+	if (NULL == original || NULL == destination) {
+		SLOG(LOG_ERROR, tts_tag(), "[ERROR] Input parameter is NULL");
+		return -1;
+	}
+
+	xmlDocPtr doc = NULL;
+	doc = xmlParseFile(original);
+	if (doc == NULL) {
+		SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to parse file error : %s", original);
+		return -1;
+	}
+
+	int ret = xmlSaveFile(destination, doc);
+	if (0 > ret) {
+		SLOG(LOG_ERROR, tts_tag(), "[ERROR] Save result : %d", ret);
+	}
+
+	/* Set mode */
+	if (0 > chmod(destination, 0666)) {
+		SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to change file mode : %d", ret);
+	}
+
+        xmlFreeDoc(doc);
+	SLOG(LOG_DEBUG, tts_tag(), "[SUCCESS] Copying xml");
+
+	return 0;
+}
+
 int tts_parser_set_engine(const char* engine_id, const char* setting, const char* language, int type)
 {
 	if (NULL == engine_id) {
