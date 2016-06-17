@@ -48,11 +48,17 @@ static int g_config_fd_noti;
 static int g_config_wd_noti;
 
 /* For engine directory monitoring */
-static Ecore_Fd_Handler* g_dir_fd_handler = NULL;
-static int g_dir_fd;
-static int g_dir_wd;
+typedef struct {
+	Ecore_Fd_Handler* dir_fd_handler;
+	int dir_fd;
+	int dir_wd;
+} tts_engine_inotify_s;
+
+static GList* g_ino_list = NULL;
 
 int __tts_config_mgr_print_engine_info();
+static int __tts_config_mgr_register_engine_config_updated_event(const char* path);
+static int __tts_config_mgr_unregister_engine_config_updated_event();
 
 int __tts_config_mgr_check_engine_is_valid(const char* engine_id)
 {
@@ -733,9 +739,11 @@ int __tts_config_mgr_get_engine_info()
 	int filesize;
 	tts_engine_info_s* info = NULL;
 
+	__tts_config_release_engine();
 	g_engine_list = NULL;
+	__tts_config_mgr_unregister_engine_config_updated_event();
 
-	/* Get engine info from default engine directory */
+	/* Copy default info directory to download directory */
 	dp  = opendir(TTS_DEFAULT_ENGINE_INFO);
 	if (NULL == dp) {
 		SLOG(LOG_DEBUG, tts_tag(), "[CONFIG] No downloadable directory : %s", TTS_DEFAULT_ENGINE_INFO);
@@ -760,8 +768,50 @@ int __tts_config_mgr_get_engine_info()
 
 				SECURE_SLOG(LOG_DEBUG, tts_tag(), "[CONFIG] Filepath(%s)", filepath);
 
+				char dest[512] = {'\0',};
+				snprintf(dest, 512, "%s/%s", TTS_DOWNLOAD_ENGINE_INFO, dirp->d_name);
+
+				if (0 != access(dest, F_OK)) {
+					if (0 != tts_parser_copy_xml(filepath, dest)) {
+						SLOG(LOG_ERROR, tts_tag(), "[CONFIG ERROR] Fail to copy engine info");
+					}
+				}
+			}
+		} while (NULL != dirp);
+
+		closedir(dp);
+	}
+
+	/* Get engine info from default engine directory */
+	dp  = opendir(TTS_DOWNLOAD_ENGINE_INFO);
+	if (NULL == dp) {
+		SLOG(LOG_DEBUG, tts_tag(), "[CONFIG] No downloadable directory : %s", TTS_DEFAULT_ENGINE_INFO);
+	} else {
+		do {
+			ret = readdir_r(dp, &entry, &dirp);
+			if (0 != ret) {
+				SLOG(LOG_ERROR, tts_tag(), "[CONFIG] Fail to read directory");
+				break;
+			}
+
+			if (NULL != dirp) {
+				filesize = strlen(TTS_DOWNLOAD_ENGINE_INFO) + strlen(dirp->d_name) + 2;
+				if (filesize >= 512) {
+					SECURE_SLOG(LOG_ERROR, tts_tag(), "[CONFIG ERROR] File path is too long : %s", dirp->d_name);
+					closedir(dp);
+					return -1;
+				}
+
+				memset(filepath, '\0', 512);
+				snprintf(filepath, 512, "%s/%s", TTS_DOWNLOAD_ENGINE_INFO, dirp->d_name);
+
+				SECURE_SLOG(LOG_DEBUG, tts_tag(), "[CONFIG] Filepath(%s)", filepath);
+
 				if (0 == tts_parser_get_engine_info(filepath, &info)) {
 					g_engine_list = g_slist_append(g_engine_list, info);
+					if (0 != __tts_config_mgr_register_engine_config_updated_event(filepath)) {
+						SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to register engine config updated event");
+					}
 				}
 			}
 		} while (NULL != dirp);
@@ -781,11 +831,14 @@ static Eina_Bool __tts_config_mgr_engine_config_inotify_event_callback(void* dat
 {
 	SLOG(LOG_DEBUG, tts_tag(), "===== Engine config updated callback event");
 
+	tts_engine_inotify_s *ino = (tts_engine_inotify_s *)data;
+	int dir_fd = ino->dir_fd;
+
 	int length;
 	struct inotify_event event;
 	memset(&event, '\0', sizeof(struct inotify_event));
 
-	length = read(g_dir_fd, &event, sizeof(struct inotify_event));
+	length = read(dir_fd, &event, sizeof(struct inotify_event));
 	if (0 > length) {
 		SLOG(LOG_ERROR, tts_tag(), "[ERROR] Empty Inotify event");
 		SLOG(LOG_DEBUG, tts_tag(), "=====");
@@ -817,6 +870,26 @@ static Eina_Bool __tts_config_mgr_engine_config_inotify_event_callback(void* dat
 			}
 			if (NULL != temp_lang)	free(temp_lang);
 		}
+
+		GSList *iter = NULL;
+		tts_config_client_s* temp_client = NULL;
+		/* Call all callbacks of client*/
+		iter = g_slist_nth(g_config_client_list, 0);
+
+		while (NULL != iter) {
+			temp_client = iter->data;
+
+			if (NULL != temp_client) {
+				if (NULL != temp_client->engine_cb) {
+					SECURE_SLOG(LOG_DEBUG, tts_tag(), "Engine changed callback : uid(%d)", temp_client->uid);
+					temp_client->engine_cb(g_config_info->engine_id, g_config_info->setting, 
+						g_config_info->language, g_config_info->type, 
+						g_config_info->auto_voice, temp_client->user_data);
+				}
+			}
+
+			iter = g_slist_next(iter);
+		}
 	} else {
 		SLOG(LOG_ERROR, tts_tag(), "[ERROR] Undefined event");
 	}
@@ -827,46 +900,68 @@ static Eina_Bool __tts_config_mgr_engine_config_inotify_event_callback(void* dat
 	return ECORE_CALLBACK_PASS_ON;
 }
 
-static int __tts_config_mgr_register_engine_config_updated_event()
+static int __tts_config_mgr_register_engine_config_updated_event(const char* path)
 {
 	/* For engine directory monitoring */
-	g_dir_fd = inotify_init();
-	if (g_dir_fd < 0) {
+	tts_engine_inotify_s *ino = (tts_engine_inotify_s *)calloc(1, sizeof(tts_engine_inotify_s));
+
+	ino->dir_fd = inotify_init();
+	if (ino->dir_fd < 0) {
 		SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to init inotify");
 		return -1;
 	}
 
 	 /* FIX_ME *//* It doesn't need check engine directory, because daemon will change engine-process */
-	g_dir_wd = inotify_add_watch(g_dir_fd, TTS_DEFAULT_ENGINE_INFO, IN_CLOSE_WRITE);
-	if (g_dir_wd < 0) {
+	ino->dir_wd = inotify_add_watch(ino->dir_fd, path, IN_CLOSE_WRITE);
+	SLOG(LOG_DEBUG, tts_tag(), "Add inotify watch(%s)", path);
+	if (ino->dir_wd < 0) {
 		SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to add watch");
 		return -1;
 	}
 
-	g_dir_fd_handler = ecore_main_fd_handler_add(g_dir_fd, ECORE_FD_READ, (Ecore_Fd_Cb)__tts_config_mgr_engine_config_inotify_event_callback, NULL, NULL, NULL);
-	if (NULL == g_dir_fd_handler) {
+	ino->dir_fd_handler = ecore_main_fd_handler_add(ino->dir_fd, ECORE_FD_READ, (Ecore_Fd_Cb)__tts_config_mgr_engine_config_inotify_event_callback, (void *)ino, NULL, NULL);
+	if (NULL == ino->dir_fd_handler) {
 		SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to add fd handler");
 		return -1;
 	}
 
 	/* Set non-blocking mode of file */
 	int value;
-	value = fcntl(g_dir_fd, F_GETFL, 0);
+	value = fcntl(ino->dir_fd, F_GETFL, 0);
 	value |= O_NONBLOCK;
 
-	if (0 > fcntl(g_dir_fd, F_SETFL, value)) {
+	if (0 > fcntl(ino->dir_fd, F_SETFL, value)) {
 		SLOG(LOG_WARN, tts_tag(), "[WARNING] Fail to set non-block mode");
 	}
+
+	g_ino_list = g_list_append(g_ino_list, ino);
 
 	return 0;
 }
 
 static int __tts_config_mgr_unregister_engine_config_updated_event()
 {
-	/* delete inotify variable */
-	ecore_main_fd_handler_del(g_dir_fd_handler);
-	inotify_rm_watch(g_dir_fd, g_dir_wd);
-	close(g_dir_fd);
+	/* delete all inotify variable */
+	if (0 < g_list_length(g_ino_list)) {
+		GList *iter = NULL;
+		iter = g_list_first(g_ino_list);
+		
+		while (NULL != iter) {
+			tts_engine_inotify_s *tmp = iter->data;
+			
+			if (NULL != tmp) {
+				ecore_main_fd_handler_del(tmp->dir_fd_handler);
+				inotify_rm_watch(tmp->dir_fd, tmp->dir_wd);
+				close(tmp->dir_fd);
+
+				free(tmp);
+			}
+
+			g_ino_list = g_list_remove_link(g_ino_list, iter);
+
+			iter = g_list_first(g_ino_list);
+		}
+	}
 
 	return 0;
 }
@@ -921,6 +1016,24 @@ int tts_config_mgr_initialize(int uid)
 			return -1;
 		} else {
 			SLOG(LOG_DEBUG, tts_tag(), "Success to make directory : %s", TTS_CONFIG_BASE);
+		}
+	}
+
+	if (0 != access(TTS_DOWNLOAD_BASE, F_OK)) {
+		if (0 != mkdir(TTS_DOWNLOAD_BASE, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)) {
+			SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to make directory : %s", TTS_DOWNLOAD_BASE);
+			return -1;
+		} else {
+			SLOG(LOG_DEBUG, tts_tag(), "Success to make directory : %s", TTS_DOWNLOAD_BASE);
+		}
+	}
+
+	if (0 != access(TTS_DOWNLOAD_ENGINE_INFO, F_OK)) {
+		if (0 != mkdir(TTS_DOWNLOAD_ENGINE_INFO, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)) {
+			SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to make directory : %s", TTS_DOWNLOAD_ENGINE_INFO);
+			return -1;
+		} else {
+			SLOG(LOG_DEBUG, tts_tag(), "Success to make directory : %s", TTS_DOWNLOAD_ENGINE_INFO);
 		}
 	}
 
@@ -1010,14 +1123,14 @@ int tts_config_mgr_initialize(int uid)
 	vconf_notify_key_changed(TTS_ACCESSIBILITY_KEY, __tts_config_screen_reader_changed_cb, NULL);
 
 	/* For engine directory monitoring */
-	if (0 != __tts_config_mgr_register_engine_config_updated_event()) {
-		SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to register engine config updated event");
-		__tts_config_release_client(uid);
-		__tts_config_release_engine();
-		tts_parser_unload_config(g_config_info);
-		__tts_config_mgr_unregister_config_event();
-		return TTS_CONFIG_ERROR_OPERATION_FAILED;
-	}
+	//if (0 != __tts_config_mgr_register_engine_config_updated_event()) {
+	//	SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to register engine config updated event");
+	//	__tts_config_release_client(uid);
+	//	__tts_config_release_engine();
+	//	tts_parser_unload_config(g_config_info);
+	//	__tts_config_mgr_unregister_config_event();
+	//	return TTS_CONFIG_ERROR_OPERATION_FAILED;
+	//}
 
 	return 0;
 }
