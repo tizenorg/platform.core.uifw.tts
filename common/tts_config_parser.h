@@ -77,6 +77,7 @@ int tts_parser_set_pitch(int value);
 int tts_parser_find_config_changed(char** engine, char**setting, bool* auto_voice, char** language, int* voice_type, 
 				   int* speech_rate, int* pitch);
 
+int tts_parser_copy_xml(const char* original, const char* destination);
 
 #ifdef __cplusplus
 }
