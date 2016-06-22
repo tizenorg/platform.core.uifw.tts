@@ -96,9 +96,14 @@ int __tts_config_mgr_check_engine_is_valid(const char* engine_id)
 
 	/* Change default engine */
 	iter = g_slist_nth(g_engine_list, 0);
-	engine_info = iter->data;
+        if (NULL == iter) {
+                SLOG(LOG_ERROR, tts_tag(), "[ERROR] No engine in list");
+                return TTS_CONFIG_ERROR_OPERATION_FAILED;
+        }
 
+	engine_info = iter->data;
 	if (NULL == g_config_info) {
+                SLOG(LOG_ERROR, tts_tag(), "[ERROR] Invalid engine info in list");
 		return TTS_CONFIG_ERROR_OPERATION_FAILED;
 	}
 
@@ -149,7 +154,16 @@ int __tts_config_mgr_check_engine_is_valid(const char* engine_id)
 			free(g_config_info->language);
 
 			iter_voice = g_slist_nth(engine_info->voices, 0);
+                        if (NULL == iter_voice) {
+                                SLOG(LOG_ERROR, tts_tag(), "Fail to get voice list");
+                                return TTS_CONFIG_ERROR_OPERATION_FAILED;
+                        }
 			voice = iter_voice->data;
+
+                        if (NULL == voice || NULL == voice->language) {
+                                SLOG(LOG_ERROR, tts_tag(), "Fail to get voice info from list");
+                                return TTS_CONFIG_ERROR_OPERATION_FAILED;
+                        }
 
 			g_config_info->language = strdup(voice->language);
 			g_config_info->type = voice->type;
