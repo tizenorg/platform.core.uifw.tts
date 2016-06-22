@@ -300,9 +300,23 @@ int ttsd_engine_agent_initialize_current_engine()
 			return TTSD_ERROR_OPERATION_FAILED;
 		}
 
-		if (cur_engine_uuid != NULL)	free(cur_engine_uuid);
+                if (NULL == iter) {
+                        SLOG(LOG_WARN, get_tag(), "[Engine Agent ERROR] No valid TTS Engine");
+                        if (NULL != cur_engine_uuid)    free(cur_engine_uuid);
+                        return TTSD_ERROR_OPERATION_FAILED;
+                }
+
+		if (cur_engine_uuid != NULL) {
+                        free(cur_engine_uuid);
+                        cur_engine_uuid = NULL;
+                }
 		ttsengine_info_s *data = NULL;
 		data = iter->data;
+
+                if (NULL == data || NULL == data->engine_uuid) {
+                        SLOG(LOG_ERROR, get_tag(), "[Engine Agent ERROR] No valid TTS Engine");
+                        return TTSD_ERROR_OPERATION_FAILED;
+                }
 
 		cur_engine_uuid = strdup(data->engine_uuid);
 
