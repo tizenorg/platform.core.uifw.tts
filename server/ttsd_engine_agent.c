@@ -260,6 +260,10 @@ int ttsd_engine_agent_initialize_current_engine()
 
 		if (g_list_length(g_engine_list) > 0) {
 			iter = g_list_first(g_engine_list);
+                        if (NULL == iter) {
+                                SLOG(LOG_WARN, get_tag(), "[Engine Agent WARNING] Fail to get a engine of engine list");
+                                return TTSD_ERROR_OPERATION_FAILED;
+                        }
 			data = iter->data;
 
 			if (NULL != data) {
@@ -272,7 +276,7 @@ int ttsd_engine_agent_initialize_current_engine()
 				}
 			}
 		} else {
-			SLOG(LOG_WARN, get_tag(), "[Engine Agent WARNING] Fail to set a engine of engine list");
+			SLOG(LOG_WARN, get_tag(), "[Engine Agent WARNING] Fail to get a engine of engine list");
 			return TTSD_ERROR_OPERATION_FAILED;
 		}
 
