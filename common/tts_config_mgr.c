@@ -378,7 +378,7 @@ Eina_Bool tts_config_mgr_inotify_event_cb(void* data, Ecore_Fd_Handler *fd_handl
 						SECURE_SLOG(LOG_DEBUG, tts_tag(), "Engine changed callback : uid(%d)", temp_client->uid);
 						temp_client->engine_cb(g_config_info->engine_id, g_config_info->setting, 
 							g_config_info->language, g_config_info->type, 
-							g_config_info->auto_voice, temp_client->user_data);
+							g_config_info->auto_voice, g_config_info->credential, temp_client->user_data);
 					}
 				}
 
@@ -896,9 +896,9 @@ static Eina_Bool __tts_config_mgr_engine_config_inotify_event_callback(void* dat
 			if (NULL != temp_client) {
 				if (NULL != temp_client->engine_cb) {
 					SECURE_SLOG(LOG_DEBUG, tts_tag(), "Engine changed callback : uid(%d)", temp_client->uid);
-					temp_client->engine_cb(g_config_info->engine_id, g_config_info->setting, 
+					temp_client->engine_cb(g_config_info->engine_id, g_config_info->setting, 	
 						g_config_info->language, g_config_info->type, 
-						g_config_info->auto_voice, temp_client->user_data);
+						g_config_info->auto_voice, g_config_info->credential, temp_client->user_data);
 				}
 			}
 

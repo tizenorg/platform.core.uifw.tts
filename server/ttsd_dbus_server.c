@@ -588,10 +588,11 @@ int ttsd_dbus_server_get_private_data(DBusConnection* conn, DBusMessage* msg)
 	if (NULL != reply) {
 		dbus_message_append_args(reply,
 			DBUS_TYPE_INT32, &ret,
+			DBUS_TYPE_STRING, &data,
 			DBUS_TYPE_INVALID);
 
 		if (0 == ret) {
-			SLOG(LOG_DEBUG, get_tag(), "[OUT] tts get private data : (%d)", ret);
+			SLOG(LOG_DEBUG, get_tag(), "[OUT] tts get private data : Result(%d), data(%s)", ret, (NULL == data) ? "NULL" : data);
 		} else {
 			SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts get private data : (%d)", ret);
 		}

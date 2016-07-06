@@ -68,7 +68,7 @@ static int __setting_convert_config_error_code(tts_config_error_e code)
 	return TTS_SETTING_ERROR_NONE;
 }
 
-void __setting_config_engine_changed_cb(const char* engine_id, const char* setting, const char* language, int voice_type, bool auto_voice, void* user_data)
+void __setting_config_engine_changed_cb(const char* engine_id, const char* setting, const char* language, int voice_type, bool auto_voice, bool need_credential, void* user_data)
 {
 	SLOG(LOG_DEBUG, TAG_TTSC, "Engine chagned : engine(%s) setting(%s) lang(%s) type(%d)",
 		 engine_id, setting, language, language, voice_type);
