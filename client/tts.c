@@ -136,6 +136,30 @@ void __tts_config_voice_changed_cb(const char* before_lang, int before_voice_typ
 	return;
 }
 
+void _tts_config_engine_changed_cb(const char* engine_id, const char* setting, const char* language, int voice_type, bool auto_voice, bool need_credential, void* user_data)
+{
+	tts_h tts = (tts_h)user_data;
+
+	tts_client_s* client = tts_client_get(tts);
+	if (NULL == client) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[WARNING] A handle is not valid");
+		return;
+	}
+
+	if (NULL != engine_id)	SLOG(LOG_DEBUG, TAG_TTSC, "Engine id(%s)", engine_id);
+	if (NULL != setting)	SLOG(LOG_DEBUG, TAG_TTSC, "Engine setting(%s)", setting);
+	if (NULL != language)	SLOG(LOG_DEBUG, TAG_TTSC, "Language(%s)", language);
+	SLOG(LOG_DEBUG, TAG_TTSC, "Voice type(%d), Auto voice(%s), Credential(%s)", voice_type, auto_voice? "on" : "off", need_credential ? "need" : "no need");
+
+	/* call callback function */
+	if (NULL != client->engine_changed_cb) {
+		client->engine_changed_cb(tts, engine_id, language, voice_type, need_credential, client->engine_changed_user_data);
+	} else {
+		SLOG(LOG_WARN, TAG_TTSC, "No registered callback function for changed engine");
+	}
+	return;
+}
+
 int tts_create(tts_h* tts)
 {
 	if (0 != __tts_get_feature_enabled()) {
@@ -177,7 +201,7 @@ int tts_create(tts_h* tts)
 		return __tts_convert_config_error_code(ret);
 	}
 
-	ret = tts_config_mgr_set_callback(client->uid, NULL, __tts_config_voice_changed_cb, NULL, NULL, NULL);
+	ret = tts_config_mgr_set_callback(client->uid, _tts_config_engine_changed_cb, __tts_config_voice_changed_cb, NULL, NULL, NULL);
 	if (0 != ret) {
 		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Fail to set config changed : %d", ret);
 		tts_client_destroy(*tts);
@@ -2054,3 +2078,66 @@ int tts_unset_default_voice_changed_cb(tts_h tts)
 
 	return 0;
 }
+
+int tts_set_engine_changed_cb(tts_h tts, tts_engine_changed_cb callback, void* user_data)
+{
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
+	}
+
+	if (NULL == tts || NULL == callback) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Set engine changed cb : Input parameter is null");
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+
+	tts_client_s* client = tts_client_get(tts);
+
+	if (NULL == client) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Set engine changed cb : A handle is not valid");
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+
+	if (TTS_STATE_CREATED != client->current_state) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Set engine changed cb : Current state is not 'Created'.");
+		return TTS_ERROR_INVALID_STATE;
+	}
+
+	client->engine_changed_cb = callback;
+	client->engine_changed_user_data = user_data;
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Set engine changed cb");
+
+	return 0;
+}
+
+int tts_unset_engine_changed_cb(tts_h tts)
+{
+	if (0 != __tts_get_feature_enabled()) {
+		return TTS_ERROR_NOT_SUPPORTED;
+	}
+
+	if (NULL == tts) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Unset engine changed cb : Input parameter is null");
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+
+	tts_client_s* client = tts_client_get(tts);
+
+	if (NULL == client) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Unset engine changed cb : A handle is not valid");
+		return TTS_ERROR_INVALID_PARAMETER;
+	}
+
+	if (TTS_STATE_CREATED != client->current_state) {
+		SLOG(LOG_ERROR, TAG_TTSC, "[ERROR] Unset engine changed cb : Current state is not 'Created'.");
+		return TTS_ERROR_INVALID_STATE;
+	}
+
+	client->engine_changed_cb = NULL;
+	client->engine_changed_user_data = NULL;
+
+	SLOG(LOG_DEBUG, TAG_TTSC, "[SUCCESS] Unset engine changed cb");
+
+	return 0;
+}
+

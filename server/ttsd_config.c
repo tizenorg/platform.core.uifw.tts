@@ -24,7 +24,7 @@ static ttsd_config_changed_cb g_callback;
 
 static ttsd_config_screen_reader_changed_cb g_sr_callback;
 
-void __ttsd_config_engine_changed_cb(const char* engine_id, const char* setting, const char* language, int voice_type, bool auto_voice, void* user_data)
+void __ttsd_config_engine_changed_cb(const char* engine_id, const char* setting, const char* language, int voice_type, bool auto_voice, bool need_credential, void* user_data)
 {
 	/* Need to check engine is valid */
 	if (false == tts_config_check_default_engine_is_valid(engine_id)) {

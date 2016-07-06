@@ -51,7 +51,7 @@ typedef bool (*tts_config_supported_engine_cb)(const char* engine_id, const char
 typedef bool (*tts_config_supported_voice_cb)(const char* engine_id, const char* language, int type, void* user_data);
 
 typedef void (*tts_config_engine_changed_cb)(const char* engine_id, const char* setting, 
-					     const char* language, int voice_type, bool auto_voice, void* user_data);
+					     const char* language, int voice_type, bool auto_voice, bool need_credential, void* user_data);
 
 typedef void (*tts_config_voice_changed_cb)(const char* before_language, int before_voice_type, 
 					    const char* current_language, int current_voice_type, 

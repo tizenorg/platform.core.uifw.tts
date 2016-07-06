@@ -41,6 +41,7 @@ typedef struct {
 	char*	setting;
 	GSList*	voices;
 	bool	pitch_support;
+	bool 	need_credential;
 } tts_engine_info_s;
 
 typedef struct {
@@ -51,6 +52,7 @@ typedef struct {
 	int	type;
 	int	speech_rate;
 	int	pitch;
+	bool	credential;
 } tts_config_s;
 
 

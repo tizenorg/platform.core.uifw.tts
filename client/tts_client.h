@@ -43,6 +43,8 @@ typedef struct {
 	void*				error_user_data;
 	tts_default_voice_changed_cb	default_voice_changed_cb;
 	void*				default_voice_changed_user_data;
+	tts_engine_changed_cb		engine_changed_cb;
+	void*				engine_changed_user_data;
 	tts_supported_voice_cb		supported_voice_cb;
 	void*				supported_voice_user_data;
 
