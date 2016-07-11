@@ -44,7 +44,7 @@
  * The TTS API also notifies you (by callback mechanism) when the state of TTS is changed, 
  * utterance is started and completed, default voice is changed or an error occured.
  * An application should register callback functions: tts_state_changed_cb(), tts_utterance_started_cb(), 
- * tts_utterance_completed_cb(), tts_default_voice_changed_cb(), tts_error_cb().
+ * tts_utterance_completed_cb(), tts_default_voice_changed_cb(), tts_error_cb(), tts_engine_changed_cb().
  *
  * @section CAPI_UIX_TTS_MODULE_STATE_DIAGRAM State Diagram
  * The following diagram shows the life cycle and the states of the TTS. 
@@ -163,6 +163,21 @@
  * <td></td>
  * </tr>
  * <tr>
+ * <td>tts_set_credential()</td>
+ * <td>Created, Ready</td>
+ * <td></td>
+ * </tr>
+ * <tr>
+ * <td>tts_set_private_data()<br>tts_get_private_data()</td>
+ * <td>Ready</td>
+ * <td></td>
+ * </tr>
+ * <tr>
+ * <td>tts_get_error_message()</td>
+ * <td>Created, Ready, Recording, Processing</td>
+ * <td>This function should be called during TTS error callback.</td>
+ * </tr>
+ * <tr>
  * <td>tts_add_text()</td>
  * <td>Ready, Playing, Paused</td>
  * <td></td>
@@ -193,7 +208,9 @@
  * tts_set_default_voice_changed_cb()<br>
  * tts_unset_default_voice_changed_cb()<br>
  * tts_set_error_cb()<br>
- * tts_unset_error_cb()</td>
+ * tts_unset_error_cb()<br>
+ * tts_set_engine_changed_cb()<br>
+ * tts_unset_engine_changed_cb()</td>
  * <td>Created</td>
  * <td> All callback function should be registered in Created state </td>
  * </tr>
