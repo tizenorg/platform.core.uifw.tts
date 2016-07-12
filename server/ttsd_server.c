@@ -23,7 +23,6 @@
 #include "ttsd_network.h"
 #include "ttsd_player.h"
 #include "ttsd_server.h"
-#include "ttsp.h"
 
 
 typedef enum {
@@ -38,7 +37,7 @@ typedef struct {
 } utterance_t;
 
 /* If current engine exist */
-static bool	g_is_engine;
+//static bool	g_is_engine;
 
 /* If engine is running */
 static ttsd_synthesis_control_e	g_synth_control;
@@ -89,7 +88,7 @@ static Eina_Bool __wait_synthesis(void *data)
 
 static int __synthesis(int uid, const char* credential)
 {
-	SLOG(LOG_DEBUG, get_tag(), "===== SYNTHESIS  START");
+	SLOG(LOG_DEBUG, tts_tag(), "===== SYNTHESIS  START");
 
 	speak_data_s* speak_data = NULL;
 	if (0 == ttsd_data_get_speak_data(uid, &speak_data)) {
@@ -97,11 +96,16 @@ static int __synthesis(int uid, const char* credential)
 			return 0;
 		}
 
+		int pid = ttsd_data_get_pid(uid);
+		char appid[128] = {0, };
+		if (0 != aul_app_get_appid_bypid(pid, appid, sizeof(appid))) {
+			SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Fail to get app id");
+		}
+
 		if (NULL == speak_data->lang || NULL == speak_data->text) {
-			SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Current data is NOT valid");
+			SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Current data is NOT valid");
 			ttsd_server_stop(uid);
 
-			int pid = ttsd_data_get_pid(uid);
 			ttsdc_send_set_state_message(pid, uid, APP_STATE_READY);
 
 			if (NULL != speak_data) {
@@ -121,18 +125,18 @@ static int __synthesis(int uid, const char* credential)
 		g_utt.uid = uid;
 		g_utt.uttid = speak_data->utt_id;
 
-		SLOG(LOG_DEBUG, get_tag(), "-----------------------------------------------------------");
-		SECURE_SLOG(LOG_DEBUG, get_tag(), "ID : uid (%d), uttid(%d) ", g_utt.uid, g_utt.uttid);
-		SECURE_SLOG(LOG_DEBUG, get_tag(), "Voice : langauge(%s), type(%d), speed(%d)", speak_data->lang, speak_data->vctype, speak_data->speed);
-		SECURE_SLOG(LOG_DEBUG, get_tag(), "Text : %s", speak_data->text);
-		SECURE_SLOG(LOG_DEBUG, get_tag(), "Credential : %s", credential);
-		SLOG(LOG_DEBUG, get_tag(), "-----------------------------------------------------------");
+		SLOG(LOG_DEBUG, tts_tag(), "-----------------------------------------------------------");
+		SECURE_SLOG(LOG_DEBUG, tts_tag(), "ID : uid (%d), uttid(%d) ", g_utt.uid, g_utt.uttid);
+		SECURE_SLOG(LOG_DEBUG, tts_tag(), "Voice : langauge(%s), type(%d), speed(%d)", speak_data->lang, speak_data->vctype, speak_data->speed);
+		SECURE_SLOG(LOG_DEBUG, tts_tag(), "Text : %s", speak_data->text);
+		SECURE_SLOG(LOG_DEBUG, tts_tag(), "Credential : %s", credential);
+		SLOG(LOG_DEBUG, tts_tag(), "-----------------------------------------------------------");
 
 		int ret = 0;
 		__server_set_synth_control(TTSD_SYNTHESIS_CONTROL_DOING);
-		ret = ttsd_engine_start_synthesis(speak_data->lang, speak_data->vctype, speak_data->text, speak_data->speed, credential, NULL);
+		ret = ttsd_engine_start_synthesis(speak_data->lang, speak_data->vctype, speak_data->text, speak_data->speed, appid, credential, NULL);
 		if (0 != ret) {
-			SLOG(LOG_ERROR, get_tag(), "[Server ERROR] * FAIL to start SYNTHESIS !!!! * ");
+			SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] * FAIL to start SYNTHESIS !!!! * ");
 
 			__server_set_synth_control(TTSD_SYNTHESIS_CONTROL_DONE);
 
@@ -156,8 +160,8 @@ static int __synthesis(int uid, const char* credential)
 		}
 	}
 
-	SLOG(LOG_DEBUG, get_tag(), "===== SYNTHESIS  END");
-	SLOG(LOG_DEBUG, get_tag(), "  ");
+	SLOG(LOG_DEBUG, tts_tag(), "===== SYNTHESIS  END");
+	SLOG(LOG_DEBUG, tts_tag(), "  ");
 
 	return 0;
 }
@@ -165,43 +169,48 @@ static int __synthesis(int uid, const char* credential)
 /*
 * TTS Server Callback Functions
 */
-int __synthesis_result_callback(ttsp_result_event_e event, const void* data, unsigned int data_size, 
-				ttsp_audio_type_e audio_type, int rate, void *user_data)
+int ttsd_send_error(ttse_error_e error, const char* msg)
 {
-	SLOG(LOG_DEBUG, get_tag(), "===== SYNTHESIS RESULT CALLBACK START");
+	return 0;
+}
+
+int ttsd_send_result(ttse_result_event_e event, const void* data, unsigned int data_size, ttse_audio_type_e audio_type, int rate, void* user_data)
+
+{
+	SLOG(LOG_DEBUG, tts_tag(), "===== SEND SYNTHESIS RESULT START");
 
 	int uid = g_utt.uid;
 	int uttid = g_utt.uttid;
 
 	/* Synthesis is success */
-	if (TTSP_RESULT_EVENT_START == event || TTSP_RESULT_EVENT_CONTINUE == event || TTSP_RESULT_EVENT_FINISH == event) {
+	if (TTSE_RESULT_EVENT_START == event || TTSE_RESULT_EVENT_CONTINUE == event || TTSE_RESULT_EVENT_FINISH == event) {
 		
-		if (TTSP_RESULT_EVENT_START == event) {
-			SLOG(LOG_DEBUG, get_tag(), "[SERVER] Event : TTSP_RESULT_EVENT_START");
-			SECURE_SLOG(LOG_DEBUG, get_tag(), "[SERVER] Result Info : uid(%d), utt(%d), data(%p), data size(%d) audiotype(%d) rate(%d)", 
+		if (TTSE_RESULT_EVENT_START == event) {
+			SLOG(LOG_DEBUG, tts_tag(), "[SERVER] Event : TTSE_RESULT_EVENT_START");
+			SECURE_SLOG(LOG_DEBUG, tts_tag(), "[SERVER] Result Info : uid(%d), utt(%d), data(%p), data size(%d) audiotype(%d) rate(%d)", 
 				uid, uttid, data, data_size, audio_type, rate);
-		} else if (TTSP_RESULT_EVENT_FINISH == event) {
-			SLOG(LOG_DEBUG, get_tag(), "[SERVER] Event : TTSP_RESULT_EVENT_FINISH");
-			SECURE_SLOG(LOG_DEBUG, get_tag(), "[SERVER] Result Info : uid(%d), utt(%d), data(%p), data size(%d) audiotype(%d) rate(%d)", 
+		} else if (TTSE_RESULT_EVENT_FINISH == event) {
+			SLOG(LOG_DEBUG, tts_tag(), "[SERVER] Event : TTSE_RESULT_EVENT_FINISH");
+			SECURE_SLOG(LOG_DEBUG, tts_tag(), "[SERVER] Result Info : uid(%d), utt(%d), data(%p), data size(%d) audiotype(%d) rate(%d)", 
 				uid, uttid, data, data_size, audio_type, rate);
 		} else {
-			/*if (TTSP_RESULT_EVENT_CONTINUE == event)  SLOG(LOG_DEBUG, get_tag(), "[SERVER] Event : TTSP_RESULT_EVENT_CONTINUE");*/
+			/*if (TTSE_RESULT_EVENT_CONTINUE == event)  SLOG(LOG_DEBUG, tts_tag(), "[SERVER] Event : TTSE_RESULT_EVENT_CONTINUE");*/
 		}
 
 
 		if (false == ttsd_data_is_uttid_valid(uid, uttid)) {
 			__server_set_synth_control(TTSD_SYNTHESIS_CONTROL_DONE);
-			SLOG(LOG_ERROR, get_tag(), "[SERVER ERROR] uttid is NOT valid !!!! - uid(%d), uttid(%d)", uid, uttid);
-			SLOG(LOG_DEBUG, get_tag(), "=====");
-			SLOG(LOG_DEBUG, get_tag(), "  ");
+			SLOG(LOG_ERROR, tts_tag(), "[SERVER ERROR] uttid is NOT valid !!!! - uid(%d), uttid(%d)", uid, uttid);
+			SLOG(LOG_DEBUG, tts_tag(), "=====");
+			SLOG(LOG_DEBUG, tts_tag(), "  ");
 			return 0;
 		}
 
-		if (rate <= 0 || audio_type < 0 || audio_type > TTSP_AUDIO_TYPE_MAX) {
+		if (rate <= 0 || audio_type < 0 || audio_type > TTSE_AUDIO_TYPE_MAX) {
 			__server_set_synth_control(TTSD_SYNTHESIS_CONTROL_DONE);
-			SLOG(LOG_ERROR, get_tag(), "[SERVER ERROR] audio data is invalid");
-			SLOG(LOG_DEBUG, get_tag(), "=====");
-			SLOG(LOG_DEBUG, get_tag(), "  ");
+			SLOG(LOG_ERROR, tts_tag(), "[SERVER ERROR] audio data is invalid");
+			SLOG(LOG_DEBUG, tts_tag(), "=====");
+			SLOG(LOG_DEBUG, tts_tag(), "  ");
 			return 0;
 		}
 
@@ -209,7 +218,7 @@ int __synthesis_result_callback(ttsp_result_event_e event, const void* data, uns
 		sound_data_s* temp_sound_data = NULL;
 		temp_sound_data = (sound_data_s*)calloc(1, sizeof(sound_data_s));
 		if (NULL == temp_sound_data) {
-			SLOG(LOG_ERROR, get_tag(), "[SERVER ERROR] Out of memory");
+			SLOG(LOG_ERROR, tts_tag(), "[SERVER ERROR] Out of memory");
 			return 0;
 		}
 		
@@ -222,13 +231,13 @@ int __synthesis_result_callback(ttsp_result_event_e event, const void* data, uns
 			if (NULL != temp_sound_data->data) {
 				memcpy(temp_sound_data->data, data, data_size);
 				temp_sound_data->data_size = data_size;
-				SLOG(LOG_ERROR, get_tag(), "[DEBUG][free] uid(%d), event(%d) sound_data(%p) data(%p) size(%d)", 
+				SLOG(LOG_ERROR, tts_tag(), "[DEBUG][free] uid(%d), event(%d) sound_data(%p) data(%p) size(%d)", 
 					uid, event, temp_sound_data, temp_sound_data->data, temp_sound_data->data_size);
 			} else {
-				SLOG(LOG_ERROR, get_tag(), "Fail to allocate memory");
+				SLOG(LOG_ERROR, tts_tag(), "Fail to allocate memory");
 			}
 		} else {
-			SLOG(LOG_ERROR, get_tag(), "Sound data is NULL");
+			SLOG(LOG_ERROR, tts_tag(), "Sound data is NULL");
 		}
 
 		temp_sound_data->utt_id = uttid;
@@ -237,15 +246,15 @@ int __synthesis_result_callback(ttsp_result_event_e event, const void* data, uns
 		temp_sound_data->rate = rate;
 
 		if (0 != ttsd_data_add_sound_data(uid, temp_sound_data)) {
-			SECURE_SLOG(LOG_ERROR, get_tag(), "[SERVER ERROR] Fail to add sound data : uid(%d)", uid);
+			SECURE_SLOG(LOG_ERROR, tts_tag(), "[SERVER ERROR] Fail to add sound data : uid(%d)", uid);
 		}
 
-		if (event == TTSP_RESULT_EVENT_FINISH) {
+		if (event == TTSE_RESULT_EVENT_FINISH) {
 			__server_set_synth_control(TTSD_SYNTHESIS_CONTROL_DONE);
 		}
 
 		if (0 != ttsd_player_play(uid)) {
-			SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to play sound : uid(%d)", uid);
+			SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Fail to play sound : uid(%d)", uid);
 
 			/* Change ready state */
 			ttsd_server_stop(uid);
@@ -255,13 +264,13 @@ int __synthesis_result_callback(ttsp_result_event_e event, const void* data, uns
 			ttsdc_send_set_state_message(tmp_pid, uid, APP_STATE_READY);
 		}
 	} else {
-		SLOG(LOG_DEBUG, get_tag(), "[SERVER] Event : TTSP_RESULT_EVENT_ERROR");
+		SLOG(LOG_DEBUG, tts_tag(), "[SERVER] Event : TTSE_RESULT_EVENT_ERROR");
 		__server_set_synth_control(TTSD_SYNTHESIS_CONTROL_EXPIRED);
 	}
 
 
-	/*SLOG(LOG_DEBUG, get_tag(), "===== SYNTHESIS RESULT CALLBACK END");
-	SLOG(LOG_DEBUG, get_tag(), "  ");*/
+	/*SLOG(LOG_DEBUG, tts_tag(), "===== SYNTHESIS RESULT CALLBACK END");
+	SLOG(LOG_DEBUG, tts_tag(), "  ");*/
 
 	return 0;
 }
@@ -286,22 +295,23 @@ void __config_changed_cb(tts_config_type_e type, const char* str_param, int int_
 	switch (type) {
 	case TTS_CONFIG_TYPE_ENGINE:
 	{
+		/* TODO - Determine the policy when engine process get engine changed cb */
 		if (NULL == str_param) {
-			SLOG(LOG_ERROR, get_tag(), "[Server] engine id from config is NULL");
+			SLOG(LOG_ERROR, tts_tag(), "[Server] engine id from config is NULL");
 			return;
 		}
 
 		int ret = 0;
 		if (true == ttsd_engine_agent_is_same_engine(str_param)) {
-			SLOG(LOG_DEBUG, get_tag(), "[Server Setting] new engine is the same as current engine");
+			SLOG(LOG_DEBUG, tts_tag(), "[Server Setting] new engine is the same as current engine");
 			ret = ttsd_engine_agent_unload_current_engine();
 			if (0 != ret) {
-				SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to unload current engine : result(%d)", ret);
+				SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Fail to unload current engine : result(%d)", ret);
 			}
 
 			ret = ttsd_engine_agent_load_current_engine();
 			if (0 != ret) {
-				SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to load current engine : result (%d)", ret);
+				SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Fail to load current engine : result (%d)", ret);
 			}
 			return;
 		}
@@ -314,19 +324,13 @@ void __config_changed_cb(tts_config_type_e type, const char* str_param, int int_
 
 		ttsd_engine_cancel_synthesis();
 
-		/* set engine */
-		ret = ttsd_engine_agent_set_default_engine(str_param);
-		if (0 != ret) {
-			SLOG(LOG_WARN, get_tag(), "[Server Setting WARNING] Fail to set current engine : result(%d)", ret);
-		}
-
 		break;
 	}
 
 	case TTS_CONFIG_TYPE_VOICE:
 	{
 		if (NULL == str_param) {
-			SLOG(LOG_ERROR, get_tag(), "[Server] language from config is NULL");
+			SLOG(LOG_ERROR, tts_tag(), "[Server] language from config is NULL");
 			return;
 		}
 
@@ -335,13 +339,13 @@ void __config_changed_cb(tts_config_type_e type, const char* str_param, int int_
 		int ret = -1;
 
 		if (true == ttsd_engine_select_valid_voice(str_param, int_param, &out_lang, &out_type)) {
-			SLOG(LOG_ERROR, get_tag(), "[Server] valid language : lang(%s), type(%d)", out_lang, out_type);
+			SLOG(LOG_ERROR, tts_tag(), "[Server] valid language : lang(%s), type(%d)", out_lang, out_type);
 			ret = ttsd_engine_agent_set_default_voice(out_lang, out_type);
 			if (0 != ret)
-				SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to set valid language : lang(%s), type(%d)", out_lang, out_type);
+				SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Fail to set valid language : lang(%s), type(%d)", out_lang, out_type);
 		} else {
 			/* Current language is not available */
-			SLOG(LOG_WARN, get_tag(), "[Server WARNING] Fail to set voice : lang(%s), type(%d)", str_param, int_param);
+			SLOG(LOG_WARN, tts_tag(), "[Server WARNING] Fail to set voice : lang(%s), type(%d)", str_param, int_param);
 		}
 		if (NULL != out_lang)	free(out_lang);
 		break;
@@ -354,7 +358,7 @@ void __config_changed_cb(tts_config_type_e type, const char* str_param, int int_
 			int ret = 0;
 			ret = ttsd_engine_agent_set_default_speed(int_param);
 			if (0 != ret) {
-				SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to set default speed : result(%d)", ret);
+				SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Fail to set default speed : result(%d)", ret);
 			}	
 		}
 		break;
@@ -367,7 +371,7 @@ void __config_changed_cb(tts_config_type_e type, const char* str_param, int int_
 			int ret = 0;
 			ret = ttsd_engine_agent_set_default_pitch(int_param);
 			if (0 != ret) {
-				SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to set default pitch : result(%d)", ret);
+				SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Fail to set default pitch : result(%d)", ret);
 			}	
 		}
 		break;
@@ -382,7 +386,7 @@ void __config_changed_cb(tts_config_type_e type, const char* str_param, int int_
 
 bool __terminate_client(int pid, int uid, app_state_e state, void* user_data)
 {
-	SLOG(LOG_DEBUG, get_tag(), "=== Start to terminate client [%d] ===", uid);
+	SLOG(LOG_DEBUG, tts_tag(), "=== Start to terminate client [%d] ===", uid);
 	ttsd_server_finalize(uid);
 	return true;
 }
@@ -396,10 +400,10 @@ Eina_Bool ttsd_terminate_daemon(void *data)
 void __screen_reader_changed_cb(bool value)
 {
 	if (TTSD_MODE_SCREEN_READER == ttsd_get_mode() && false == value) {
-		SLOG(LOG_DEBUG, get_tag(), "[Server] Screen reader is OFF. Start to terminate tts daemon");
+		SLOG(LOG_DEBUG, tts_tag(), "[Server] Screen reader is OFF. Start to terminate tts daemon");
 		ecore_timer_add(1, ttsd_terminate_daemon, NULL);
 	} else {
-		SLOG(LOG_DEBUG, get_tag(), "[Server] Screen reader is %s", value ? "ON" : "OFF");
+		SLOG(LOG_DEBUG, tts_tag(), "[Server] Screen reader is %s", value ? "ON" : "OFF");
 	}
 	return;
 }
@@ -434,33 +438,38 @@ static void __register_sig_handler()
 	signal(SIGQUIT, __sig_handler);
 }
 
-int ttsd_initialize()
+int ttsd_initialize(ttse_request_callback_s *callback)
 {
 	/* Register signal handler */
 	__register_sig_handler();
 	
 	if (ttsd_config_initialize(__config_changed_cb)) {
-		SLOG(LOG_ERROR, get_tag(), "[Server WARNING] Fail to initialize config.");
+		SLOG(LOG_ERROR, tts_tag(), "[Server WARNING] Fail to initialize config.");
 	}
 
 	/* player init */
 	if (ttsd_player_init()) {
-		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to initialize player init.");
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Fail to initialize player init.");
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
 	/* Engine Agent initialize */
-	if (0 != ttsd_engine_agent_init(__synthesis_result_callback)) {
-		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to engine agent initialize.");
+	if (0 != ttsd_engine_agent_init()) {
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Fail to engine agent initialize.");
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
 	/* set current engine */
-	if (0 != ttsd_engine_agent_initialize_current_engine()) {
-		SLOG(LOG_WARN, get_tag(), "[Server WARNING] No Engine !!!");
-		g_is_engine = false;
-	} else
-		g_is_engine = true;
+	//if (0 != ttsd_engine_agent_initialize_current_engine(callback)) {
+	//	SLOG(LOG_WARN, tts_tag(), "[Server WARNING] No Engine !!!" );
+	//	g_is_engine = false;
+	//} else
+	//	g_is_engine = true;
+
+	if (0 != ttsd_engine_agent_load_current_engine(callback)) {
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Fail to load current engine");
+		return TTSD_ERROR_OPERATION_FAILED;
+	}
 
 	__server_set_synth_control(TTSD_SYNTHESIS_CONTROL_EXPIRED);
 
@@ -492,6 +501,47 @@ int ttsd_finalize()
 	return TTSD_ERROR_NONE;
 }
 
+/*
+* TTS Server Functions for Client
+*/
+
+int ttsd_server_initialize(int pid, int uid, bool* credential_needed)
+{
+	if (-1 != ttsd_data_is_client(uid)) {
+		SLOG(LOG_WARN, tts_tag(), "[Server WARNING] Uid has already been registered");
+		return TTSD_ERROR_NONE;
+	}
+
+	if (0 != ttsd_engine_agent_is_credential_needed(uid, credential_needed)) {
+		SLOG(LOG_ERROR, tts_tag(), "Server ERROR] Fail to get credential necessity");
+		return TTSD_ERROR_OPERATION_FAILED;
+	}
+	if (0 != ttsd_data_new_client(pid, uid)) {
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Fail to add client info");
+		return TTSD_ERROR_OPERATION_FAILED;
+	}
+
+	if (0 != ttsd_player_create_instance(uid)) {
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Fail to create player");
+		return TTSD_ERROR_OPERATION_FAILED;
+	}
+
+	return TTSD_ERROR_NONE;
+}
+
+static Eina_Bool __quit_ecore_loop(void *data)
+{
+	ttsd_dbus_close_connection();
+
+	ttsd_network_finalize();
+
+	ttsd_finalize();
+
+	ecore_main_loop_quit();
+	return EINA_FALSE;
+}
+
+
 static void __read_proc()
 {
 	DIR *dp = NULL;
@@ -512,12 +562,12 @@ static void __read_proc()
 
 	dp = opendir("/proc");
 	if (NULL == dp) {
-		SLOG(LOG_ERROR, get_tag(), "[ERROR] Fail to open proc");
+		SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to open proc");
 	} else {
 		do {
 			ret = readdir_r(dp, &entry, &dirp);
 			if (0 != ret) {
-				SLOG(LOG_ERROR, get_tag(), "[ERROR] Fail to readdir");
+				SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to readdir");
 				break;
 			}
 
@@ -542,7 +592,7 @@ bool __get_client_for_clean_up(int pid, int uid, app_state_e state, void* user_d
 		iter = g_list_nth(g_proc_list, i);
 		if (NULL != iter) {
 			if (pid == GPOINTER_TO_INT(iter->data)) {
-				SLOG(LOG_DEBUG, get_tag(), "uid (%d) is running", uid);
+				SLOG(LOG_DEBUG, tts_tag(), "uid (%d) is running", uid);
 				exist = true;
 				break;
 			}
@@ -550,7 +600,7 @@ bool __get_client_for_clean_up(int pid, int uid, app_state_e state, void* user_d
 	}
 	
 	if (false == exist) {
-		SLOG(LOG_ERROR, get_tag(), "uid (%d) should be removed", uid);
+		SLOG(LOG_ERROR, tts_tag(), "uid (%d) should be removed", uid);
 		ttsd_server_finalize(uid);
 	}
 
@@ -558,22 +608,22 @@ bool __get_client_for_clean_up(int pid, int uid, app_state_e state, void* user_d
 #if 0
 	char appid[128] = {0, };
 	if (0 != aul_app_get_appid_bypid(pid, appid, sizeof(appid))) {
-		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to get app id");
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Fail to get app id");
 	}
 
 	if (0 < strlen(appid)) {
-		SLOG(LOG_DEBUG, get_tag(), "[%d] is running app - %s", pid, appid);
+		SLOG(LOG_DEBUG, tts_tag(), "[%d] is running app - %s", pid, appid);
 	} else {
-		SLOG(LOG_DEBUG, get_tag(), "[%d] is daemon or no_running app", pid);
+		SLOG(LOG_DEBUG, tts_tag(), "[%d] is daemon or no_running app", pid);
 
 		int result = 1;
 		result = ttsdc_send_hello(pid, uid);
 
 		if (0 == result) {
-			SLOG(LOG_DEBUG, get_tag(), "[Server] uid(%d) should be removed.", uid);
+			SLOG(LOG_DEBUG, tts_tag(), "[Server] uid(%d) should be removed.", uid);
 			ttsd_server_finalize(uid);
 		} else if (-1 == result) {
-			SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Hello result has error");
+			SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Hello result has error");
 		}
 	}
 	return true;
@@ -583,72 +633,26 @@ bool __get_client_for_clean_up(int pid, int uid, app_state_e state, void* user_d
 
 Eina_Bool ttsd_cleanup_client(void *data)
 {
-	SLOG(LOG_DEBUG, get_tag(), "===== CLEAN UP CLIENT START");
+	SLOG(LOG_DEBUG, tts_tag(), "===== CLEAN UP CLIENT START");
 	__read_proc();
+
+	if (0 < ttsd_data_get_client_count()) {
 	ttsd_data_foreach_clients(__get_client_for_clean_up, NULL);
-	SLOG(LOG_DEBUG, get_tag(), "=====");
-	SLOG(LOG_DEBUG, get_tag(), "  ");
+		} else {
+		ecore_timer_add(0, __quit_ecore_loop, NULL);
+	}
+
+	SLOG(LOG_DEBUG, tts_tag(), "=====");
+	SLOG(LOG_DEBUG, tts_tag(), "  ");
 
 	return EINA_TRUE;
 }
 
-/*
-* TTS Server Functions for Client
-*/
-
-int ttsd_server_initialize(int pid, int uid, bool* credential_needed)
-{
-	if (false == g_is_engine) {
-		if (0 != ttsd_engine_agent_initialize_current_engine()) {
-			SLOG(LOG_WARN, get_tag(), "[Server WARNING] No Engine !!!");
-			g_is_engine = false;
-
-			return TTSD_ERROR_ENGINE_NOT_FOUND;
-		} else {
-			g_is_engine = true;
-		}
-	}
-
-	if (-1 != ttsd_data_is_client(uid)) {
-		SLOG(LOG_WARN, get_tag(), "[Server WARNING] Uid has already been registered");
-		return TTSD_ERROR_NONE;
-	}
-
-	if (0 == ttsd_data_get_client_count()) {
-		if (0 != ttsd_engine_agent_load_current_engine()) {
-			SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to load current engine");
-			return TTSD_ERROR_OPERATION_FAILED;
-		}
-	}
-
-	if (0 != ttsd_engine_agent_is_credential_needed(uid, credential_needed)) {
-		SLOG(LOG_ERROR, get_tag(), "Server ERROR] Fail to get credential necessity");
-		return TTSD_ERROR_OPERATION_FAILED;
-	}
-	if (0 != ttsd_data_new_client(pid, uid)) {
-		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to add client info");
-		return TTSD_ERROR_OPERATION_FAILED;
-	}
-
-	if (0 != ttsd_player_create_instance(uid)) {
-		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to create player");
-		return TTSD_ERROR_OPERATION_FAILED;
-	}
-
-	return TTSD_ERROR_NONE;
-}
-
-static Eina_Bool __quit_ecore_loop(void *data)
-{
-	ecore_main_loop_quit();
-	return EINA_FALSE;
-}
-
 void __used_voice_cb(const char* lang, int type)
 {
-	SLOG(LOG_DEBUG, get_tag(), "[Server] Request to unload voice (%s,%d)", lang, type);
+	SLOG(LOG_DEBUG, tts_tag(), "[Server] Request to unload voice (%s,%d)", lang, type);
 	if (0 != ttsd_engine_unload_voice(lang, type)) {
-		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to unload voice");
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Fail to unload voice");
 	}
 }
 
@@ -656,7 +660,7 @@ int ttsd_server_finalize(int uid)
 {
 	app_state_e state;
 	if (0 > ttsd_data_get_client_state(uid, &state)) {
-		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] ttsd_server_finalize : uid is not valid");
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] ttsd_server_finalize : uid is not valid");
 	}
 
 	ttsd_server_stop(uid);
@@ -666,7 +670,7 @@ int ttsd_server_finalize(int uid)
 
 	/* Need to unload voice when used voice is unregistered */
 	if (0 != ttsd_data_reset_used_voice(uid, __used_voice_cb)) {
-		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to set used voice");
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Fail to set used voice");
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
@@ -674,7 +678,7 @@ int ttsd_server_finalize(int uid)
 
 	/* unload engine, if ref count of client is 0 */
 	if (0 == ttsd_data_get_client_count()) {
-		SLOG(LOG_DEBUG, get_tag(), "[Server] Quit main loop");
+		SLOG(LOG_DEBUG, tts_tag(), "[Server] Quit main loop");
 		ecore_timer_add(0, __quit_ecore_loop, NULL);
 	}
 
@@ -685,7 +689,7 @@ int ttsd_server_add_queue(int uid, const char* text, const char* lang, int voice
 {
 	app_state_e state;
 	if (0 > ttsd_data_get_client_state(uid, &state)) {
-		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] ttsd_server_add_queue : uid is not valid");
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] ttsd_server_add_queue : uid is not valid");
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
@@ -693,20 +697,20 @@ int ttsd_server_add_queue(int uid, const char* text, const char* lang, int voice
 	char* temp_lang = NULL;
 	int temp_type;
 	if (true != ttsd_engine_select_valid_voice((const char*)lang, voice_type, &temp_lang, &temp_type)) {
-		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to select valid voice");
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Fail to select valid voice");
 		if (NULL != temp_lang)	free(temp_lang);
 		return TTSD_ERROR_INVALID_VOICE;
 	}
 
 	if (NULL == temp_lang) {
-		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to select valid voice : result lang is NULL");
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Fail to select valid voice : result lang is NULL");
 		return TTSD_ERROR_INVALID_VOICE;
 	}
 	
 	speak_data_s* speak_data = NULL;
 	speak_data = (speak_data_s*)calloc(1, sizeof(speak_data_s));
 	if (NULL == speak_data) {
-		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to allocate memory");
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Fail to allocate memory");
 		if (NULL != temp_lang)	free(temp_lang);
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
@@ -721,7 +725,7 @@ int ttsd_server_add_queue(int uid, const char* text, const char* lang, int voice
 
 	/* if state is APP_STATE_READY , APP_STATE_PAUSED , only need to add speak data to queue*/
 	if (0 != ttsd_data_add_speak_data(uid, speak_data)) {
-		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to add speak data");
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Fail to add speak data");
 		if (NULL != temp_lang)	free(temp_lang);
 		if (NULL != speak_data) {
 			if (NULL != speak_data->lang)	free(speak_data->lang);
@@ -739,9 +743,9 @@ int ttsd_server_add_queue(int uid, const char* text, const char* lang, int voice
 
 	if (0 != ttsd_data_set_used_voice(uid, temp_lang, temp_type)) {
 		/* Request load voice */
-		SLOG(LOG_DEBUG, get_tag(), "[Server] Request to load voice");
+		SLOG(LOG_DEBUG, tts_tag(), "[Server] Request to load voice");
 		if (0 != ttsd_engine_load_voice(temp_lang, temp_type)) {
-			SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to load voice");
+			SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Fail to load voice");
 		}
 	}
 
@@ -751,14 +755,14 @@ int ttsd_server_add_queue(int uid, const char* text, const char* lang, int voice
 		/* check if engine use network */
 		if (ttsd_engine_agent_need_network()) {
 			if (false == ttsd_network_is_connected()) {
-				SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Disconnect network. Current engine needs network.");
+				SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Disconnect network. Current engine needs network.");
 				return TTSD_ERROR_OPERATION_FAILED;
 			}
 		}
 
 		/* Check whether tts-engine is running or not */
 		if (TTSD_SYNTHESIS_CONTROL_DOING == __server_get_synth_control()) {
-			SLOG(LOG_WARN, get_tag(), "[Server WARNING] Engine has already been running.");
+			SLOG(LOG_WARN, tts_tag(), "[Server WARNING] Engine has already been running.");
 		} else {
 			__synthesis(uid, credential);
 		}
@@ -788,37 +792,37 @@ int ttsd_server_play(int uid, const char* credential)
 {
 	app_state_e state;
 	if (0 > ttsd_data_get_client_state(uid, &state)) {
-		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] uid(%d) is NOT valid  ", uid);
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] uid(%d) is NOT valid  ", uid);
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
 	if (APP_STATE_PLAYING == state) {
-		SLOG(LOG_WARN, get_tag(), "[Server WARNING] Current state(%d) is 'play' ", uid);
+		SLOG(LOG_WARN, tts_tag(), "[Server WARNING] Current state(%d) is 'play' ", uid);
 		return TTSD_ERROR_NONE;
 	}
 
 	/* check if engine use network */
 	if (ttsd_engine_agent_need_network()) {
 		if (false == ttsd_network_is_connected()) {
-			SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Disconnect network. Current engine needs network service!!!.");
+			SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Disconnect network. Current engine needs network service!!!.");
 			return TTSD_ERROR_OUT_OF_NETWORK;
 		}
 	}
 
 	int current_uid = ttsd_data_get_current_playing();
-	SLOG(LOG_ERROR, get_tag(), "[Server] playing uid (%d)", current_uid);
+	SLOG(LOG_ERROR, tts_tag(), "[Server] playing uid (%d)", current_uid);
 
 	if (uid != current_uid && -1 != current_uid) {
 		if (TTSD_MODE_DEFAULT != ttsd_get_mode()) {
 			/* Send interrupt message */
-			SLOG(LOG_DEBUG, get_tag(), "[Server] Old uid(%d) will be interrupted into 'Stop' state ", current_uid);
+			SLOG(LOG_DEBUG, tts_tag(), "[Server] Old uid(%d) will be interrupted into 'Stop' state ", current_uid);
 
 			/* pause player */
 			if (0 != ttsd_server_stop(current_uid)) {
-				SLOG(LOG_WARN, get_tag(), "[Server ERROR] Fail to stop : uid (%d)", current_uid);
+				SLOG(LOG_WARN, tts_tag(), "[Server ERROR] Fail to stop : uid (%d)", current_uid);
 			}
 			if (0 != ttsd_player_stop(current_uid)) {
-				SLOG(LOG_WARN, get_tag(), "[Server ERROR] Fail to player stop : uid (%d)", current_uid);
+				SLOG(LOG_WARN, tts_tag(), "[Server ERROR] Fail to player stop : uid (%d)", current_uid);
 			}
 
 			intptr_t pcurrent_uid = (intptr_t)current_uid;
@@ -827,11 +831,11 @@ int ttsd_server_play(int uid, const char* credential)
 			/* Default mode policy of interrupt is "Pause" */
 
 			/* Send interrupt message */
-			SLOG(LOG_DEBUG, get_tag(), "[Server] Old uid(%d) will be interrupted into 'Pause' state ", current_uid);
+			SLOG(LOG_DEBUG, tts_tag(), "[Server] Old uid(%d) will be interrupted into 'Pause' state ", current_uid);
 
 			/* pause player */
 			if (0 != ttsd_player_pause(current_uid)) {
-				SLOG(LOG_WARN, get_tag(), "[Server ERROR] Fail to ttsd_player_pause() : uid (%d)", current_uid);
+				SLOG(LOG_WARN, tts_tag(), "[Server ERROR] Fail to ttsd_player_pause() : uid (%d)", current_uid);
 			}
 
 			/* change state */
@@ -844,22 +848,22 @@ int ttsd_server_play(int uid, const char* credential)
 
 	/* Change current play */
 	if (0 != ttsd_data_set_client_state(uid, APP_STATE_PLAYING)) {
-		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to set state : uid(%d)", uid);
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Fail to set state : uid(%d)", uid);
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
 	if (APP_STATE_PAUSED == state) {
-		SLOG(LOG_DEBUG, get_tag(), "[Server] uid(%d) is 'Pause' state : resume player", uid);
+		SLOG(LOG_DEBUG, tts_tag(), "[Server] uid(%d) is 'Pause' state : resume player", uid);
 
 		/* Resume player */
 		if (0 != ttsd_player_resume(uid)) {
-			SLOG(LOG_WARN, get_tag(), "[Server WARNING] Fail to ttsd_player_resume()");
+			SLOG(LOG_WARN, tts_tag(), "[Server WARNING] Fail to ttsd_player_resume()");
 		}
 	}
 
 	/* Check whether tts-engine is running or not */
 	if (TTSD_SYNTHESIS_CONTROL_DOING == __server_get_synth_control()) {
-		SLOG(LOG_WARN, get_tag(), "[Server WARNING] Engine has already been running.");
+		SLOG(LOG_WARN, tts_tag(), "[Server WARNING] Engine has already been running.");
 	} else {
 		__synthesis(uid, credential);
 	}
@@ -872,24 +876,24 @@ int ttsd_server_stop(int uid)
 {
 	app_state_e state;
 	if (0 > ttsd_data_get_client_state(uid, &state)) {
-		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] uid is not valid");
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] uid is not valid");
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
 	if (APP_STATE_PLAYING == state || APP_STATE_PAUSED == state) {
 		if (TTSD_SYNTHESIS_CONTROL_DOING == __server_get_synth_control()) {
-			SLOG(LOG_DEBUG, get_tag(), "[Server] TTS-engine is running");
+			SLOG(LOG_DEBUG, tts_tag(), "[Server] TTS-engine is running");
 
 			int ret = 0;
 			ret = ttsd_engine_cancel_synthesis();
 			if (0 != ret)
-				SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to cancel synthesis : ret(%d)", ret);
+				SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Fail to cancel synthesis : ret(%d)", ret);
 		}
 
 		__server_set_synth_control(TTSD_SYNTHESIS_CONTROL_EXPIRED);
 
 		if (0 != ttsd_player_clear(uid))
-			SLOG(LOG_WARN, get_tag(), "[Server] Fail to ttsd_player_stop()");
+			SLOG(LOG_WARN, tts_tag(), "[Server] Fail to ttsd_player_stop()");
 
 		ttsd_data_set_client_state(uid, APP_STATE_READY);
 	}
@@ -904,19 +908,19 @@ int ttsd_server_pause(int uid, int* utt_id)
 {
 	app_state_e state;
 	if (0 > ttsd_data_get_client_state(uid, &state)) {
-		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] ttsd_server_pause : uid is not valid");
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] ttsd_server_pause : uid is not valid");
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
 	if (APP_STATE_PLAYING != state)	{
-		SLOG(LOG_WARN, get_tag(), "[Server WARNING] Current state is not 'play'");
+		SLOG(LOG_WARN, tts_tag(), "[Server WARNING] Current state is not 'play'");
 		return TTSD_ERROR_INVALID_STATE;
 	}
 
 	int ret = 0;
 	ret = ttsd_player_pause(uid);
 	if (0 != ret) {
-		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail player_pause() : ret(%d)", ret);
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Fail player_pause() : ret(%d)", ret);
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
@@ -929,17 +933,17 @@ int ttsd_server_get_support_voices(int uid, GList** voice_list)
 {
 	app_state_e state;
 	if (0 > ttsd_data_get_client_state(uid, &state)) {
-		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] uid is not valid");
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] uid is not valid");
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
 	/* get voice list*/
 	if (0 != ttsd_engine_get_voice_list(voice_list)) {
-		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail ttsd_server_get_support_voices()");
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Fail ttsd_server_get_support_voices()");
 		return TTSD_ERROR_OPERATION_FAILED;
 	}
 
-	SLOG(LOG_DEBUG, get_tag(), "[Server SUCCESS] Get supported voices");
+	SLOG(LOG_DEBUG, tts_tag(), "[Server SUCCESS] Get supported voices");
 
 	return TTSD_ERROR_NONE;
 }
@@ -948,18 +952,18 @@ int ttsd_server_get_current_voice(int uid, char** language, int* voice_type)
 {
 	app_state_e state;
 	if (0 > ttsd_data_get_client_state(uid, &state)) {
-		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] ttsd_server_get_current_voice : uid is not valid");
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] ttsd_server_get_current_voice : uid is not valid");
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
 	/* get current voice */
 	int ret = ttsd_engine_get_default_voice(language, voice_type);
 	if (0 != ret) {
-		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail ttsd_server_get_support_voices()");
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Fail ttsd_server_get_support_voices()");
 		return ret;
 	}
 
-	SLOG(LOG_DEBUG, get_tag(), "[Server] Get default language (%s), voice type(%d) ", *language, *voice_type);
+	SLOG(LOG_DEBUG, tts_tag(), "[Server] Get default language (%s), voice type(%d) ", *language, *voice_type);
 
 	return TTSD_ERROR_NONE;
 }
@@ -968,20 +972,20 @@ int ttsd_server_set_private_data(int uid, const char* key, const char* data)
 {
 	app_state_e state;
 	if (0 > ttsd_data_get_client_state(uid, &state)) {
-		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] uid(%d) is NOT valid", uid);
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] uid(%d) is NOT valid", uid);
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
 	if (APP_STATE_READY != state) {
-		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Current state(%d) is NOT 'READY'", uid);
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Current state(%d) is NOT 'READY'", uid);
 		return TTSD_ERROR_INVALID_STATE;
 	}
 
 	int ret = ttsd_engine_set_private_data(key, data);
 	if (0 != ret) {
-		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to set private data");
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Fail to set private data");
 	} else {
-		SLOG(LOG_DEBUG, get_tag(), "[Server] Set private data");
+		SLOG(LOG_DEBUG, tts_tag(), "[Server] Set private data");
 	}
 
 	return ret;
@@ -991,21 +995,54 @@ int ttsd_server_get_private_data(int uid, const char* key, char** data)
 {
 	app_state_e state;
 	if (0 > ttsd_data_get_client_state(uid, &state)) {
-		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] uid(%d) is NOT valid", uid);
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] uid(%d) is NOT valid", uid);
 		return TTSD_ERROR_INVALID_PARAMETER;
 	}
 
 	if (APP_STATE_READY != state) {
-		SLOG(LOG_WARN, get_tag(), "[Server ERROR] Current state(%d) is NOT 'READY'", uid);
+		SLOG(LOG_WARN, tts_tag(), "[Server ERROR] Current state(%d) is NOT 'READY'", uid);
 		return TTSD_ERROR_INVALID_STATE;
 	}
 
 	int ret = ttsd_engine_get_private_data(key, data);
 	if (0 != ret) {
-		SLOG(LOG_ERROR, get_tag(), "[Server ERROR] Fail to get private data");
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Fail to get private data");
 	} else {
-		SLOG(LOG_DEBUG, get_tag(), "[Server] Get private data");
+		SLOG(LOG_DEBUG, tts_tag(), "[Server] Get private data");
 	}
 
 	return ret;
 }
+
+int ttsd_set_private_data_set_cb(ttse_private_data_set_cb callback)
+{
+	SLOG(LOG_DEBUG, tts_tag(), "[Server] Set private data set cb");
+
+	if(0 != ttsd_engine_agent_set_private_data_set_cb(callback)) {
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Fail to set private data set cb");
+		return TTSD_ERROR_OPERATION_FAILED;
+	}
+
+	return 0;
+}
+
+int ttsd_set_private_data_requested_cb(ttse_private_data_requested_cb callback)
+{
+	SLOG(LOG_DEBUG, tts_tag(), "[Server] Set private data requested cb");
+
+	if(0 != ttsd_engine_agent_set_private_data_requested_cb(callback)) {
+		SLOG(LOG_ERROR, tts_tag(), "[Server ERROR] Fail to set private data requested cb");
+		return TTSD_ERROR_OPERATION_FAILED;
+	}
+
+	return 0;
+}
+
+/*
+int ttsd_send_result(ttse_result_event_e event, const void* data, unsigned int data_size, ttse_audio_type_e audio_type, int rate, void* user_data)
+{}
+
+int ttsd_send_error(ttse_error_e error, const char* msg)
+{}
+*/
+

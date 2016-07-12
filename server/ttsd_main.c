@@ -23,11 +23,6 @@
 
 static Ecore_Timer* g_check_client_timer = NULL;
 
-const char* get_tag()
-{
-	return "ttsd";
-}
-
 const char* tts_tag()
 {
 	return "ttsd";
@@ -41,42 +36,42 @@ ttsd_mode_e ttsd_get_mode()
 /* Main of TTS Daemon */
 int main()
 {
-	SLOG(LOG_DEBUG, get_tag(), "  ");
-	SLOG(LOG_DEBUG, get_tag(), "  ");
-	SLOG(LOG_DEBUG, get_tag(), "===== TTS DAEMON DEFAULT INITIALIZE");
+	SLOG(LOG_DEBUG, tts_tag(), "  ");
+	SLOG(LOG_DEBUG, tts_tag(), "  ");
+	SLOG(LOG_DEBUG, tts_tag(), "===== TTS DAEMON DEFAULT INITIALIZE");
 
 	if (!ecore_init()) {
-		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] Fail ecore_init()");
+		SLOG(LOG_ERROR, tts_tag(), "[Main ERROR] Fail ecore_init()");
 		return -1;
 	}
 
 	if (0 != ttsd_dbus_open_connection()) {
-		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] Fail to open dbus connection");
+		SLOG(LOG_ERROR, tts_tag(), "[Main ERROR] Fail to open dbus connection");
 		return EXIT_FAILURE;
 	}
 
 	if (0 != ttsd_initialize()) {
-		SLOG(LOG_ERROR, get_tag(), "[Main ERROR] Fail to initialize tts-daemon"); 
+		SLOG(LOG_ERROR, tts_tag(), "[Main ERROR] Fail to initialize tts-daemon"); 
 		return EXIT_FAILURE;
 	}
 
 	if (0 != ttsd_network_initialize()) {
-		SLOG(LOG_WARN, get_tag(), "[Main WARNING] Fail to initialize network");
+		SLOG(LOG_WARN, tts_tag(), "[Main WARNING] Fail to initialize network");
 	}
 
 	g_check_client_timer = ecore_timer_add(CLIENT_CLEAN_UP_TIME, ttsd_cleanup_client, NULL);
 	if (NULL == g_check_client_timer) {
-		SLOG(LOG_WARN, get_tag(), "[Main Warning] Fail to create timer of client check");
+		SLOG(LOG_WARN, tts_tag(), "[Main Warning] Fail to create timer of client check");
 	}
 
-	SLOG(LOG_DEBUG, get_tag(), "[Main] tts-daemon start..."); 
-	SLOG(LOG_DEBUG, get_tag(), "=====");
-	SLOG(LOG_DEBUG, get_tag(), "  ");
-	SLOG(LOG_DEBUG, get_tag(), "  ");
+	SLOG(LOG_DEBUG, tts_tag(), "[Main] tts-daemon start..."); 
+	SLOG(LOG_DEBUG, tts_tag(), "=====");
+	SLOG(LOG_DEBUG, tts_tag(), "  ");
+	SLOG(LOG_DEBUG, tts_tag(), "  ");
 	
 	ecore_main_loop_begin();
 
-	SLOG(LOG_DEBUG, get_tag(), "===== TTS DAEMON DEFAULT FINALIZE");
+	SLOG(LOG_DEBUG, tts_tag(), "===== TTS DAEMON DEFAULT FINALIZE");
 
 	if (NULL != g_check_client_timer) {
 		ecore_timer_del(g_check_client_timer);
@@ -90,9 +85,9 @@ int main()
 
 	ecore_shutdown();
 
-	SLOG(LOG_DEBUG, get_tag(), "=====");
-	SLOG(LOG_DEBUG, get_tag(), "  ");
-	SLOG(LOG_DEBUG, get_tag(), "  ");
+	SLOG(LOG_DEBUG, tts_tag(), "=====");
+	SLOG(LOG_DEBUG, tts_tag(), "  ");
+	SLOG(LOG_DEBUG, tts_tag(), "  ");
 
 	return 0;
 }

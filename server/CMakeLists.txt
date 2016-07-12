@@ -4,7 +4,7 @@ SET(SRCS
 	ttsd_dbus.c
 	ttsd_dbus_server.c
 	ttsd_engine_agent.c
-	ttsd_main.c
+	ttse.c
 	ttsd_network.c
 	ttsd_player.c
 	ttsd_server.c
@@ -42,6 +42,7 @@ SET(SR_SRCS
 
 INCLUDE_DIRECTORIES(${CMAKE_SOURCE_DIR})
 INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR}/common)
+INCLUDE_DIRECTORIES(${CMAKE_BINARY_DIR}/include)
 
 FOREACH(flag ${pkgs_CFLAGS})
 	SET(EXTRA_CFLAGS "${EXTRA_CFLAGS} ${flag}")
@@ -54,16 +55,8 @@ SET(CMAKE_C_FLAGS_RELEASE "-O2 -fPIE")
 SET(CMAKE_EXE_LINKER_FLAGS "-Wl,--as-needed -pie")
 
 ## Executable ##
-ADD_EXECUTABLE("${PROJECT_NAME}-daemon" ${SRCS})
-TARGET_LINK_LIBRARIES("${PROJECT_NAME}-daemon" -ldl ${pkgs_LDFLAGS})
-
-ADD_EXECUTABLE("${PROJECT_NAME}-daemon-noti" ${NOTI_SRCS})
-TARGET_LINK_LIBRARIES("${PROJECT_NAME}-daemon-noti" -ldl ${pkgs_LDFLAGS})
-
-ADD_EXECUTABLE("${PROJECT_NAME}-daemon-sr" ${SR_SRCS})
-TARGET_LINK_LIBRARIES("${PROJECT_NAME}-daemon-sr" -ldl ${pkgs_LDFLAGS})
+ADD_LIBRARY("${PROJECT_NAME}_engine" SHARED ${SRCS})
+TARGET_LINK_LIBRARIES("${PROJECT_NAME}_engine" -ldl ${pkgs_LDFLAGS})
 
 ## Install ##
-INSTALL(TARGETS "${PROJECT_NAME}-daemon" DESTINATION bin)
-INSTALL(TARGETS "${PROJECT_NAME}-daemon-noti" DESTINATION bin)
-INSTALL(TARGETS "${PROJECT_NAME}-daemon-sr" DESTINATION bin)
+INSTALL(TARGETS "${PROJECT_NAME}_engine" DESTINATION lib COMPONENT RuntimeLibraries)

@@ -24,20 +24,20 @@ extern int ttsd_data_get_pid(const int uid);
 */
 int ttsd_dbus_server_hello(DBusConnection* conn, DBusMessage* msg)
 {
-	SLOG(LOG_DEBUG, get_tag(), ">>>>> TTS Hello");
+	SLOG(LOG_DEBUG, tts_tag(), ">>>>> TTS Hello");
 
 	DBusMessage* reply;
 	reply = dbus_message_new_method_return(msg);
 
 	if (NULL != reply) {
 		if (!dbus_connection_send(conn, reply, NULL)) {
-			SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] Out Of Memory!");
+			SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] Out Of Memory!");
 		}
 
 		dbus_connection_flush(conn);
 		dbus_message_unref(reply);
 	} else {
-		SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] Fail to create reply message!!");
+		SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] Fail to create reply message!!");
 	}
 
 	return 0;
@@ -57,15 +57,15 @@ int ttsd_dbus_server_initialize(DBusConnection* conn, DBusMessage* msg)
 		DBUS_TYPE_INT32, &uid,
 		DBUS_TYPE_INVALID);
 
-	SLOG(LOG_DEBUG, get_tag(), ">>>>> TTS INITIALIZE");
+	SLOG(LOG_DEBUG, tts_tag(), ">>>>> TTS INITIALIZE");
 
 	if (dbus_error_is_set(&err)) {
-		SLOG(LOG_ERROR, get_tag(), "[IN ERROR] tts initialize : get arguments error (%s)", err.message);
+		SLOG(LOG_ERROR, tts_tag(), "[IN ERROR] tts initialize : get arguments error (%s)", err.message);
 		dbus_error_free(&err);
 		ret = TTSD_ERROR_OPERATION_FAILED;
 	} else {
 
-		SECURE_SLOG(LOG_DEBUG, get_tag(), "[IN] tts initialize : pid(%d), uid(%d)", pid , uid);
+		SECURE_SLOG(LOG_DEBUG, tts_tag(), "[IN] tts initialize : pid(%d), uid(%d)", pid , uid);
 		ret =  ttsd_server_initialize(pid, uid, &credential_needed);
 	}
 
@@ -73,7 +73,7 @@ int ttsd_dbus_server_initialize(DBusConnection* conn, DBusMessage* msg)
 	reply = dbus_message_new_method_return(msg);
 
 	int temp = (int)credential_needed;
-	SLOG(LOG_DEBUG, get_tag(), "[OUT] tts initialize : result(%d), credential_needed(%d)", ret, (int)credential_needed);
+	SLOG(LOG_DEBUG, tts_tag(), "[OUT] tts initialize : result(%d), credential_needed(%d)", ret, (int)credential_needed);
 	if (NULL != reply) {
 		dbus_message_append_args(reply,
 			DBUS_TYPE_INT32, &ret,
@@ -81,19 +81,19 @@ int ttsd_dbus_server_initialize(DBusConnection* conn, DBusMessage* msg)
 			DBUS_TYPE_INVALID);
 
 		if (0 == ret) {
-			SLOG(LOG_DEBUG, get_tag(), "[OUT] tts initialize : result(%d), credential_needed(%d)", ret, credential_needed);
+			SLOG(LOG_DEBUG, tts_tag(), "[OUT] tts initialize : result(%d), credential_needed(%d)", ret, credential_needed);
 		} else {
-			SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts initialize : result(%d)", ret);
+			SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] tts initialize : result(%d)", ret);
 		}
 
 		if (!dbus_connection_send(conn, reply, NULL)) {
-			SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts initialize : Out Of Memory!");
+			SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] tts initialize : Out Of Memory!");
 		}
 
 		dbus_connection_flush(conn);
 		dbus_message_unref(reply);
 	} else {
-		SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts initialize : Fail to create reply message!!");
+		SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] tts initialize : Fail to create reply message!!");
 	}
 
 	return 0;
@@ -109,14 +109,14 @@ int ttsd_dbus_server_finalize(DBusConnection* conn, DBusMessage* msg)
 
 	dbus_message_get_args(msg, &err, DBUS_TYPE_INT32, &uid, DBUS_TYPE_INVALID);
 
-	SLOG(LOG_DEBUG, get_tag(), ">>>>> TTS FINALIZE");
+	SLOG(LOG_DEBUG, tts_tag(), ">>>>> TTS FINALIZE");
 
 	if (dbus_error_is_set(&err)) {
-		SLOG(LOG_ERROR, get_tag(), "[IN ERROR] tts finalize : get arguments error (%s)", err.message);
+		SLOG(LOG_ERROR, tts_tag(), "[IN ERROR] tts finalize : get arguments error (%s)", err.message);
 		dbus_error_free(&err);
 		ret = TTSD_ERROR_OPERATION_FAILED;
 	} else {
-		SECURE_SLOG(LOG_DEBUG, get_tag(), "[IN] tts finalize : uid(%d)", uid);
+		SECURE_SLOG(LOG_DEBUG, tts_tag(), "[IN] tts finalize : uid(%d)", uid);
 		ret =  ttsd_server_finalize(uid);
 	}
 
@@ -127,19 +127,19 @@ int ttsd_dbus_server_finalize(DBusConnection* conn, DBusMessage* msg)
 		dbus_message_append_args(reply, DBUS_TYPE_INT32, &ret, DBUS_TYPE_INVALID);
 
 		if (0 == ret) {
-			SLOG(LOG_DEBUG, get_tag(), "[OUT] tts finalize : result(%d)", ret);
+			SLOG(LOG_DEBUG, tts_tag(), "[OUT] tts finalize : result(%d)", ret);
 		} else {
-			SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts finalize : result(%d)", ret);
+			SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] tts finalize : result(%d)", ret);
 		}
 
 		if (!dbus_connection_send(conn, reply, NULL)) {
-			SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts finalize : Out Of Memory!");
+			SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] tts finalize : Out Of Memory!");
 		}
 
 		dbus_connection_flush(conn);
 		dbus_message_unref(reply);
 	} else {
-		SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts finalize : Fail to create reply message!!");
+		SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] tts finalize : Fail to create reply message!!");
 	}
 
 	return 0;
@@ -156,14 +156,14 @@ int ttsd_dbus_server_get_support_voices(DBusConnection* conn, DBusMessage* msg)
 
 	dbus_message_get_args(msg, &err, DBUS_TYPE_INT32, &uid, DBUS_TYPE_INVALID);
 
-	SLOG(LOG_DEBUG, get_tag(), ">>>>> TTS GET VOICES");
+	SLOG(LOG_DEBUG, tts_tag(), ">>>>> TTS GET VOICES");
 
 	if (dbus_error_is_set(&err)) {
-		SLOG(LOG_ERROR, get_tag(), "[IN ERROR] tts get supported voices : get arguments error (%s)", err.message);
+		SLOG(LOG_ERROR, tts_tag(), "[IN ERROR] tts get supported voices : get arguments error (%s)", err.message);
 		dbus_error_free(&err);
 		ret = TTSD_ERROR_OPERATION_FAILED;
 	} else {
-		SECURE_SLOG(LOG_DEBUG, get_tag(), "[IN] get supported voices : uid(%d)", uid);
+		SECURE_SLOG(LOG_DEBUG, tts_tag(), "[IN] get supported voices : uid(%d)", uid);
 		ret = ttsd_server_get_support_voices(uid, &voice_list);
 	}
 
@@ -182,7 +182,7 @@ int ttsd_dbus_server_get_support_voices(DBusConnection* conn, DBusMessage* msg)
 			int size = g_list_length(voice_list);
 
 			if (!dbus_message_iter_append_basic(&args, DBUS_TYPE_INT32, &(size))) {
-				SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts supported voices : Fail to append type");
+				SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] tts supported voices : Fail to append type");
 				ret = TTSD_ERROR_OPERATION_FAILED;
 			} else {
 
@@ -209,19 +209,19 @@ int ttsd_dbus_server_get_support_voices(DBusConnection* conn, DBusMessage* msg)
 					iter = g_list_first(voice_list);
 				}
 			}
-			SLOG(LOG_DEBUG, get_tag(), "[OUT] tts supported voices : result(%d)", ret);
+			SLOG(LOG_DEBUG, tts_tag(), "[OUT] tts supported voices : result(%d)", ret);
 		} else {
-			SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts supported voices : result(%d)", ret);
+			SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] tts supported voices : result(%d)", ret);
 		}
 
 		if (!dbus_connection_send(conn, reply, NULL)) {
-			SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] error : Out Of Memory!");
+			SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] error : Out Of Memory!");
 		}
 
 		dbus_connection_flush(conn);
 		dbus_message_unref(reply);
 	} else {
-		SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts supported voices : Fail to create reply message!!");
+		SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] tts supported voices : Fail to create reply message!!");
 	}
 
 	return 0;
@@ -239,14 +239,14 @@ int ttsd_dbus_server_get_current_voice(DBusConnection* conn, DBusMessage* msg)
 
 	dbus_message_get_args(msg, &err, DBUS_TYPE_INT32, &uid, DBUS_TYPE_INVALID);
 
-	SLOG(LOG_DEBUG, get_tag(), ">>>>> TTS GET DEFAULT VOICE");
+	SLOG(LOG_DEBUG, tts_tag(), ">>>>> TTS GET DEFAULT VOICE");
 
 	if (dbus_error_is_set(&err)) {
-		SLOG(LOG_ERROR, get_tag(), "[IN ERROR] tts get default voice : Get arguments error (%s)", err.message);
+		SLOG(LOG_ERROR, tts_tag(), "[IN ERROR] tts get default voice : Get arguments error (%s)", err.message);
 		dbus_error_free(&err);
 		ret = TTSD_ERROR_OPERATION_FAILED;
 	} else {
-		SECURE_SLOG(LOG_DEBUG, get_tag(), "[IN] tts get default voice : uid(%d)", uid);
+		SECURE_SLOG(LOG_DEBUG, tts_tag(), "[IN] tts get default voice : uid(%d)", uid);
 		ret = ttsd_server_get_current_voice(uid, &lang, &voice_type);
 	}
 
@@ -261,22 +261,22 @@ int ttsd_dbus_server_get_current_voice(DBusConnection* conn, DBusMessage* msg)
 				DBUS_TYPE_STRING, &lang,
 				DBUS_TYPE_INT32, &voice_type,
 				DBUS_TYPE_INVALID);
-			SECURE_SLOG(LOG_DEBUG, get_tag(), "[OUT] tts default voice : lang(%s), vctype(%d)", lang, voice_type);
+			SECURE_SLOG(LOG_DEBUG, tts_tag(), "[OUT] tts default voice : lang(%s), vctype(%d)", lang, voice_type);
 		} else {
 			dbus_message_append_args(reply,
 				DBUS_TYPE_INT32, &ret,
 				DBUS_TYPE_INVALID);
-			SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts default voice : result(%d)", ret); 
+			SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] tts default voice : result(%d)", ret); 
 		}
 
 		if (!dbus_connection_send(conn, reply, NULL)) {
-			SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts default voice : Out Of Memory!");
+			SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] tts default voice : Out Of Memory!");
 		}
 
 		dbus_connection_flush(conn);
 		dbus_message_unref(reply);
 	} else {
-		SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts default voice : Fail to create reply message!!");
+		SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] tts default voice : Fail to create reply message!!");
 	}
 
 	if (NULL != lang)	free(lang);
@@ -302,16 +302,16 @@ int ttsd_dbus_server_add_text(DBusConnection* conn, DBusMessage* msg)
 		DBUS_TYPE_STRING, &credential,
 		DBUS_TYPE_INVALID);
 
-	SLOG(LOG_DEBUG, get_tag(), ">>>>> TTS ADD TEXT");
+	SLOG(LOG_DEBUG, tts_tag(), ">>>>> TTS ADD TEXT");
 
 	if (dbus_error_is_set(&err)) {
-		SLOG(LOG_ERROR, get_tag(), "[IN ERROR] tts add text : Get arguments error (%s)", err.message);
+		SLOG(LOG_ERROR, tts_tag(), "[IN ERROR] tts add text : Get arguments error (%s)", err.message);
 		dbus_error_free(&err);
 		ret = TTSD_ERROR_OPERATION_FAILED;
 	} else {
 		
-		SECURE_SLOG(LOG_DEBUG, get_tag(), "[IN] tts add text : uid(%d), text(%s), lang(%s), type(%d), speed(%d), uttid(%d), credential(%s)", 
-			uid, text, lang, voicetype, speed, uttid, credential); 
+		SECURE_SLOG(LOG_DEBUG, tts_tag(), "[IN] tts add text : uid(%d), text(%s), lang(%s), type(%d), speed(%d), uttid(%d), credential(%s)", 
+			uid, (NULL == text) ? "NULL" : text, (NULL == lang) ? "NULL" : lang, voicetype, speed, uttid, (NULL == credential) ? "NULL" : credential); 
 		ret =  ttsd_server_add_queue(uid, text, lang, voicetype, speed, uttid, credential);
 	}
 
@@ -322,23 +322,23 @@ int ttsd_dbus_server_add_text(DBusConnection* conn, DBusMessage* msg)
 		dbus_message_append_args(reply, DBUS_TYPE_INT32, &ret, DBUS_TYPE_INVALID);
 
 		if (0 == ret) {
-			SLOG(LOG_DEBUG, get_tag(), "[OUT] tts add text : result(%d)", ret);
+			SLOG(LOG_DEBUG, tts_tag(), "[OUT] tts add text : result(%d)", ret);
 		} else {
-			SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts add text : result(%d)", ret);
+			SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] tts add text : result(%d)", ret);
 		}
 
 		if (!dbus_connection_send(conn, reply, NULL)) {
-			SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts add text : Out Of Memory!");
+			SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] tts add text : Out Of Memory!");
 		}
 
 		dbus_connection_flush(conn);
 		dbus_message_unref(reply);
 	} else {
-		SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts add text : Fail to create reply message!!");
+		SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] tts add text : Fail to create reply message!!");
 	}
 
-	SLOG(LOG_DEBUG, get_tag(), "<<<<<");
-	SLOG(LOG_DEBUG, get_tag(), "  ");
+	SLOG(LOG_DEBUG, tts_tag(), "<<<<<");
+	SLOG(LOG_DEBUG, tts_tag(), "  ");
 
 	return 0;
 }
@@ -357,14 +357,14 @@ int ttsd_dbus_server_play(DBusConnection* conn, DBusMessage* msg)
 		DBUS_TYPE_STRING, &credential,
 		DBUS_TYPE_INVALID);
 
-	SLOG(LOG_DEBUG, get_tag(), ">>>>> TTS PLAY");
+	SLOG(LOG_DEBUG, tts_tag(), ">>>>> TTS PLAY");
 
 	if (dbus_error_is_set(&err)) {
-		SLOG(LOG_ERROR, get_tag(), "[IN ERROR] tts play : Get arguments error (%s)", err.message);
+		SLOG(LOG_ERROR, tts_tag(), "[IN ERROR] tts play : Get arguments error (%s)", err.message);
 		dbus_error_free(&err);
 		ret = TTSD_ERROR_OPERATION_FAILED;
 	} else {
-		SECURE_SLOG(LOG_DEBUG, get_tag(), "[IN] tts play : uid(%d), credential(%s)", uid, credential);
+		SECURE_SLOG(LOG_DEBUG, tts_tag(), "[IN] tts play : uid(%d), credential(%s)", uid, (NULL == credential) ? "NULL" : credential);
 		ret =  ttsd_server_play(uid, credential);
 	}
 
@@ -375,23 +375,23 @@ int ttsd_dbus_server_play(DBusConnection* conn, DBusMessage* msg)
 		dbus_message_append_args(reply, DBUS_TYPE_INT32, &ret, DBUS_TYPE_INVALID);
 
 		if (0 == ret) {
-			SLOG(LOG_DEBUG, get_tag(), "[OUT] tts play : result(%d)", ret);
+			SLOG(LOG_DEBUG, tts_tag(), "[OUT] tts play : result(%d)", ret);
 		} else {
-			SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts play : result(%d)", ret);
+			SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] tts play : result(%d)", ret);
 		}
 
 		if (!dbus_connection_send(conn, reply, NULL)) {
-			SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts play : Out Of Memory!");
+			SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] tts play : Out Of Memory!");
 		}
 
 		dbus_connection_flush(conn);
 		dbus_message_unref(reply);
 	} else {
-		SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts play : Fail to create reply message!!");
+		SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] tts play : Fail to create reply message!!");
 	}
 
-	SLOG(LOG_DEBUG, get_tag(), "<<<<<");
-	SLOG(LOG_DEBUG, get_tag(), "  ");
+	SLOG(LOG_DEBUG, tts_tag(), "<<<<<");
+	SLOG(LOG_DEBUG, tts_tag(), "  ");
 
 	return 0;
 }
@@ -407,14 +407,14 @@ int ttsd_dbus_server_stop(DBusConnection* conn, DBusMessage* msg)
 		DBUS_TYPE_INT32, &uid, 
 		DBUS_TYPE_INVALID);
 
-	SLOG(LOG_DEBUG, get_tag(), ">>>>> TTS STOP");
+	SLOG(LOG_DEBUG, tts_tag(), ">>>>> TTS STOP");
 
 	if (dbus_error_is_set(&err)) {
-		SLOG(LOG_ERROR, get_tag(), "[IN ERROR] tts stop : Get arguments error (%s)", err.message);
+		SLOG(LOG_ERROR, tts_tag(), "[IN ERROR] tts stop : Get arguments error (%s)", err.message);
 		dbus_error_free(&err);
 		ret = TTSD_ERROR_OPERATION_FAILED;
 	} else {
-		SECURE_SLOG(LOG_DEBUG, get_tag(), "[IN] tts stop : uid(%d)", uid);
+		SECURE_SLOG(LOG_DEBUG, tts_tag(), "[IN] tts stop : uid(%d)", uid);
 		ret = ttsd_server_stop(uid);
 	}
 
@@ -427,23 +427,23 @@ int ttsd_dbus_server_stop(DBusConnection* conn, DBusMessage* msg)
 			DBUS_TYPE_INVALID);
 
 		if (0 == ret) {
-			SLOG(LOG_DEBUG, get_tag(), "[OUT] tts stop : result(%d)", ret);
+			SLOG(LOG_DEBUG, tts_tag(), "[OUT] tts stop : result(%d)", ret);
 		} else {
-			SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts stop : result(%d)", ret);
+			SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] tts stop : result(%d)", ret);
 		}
 
 		if (!dbus_connection_send(conn, reply, NULL)) {
-			SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts stop : Out Of Memory!");
+			SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] tts stop : Out Of Memory!");
 		}
 
 		dbus_connection_flush(conn);
 		dbus_message_unref(reply);
 	} else {
-		SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts stop : Fail to create reply message!!");
+		SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] tts stop : Fail to create reply message!!");
 	}
 
-	SLOG(LOG_DEBUG, get_tag(), "<<<<<");
-	SLOG(LOG_DEBUG, get_tag(), "  ");
+	SLOG(LOG_DEBUG, tts_tag(), "<<<<<");
+	SLOG(LOG_DEBUG, tts_tag(), "  ");
 
 	return 0;
 }
@@ -460,14 +460,14 @@ int ttsd_dbus_server_pause(DBusConnection* conn, DBusMessage* msg)
 		DBUS_TYPE_INT32, &uid, 
 		DBUS_TYPE_INVALID);
 
-	SLOG(LOG_DEBUG, get_tag(), ">>>>> TTS PAUSE");
+	SLOG(LOG_DEBUG, tts_tag(), ">>>>> TTS PAUSE");
 
 	if (dbus_error_is_set(&err)) {
-		SLOG(LOG_ERROR, get_tag(), "[IN ERROR] tts pause : Get arguments error (%s)", err.message);
+		SLOG(LOG_ERROR, tts_tag(), "[IN ERROR] tts pause : Get arguments error (%s)", err.message);
 		dbus_error_free(&err);
 		ret = TTSD_ERROR_OPERATION_FAILED;
 	} else {
-		SECURE_SLOG(LOG_DEBUG, get_tag(), "[IN] tts pause : uid(%d)", uid);
+		SECURE_SLOG(LOG_DEBUG, tts_tag(), "[IN] tts pause : uid(%d)", uid);
 		ret = ttsd_server_pause(uid, &uttid);
 	}
 
@@ -480,23 +480,23 @@ int ttsd_dbus_server_pause(DBusConnection* conn, DBusMessage* msg)
 			DBUS_TYPE_INVALID);
 
 		if (0 == ret) {
-			SLOG(LOG_DEBUG, get_tag(), "[OUT] tts pause : result(%d)", ret);
+			SLOG(LOG_DEBUG, tts_tag(), "[OUT] tts pause : result(%d)", ret);
 		} else {
-			SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts pause : result(%d)", ret);
+			SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] tts pause : result(%d)", ret);
 		}
 
 		if (!dbus_connection_send(conn, reply, NULL)) {
-			SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts pause : Out Of Memory!");
+			SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] tts pause : Out Of Memory!");
 		}
 
 		dbus_connection_flush(conn);
 		dbus_message_unref(reply);
 	} else {
-		SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts pause : Fail to create reply message!!");
+		SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] tts pause : Fail to create reply message!!");
 	}
 
-	SLOG(LOG_DEBUG, get_tag(), "<<<<<");
-	SLOG(LOG_DEBUG, get_tag(), "  ");
+	SLOG(LOG_DEBUG, tts_tag(), "<<<<<");
+	SLOG(LOG_DEBUG, tts_tag(), "  ");
 
 	return 0;
 }
@@ -516,14 +516,14 @@ int ttsd_dbus_server_set_private_data(DBusConnection* conn, DBusMessage* msg)
 		DBUS_TYPE_STRING, &data,
 		DBUS_TYPE_INVALID);
 
-	SLOG(LOG_DEBUG, get_tag(), ">>>>> TTS set private data");
+	SLOG(LOG_DEBUG, tts_tag(), ">>>>> TTS set private data");
 
 	if (dbus_error_is_set(&err)) {
-		SLOG(LOG_ERROR, get_tag(), "[IN ERROR] Fail to get arguments (%s)", err.message);
+		SLOG(LOG_ERROR, tts_tag(), "[IN ERROR] Fail to get arguments (%s)", err.message);
 		dbus_error_free(&err);
 		ret = TTSD_ERROR_OPERATION_FAILED;
 	} else {
-		SLOG(LOG_DEBUG, get_tag(), "[IN] tts set private data(%d)", uid);
+		SLOG(LOG_DEBUG, tts_tag(), "[IN] tts set private data(%d)", uid);
 		ret = ttsd_server_set_private_data(uid, key, data);
 	}
 
@@ -536,23 +536,23 @@ int ttsd_dbus_server_set_private_data(DBusConnection* conn, DBusMessage* msg)
 			DBUS_TYPE_INVALID);
 
 		if (0 == ret) {
-			SLOG(LOG_DEBUG, get_tag(), "[OUT] tts set private data : (%d)", ret);
+			SLOG(LOG_DEBUG, tts_tag(), "[OUT] tts set private data : (%d)", ret);
 		} else {
-			SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts set private data : (%d)", ret);
+			SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] tts set private data : (%d)", ret);
 		}
 
 		if (!dbus_connection_send(conn, reply, NULL)) {
-			SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] Fail to send reply");
+			SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] Fail to send reply");
 		}
 
 		dbus_connection_flush(conn);
 		dbus_message_unref(reply);
 	} else {
-		SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] Fail to create reply message");
+		SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] Fail to create reply message");
 	}
 
-	SLOG(LOG_DEBUG, get_tag(), "<<<<<");
-	SLOG(LOG_DEBUG, get_tag(), "");
+	SLOG(LOG_DEBUG, tts_tag(), "<<<<<");
+	SLOG(LOG_DEBUG, tts_tag(), "");
 
 	return 0;
 }
@@ -571,14 +571,14 @@ int ttsd_dbus_server_get_private_data(DBusConnection* conn, DBusMessage* msg)
 		DBUS_TYPE_STRING, &key,
 		DBUS_TYPE_INVALID);
 
-	SLOG(LOG_DEBUG, get_tag(), ">>>>> TTS get private data");
+	SLOG(LOG_DEBUG, tts_tag(), ">>>>> TTS get private data");
 
 	if (dbus_error_is_set(&err)) {
-		SLOG(LOG_ERROR, get_tag(), "[IN ERROR] Fail to get arguments (%s)", err.message);
+		SLOG(LOG_ERROR, tts_tag(), "[IN ERROR] Fail to get arguments (%s)", err.message);
 		dbus_error_free(&err);
 		ret = TTSD_ERROR_OPERATION_FAILED;
 	} else {
-		SLOG(LOG_DEBUG, get_tag(), "[IN] tts get private data(%d)", uid);
+		SLOG(LOG_DEBUG, tts_tag(), "[IN] tts get private data(%d)", uid);
 		ret = ttsd_server_get_private_data(uid, key, &data);
 	}
 
@@ -592,25 +592,28 @@ int ttsd_dbus_server_get_private_data(DBusConnection* conn, DBusMessage* msg)
 			DBUS_TYPE_INVALID);
 
 		if (0 == ret) {
-			SLOG(LOG_DEBUG, get_tag(), "[OUT] tts get private data : Result(%d), data(%s)", ret, (NULL == data) ? "NULL" : data);
+			SLOG(LOG_DEBUG, tts_tag(), "[OUT] tts get private data : Result(%d), data(%s)", ret, (NULL == data) ? "NULL" : data);
 		} else {
-			SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] tts get private data : (%d)", ret);
+			SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] tts get private data : (%d)", ret);
 		}
 
 		if (!dbus_connection_send(conn, reply, NULL)) {
-			SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] Fail to send reply");
+			SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] Fail to send reply");
 		}
 
 		dbus_connection_flush(conn);
 		dbus_message_unref(reply);
 	} else {
-		SLOG(LOG_ERROR, get_tag(), "[OUT ERROR] Fail to create reply message");
+		SLOG(LOG_ERROR, tts_tag(), "[OUT ERROR] Fail to create reply message");
 	}
 
-	SLOG(LOG_DEBUG, get_tag(), "<<<<<");
-	SLOG(LOG_DEBUG, get_tag(), "");
+	SLOG(LOG_DEBUG, tts_tag(), "<<<<<");
+	SLOG(LOG_DEBUG, tts_tag(), "");
 
-	if (NULL != data)	free(data);
+	if (NULL != data) {
+		free(data);
+		data = NULL;
+	}
 
 	return 0;
 }

@@ -20,6 +20,7 @@ BuildRequires:  pkgconfig(glib-2.0)
 BuildRequires:  pkgconfig(libtzplatform-config)
 BuildRequires:  pkgconfig(libxml-2.0)
 BuildRequires:  pkgconfig(vconf)
+BuildRequires:  pkgconfig(bundle)
 
 
 BuildRequires:  cmake
@@ -93,7 +94,7 @@ mkdir -p %{TZ_SYS_RO_SHARE}/voice/test
 %manifest %{name}.manifest
 %defattr(-,root,root,-)
 %{_libdir}/lib*.so
-%{_bindir}/tts-daemon*
+#%{_bindir}/tts-daemon*
 %{TZ_SYS_RO_SHARE}/voice/tts/1.0/tts-config.xml
 %{TZ_SYS_RO_SHARE}/dbus-1/services/org.tizen.voice*
 %{TZ_SYS_RO_SHARE}/voice/test/tts-test
@@ -114,4 +115,5 @@ mkdir -p %{TZ_SYS_RO_SHARE}/voice/test
 %files engine-devel
 %defattr(-,root,root,-)
 %{_libdir}/pkgconfig/tts-engine.pc
-%{_includedir}/ttsp.h
+%{_includedir}/ttse.h
+#%{_includedir}/ttsp.h

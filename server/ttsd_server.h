@@ -18,6 +18,8 @@
 #include <glib.h>
 #include <Ecore.h>
 
+#include "ttse.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -25,11 +27,19 @@ extern "C" {
 /**
 * Server APIs
 */
-int ttsd_initialize();
+int ttsd_initialize(ttse_request_callback_s *callback);
 
 int ttsd_finalize();
 
 Eina_Bool ttsd_cleanup_client(void *data);
+
+Eina_Bool ttsd_get_daemon_exist();
+
+int ttsd_send_result(ttse_result_event_e event, const void* data, unsigned int data_size, ttse_audio_type_e audio_type, int rate, void* user_data);
+int ttsd_send_error(ttse_error_e error, const char* msg);
+
+int ttsd_set_private_data_set_cb(ttse_private_data_set_cb callback);
+int ttsd_set_private_data_requested_cb(ttse_private_data_requested_cb callback);
 
 /*
 * Server API for client
