@@ -1,3 +1,4 @@
 [D-BUS Service]
 Name=org.tizen.voice.ttssrserver
-Exec=/usr/bin/tts-daemon-sr
+#Exec=/bin/sh -c "buxton2ctl get user db/voice/tts_engine | awk '{print$5}' | xargs -t -i launch_app {}-sr"
+Exec=/bin/sh -c "launch_app org.tizen.tts-engine-default-sr mode sr"
