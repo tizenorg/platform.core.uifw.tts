@@ -1,3 +1,4 @@
 [D-BUS Service]
 Name=org.tizen.voice.ttsnotiserver
-Exec=/usr/bin/tts-daemon-noti
+#Exec=/bin/sh -c "buxton2ctl get user db/voice/tts_engine | awk '{print$5}' | xargs -t -i launch_app {}-noti"
+Exec=/bin/sh -c "launch_app org.tizen.tts-engine-default-noti mode noti"

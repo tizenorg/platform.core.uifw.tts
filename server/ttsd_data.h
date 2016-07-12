@@ -15,7 +15,7 @@
 #ifndef __TTSD_DATA_H_
 #define __TTSD_DATA_H_
 
-#include "ttsp.h"
+#include "ttse.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,8 +41,8 @@ typedef struct {
 	void*		data;
 	unsigned int	data_size;
 
-	ttsp_result_event_e	event;
-	ttsp_audio_type_e	audio_type;
+	ttse_result_event_e	event;
+	ttse_audio_type_e	audio_type;
 	int			rate;
 	int			channels;
 } sound_data_s;
