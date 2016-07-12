@@ -59,6 +59,7 @@ extern "C" {
 
 #define TTS_METHOD_SET_PRIVATE_DATA	"tts_method_set_private_data"
 #define TTS_METHOD_GET_PRIVATE_DATA	"tts_method_get_private_data"
+#define TTS_METHOD_SET_CREDENTIAL	"tts_method_set_credential"
 
 #define TTSD_METHOD_HELLO		"ttsd_method_hello"
 #define TTSD_METHOD_UTTERANCE_STARTED	"ttsd_method_utterance_started"
@@ -79,8 +80,9 @@ extern "C" {
 #define TTS_DEFAULT_ENGINE_INFO		tzplatform_mkpath(TZ_SYS_RO_SHARE, "/voice/tts/1.0/engine-info")
 #define TTS_DEFAULT_ENGINE_SETTING	tzplatform_mkpath(TZ_SYS_RO_SHARE, "/voice/tts/1.0/engine-setting")
 
-#define TTS_DOWNLOAD_BASE		tzplatform_mkpath(TZ_USER_HOME, "/share/.voice/tts")
-#define TTS_DOWNLOAD_ENGINE_INFO	tzplatform_mkpath(TZ_USER_HOME, "/share/.voice/tts/engine-info")
+#define TTS_HOME			tzplatform_mkpath(TZ_USER_HOME, "/share/.voice/tts")
+#define TTS_DOWNLOAD_BASE		tzplatform_mkpath(TZ_USER_HOME, "/share/.voice/tts/1.0")
+#define TTS_DOWNLOAD_ENGINE_INFO	tzplatform_mkpath(TZ_USER_HOME, "share/.voice/tts/1.0/engine-info")
 
 #define TTS_BASE_LANGUAGE		"en_US"
 

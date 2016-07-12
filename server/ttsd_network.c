@@ -35,11 +35,11 @@ bool ttsd_network_is_connected()
 	vconf_get_int(VCONFKEY_NETWORK_STATUS, &network_status);
 
 	if (network_status == VCONFKEY_NETWORK_OFF) {
-		SLOG(LOG_WARN, get_tag(), "[Network] Current network connection is OFF.");
+		SLOG(LOG_WARN, tts_tag(), "[Network] Current network connection is OFF.");
 		return false;
 	}
 
-	SLOG(LOG_DEBUG, get_tag(), "[Network] Network status is %d", network_status);
+	SLOG(LOG_DEBUG, tts_tag(), "[Network] Network status is %d", network_status);
 
 	return true;
 }

@@ -426,6 +426,10 @@ int tts_set_credential(tts_h tts, const char* credential)
 		return TTS_ERROR_INVALID_STATE;
 	}
 
+	if (NULL != client->credential) {
+		free(client->credential);
+		client->credential = NULL;
+	}
 	client->credential = strdup(credential);
 
 	SLOG(LOG_DEBUG, TAG_TTSC, "=====");
@@ -833,6 +837,8 @@ int tts_get_error_message(tts_h tts, char** err_msg)
 
 int tts_add_text(tts_h tts, const char* text, const char* language, int voice_type, int speed, int* utt_id)
 {
+	SLOG(LOG_DEBUG, TAG_TTSC, "[DEBUG] Add text: text(%s), language(%s), type(%d)", (NULL == text) ? "NULL" : text, (NULL == language) ? "NULL" : language, voice_type);
+
 	if (0 != __tts_get_feature_enabled()) {
 		return TTS_ERROR_NOT_SUPPORTED;
 	}

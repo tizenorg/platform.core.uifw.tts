@@ -41,7 +41,7 @@ static GSList* g_engine_list = NULL;
 
 static GSList* g_config_client_list = NULL;
 
-static tts_config_s* g_config_info;
+static tts_config_s* g_config_info = NULL;
 
 static Ecore_Fd_Handler* g_config_fd_handler_noti = NULL;
 static int g_config_fd_noti;
@@ -760,7 +760,7 @@ int __tts_config_mgr_get_engine_info()
 	/* Copy default info directory to download directory */
 	dp  = opendir(TTS_DEFAULT_ENGINE_INFO);
 	if (NULL == dp) {
-		SLOG(LOG_DEBUG, tts_tag(), "[CONFIG] No downloadable directory : %s", TTS_DEFAULT_ENGINE_INFO);
+		SLOG(LOG_DEBUG, tts_tag(), "[CONFIG] No default directory : %s", TTS_DEFAULT_ENGINE_INFO);
 	} else {
 		do {
 			ret = readdir_r(dp, &entry, &dirp);
@@ -799,7 +799,7 @@ int __tts_config_mgr_get_engine_info()
 	/* Get engine info from default engine directory */
 	dp  = opendir(TTS_DOWNLOAD_ENGINE_INFO);
 	if (NULL == dp) {
-		SLOG(LOG_DEBUG, tts_tag(), "[CONFIG] No downloadable directory : %s", TTS_DEFAULT_ENGINE_INFO);
+		SLOG(LOG_DEBUG, tts_tag(), "[CONFIG] No downloadable directory : %s", TTS_DOWNLOAD_ENGINE_INFO);
 	} else {
 		do {
 			ret = readdir_r(dp, &entry, &dirp);
@@ -916,16 +916,27 @@ static Eina_Bool __tts_config_mgr_engine_config_inotify_event_callback(void* dat
 
 static int __tts_config_mgr_register_engine_config_updated_event(const char* path)
 {
+	if (NULL == path) {
+		SLOG(LOG_ERROR, tts_tag(), "[ERROR] Path is NULL");
+		return -1;
+	}
+
 	/* For engine directory monitoring */
 	tts_engine_inotify_s *ino = (tts_engine_inotify_s *)calloc(1, sizeof(tts_engine_inotify_s));
+	if (NULL == ino) {
+		SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to allocate memory");
+		return -1;
+	}
 
 	ino->dir_fd = inotify_init();
 	if (ino->dir_fd < 0) {
 		SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to init inotify");
+		free(ino);
+		ino = NULL;
+
 		return -1;
 	}
 
-	 /* FIX_ME *//* It doesn't need check engine directory, because daemon will change engine-process */
 	ino->dir_wd = inotify_add_watch(ino->dir_fd, path, IN_CLOSE_WRITE);
 	SLOG(LOG_DEBUG, tts_tag(), "Add inotify watch(%s)", path);
 	if (ino->dir_wd < 0) {
@@ -959,10 +970,10 @@ static int __tts_config_mgr_unregister_engine_config_updated_event()
 	if (0 < g_list_length(g_ino_list)) {
 		GList *iter = NULL;
 		iter = g_list_first(g_ino_list);
-		
+
 		while (NULL != iter) {
 			tts_engine_inotify_s *tmp = iter->data;
-			
+
 			if (NULL != tmp) {
 				ecore_main_fd_handler_del(tmp->dir_fd_handler);
 				inotify_rm_watch(tmp->dir_fd, tmp->dir_wd);
@@ -1024,10 +1035,23 @@ int tts_config_mgr_initialize(int uid)
 		g_config_client_list = g_slist_append(g_config_client_list, temp_client);
 	}
 
+	if (0 != access(TTS_HOME, F_OK)) {
+		if (0 != mkdir(TTS_HOME, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)) {
+			SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to make directory : %s", TTS_HOME);
+			__tts_config_release_client(uid);
+			__tts_config_release_engine();
+			return TTS_CONFIG_ERROR_OPERATION_FAILED;
+		} else {
+			SLOG(LOG_DEBUG, tts_tag(), "Success to make directory : %s", TTS_HOME);
+		}
+	}
+
 	if (0 != access(TTS_CONFIG_BASE, F_OK)) {
 		if (0 != mkdir(TTS_CONFIG_BASE, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)) {
 			SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to make directory : %s", TTS_CONFIG_BASE);
-			return -1;
+			__tts_config_release_client(uid);
+			__tts_config_release_engine();
+			return TTS_CONFIG_ERROR_OPERATION_FAILED;
 		} else {
 			SLOG(LOG_DEBUG, tts_tag(), "Success to make directory : %s", TTS_CONFIG_BASE);
 		}
@@ -1036,7 +1060,9 @@ int tts_config_mgr_initialize(int uid)
 	if (0 != access(TTS_DOWNLOAD_BASE, F_OK)) {
 		if (0 != mkdir(TTS_DOWNLOAD_BASE, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)) {
 			SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to make directory : %s", TTS_DOWNLOAD_BASE);
-			return -1;
+			__tts_config_release_client(uid);
+			__tts_config_release_engine();
+			return TTS_CONFIG_ERROR_OPERATION_FAILED;
 		} else {
 			SLOG(LOG_DEBUG, tts_tag(), "Success to make directory : %s", TTS_DOWNLOAD_BASE);
 		}
@@ -1045,7 +1071,9 @@ int tts_config_mgr_initialize(int uid)
 	if (0 != access(TTS_DOWNLOAD_ENGINE_INFO, F_OK)) {
 		if (0 != mkdir(TTS_DOWNLOAD_ENGINE_INFO, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH)) {
 			SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to make directory : %s", TTS_DOWNLOAD_ENGINE_INFO);
-			return -1;
+			__tts_config_release_client(uid);
+			__tts_config_release_engine();
+			return TTS_CONFIG_ERROR_OPERATION_FAILED;
 		} else {
 			SLOG(LOG_DEBUG, tts_tag(), "Success to make directory : %s", TTS_DOWNLOAD_ENGINE_INFO);
 		}

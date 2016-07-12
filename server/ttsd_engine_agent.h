@@ -22,24 +22,23 @@
 extern "C" {
 #endif
 
-typedef int (*synth_result_callback)(ttsp_result_event_e event, const void* data, unsigned int data_size, 
-				     ttsp_audio_type_e audio_type, int rate, void *user_data);
 
 /*
 * tts Engine Agent Interfaces
 */
 
 /** Init engine agent */
-int ttsd_engine_agent_init(synth_result_callback result_cb);
+int ttsd_engine_agent_init();
 
 /** Release engine agent */
 int ttsd_engine_agent_release();
 
-/** Set current engine */
-int ttsd_engine_agent_initialize_current_engine();
-
 /** load current engine */
 int ttsd_engine_agent_load_current_engine();
+
+/** Set callbacks of the current engine */
+int ttsd_engine_agent_set_private_data_set_cb(ttse_private_data_set_cb callback);
+int ttsd_engine_agent_set_private_data_requested_cb(ttse_private_data_requested_cb callback);
 
 /** Unload current engine */
 int ttsd_engine_agent_unload_current_engine();
@@ -74,7 +73,7 @@ int ttsd_engine_load_voice(const char* lang, int vctype);
 
 int ttsd_engine_unload_voice(const char* lang, int vctype);
 
-int ttsd_engine_start_synthesis(const char* lang, int vctype, const char* text, int speed, const char* credential, void* user_param);
+int ttsd_engine_start_synthesis(const char* lang, int vctype, const char* text, int speed, const char* appid, const char* credential, void* user_param);
 
 int ttsd_engine_cancel_synthesis();
 
