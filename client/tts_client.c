@@ -77,7 +77,14 @@ int tts_client_new(tts_h* tts)
 
 	client->cb_ref_count = 0;
 
+	client->utt_id = 0;
+	client->reason = 0;
+	client->err_msg = NULL;
+
 	client->conn_timer = NULL;
+
+	client->credential = NULL;
+	client->credential_needed = false;
 
 	g_client_list = g_list_append(g_client_list, client);
 
@@ -93,7 +100,7 @@ int tts_client_destroy(tts_h tts)
 	if (tts == NULL) {
 		SLOG(LOG_ERROR, TAG_TTSC, "Input parameter is NULL");
 		return TTS_ERROR_INVALID_PARAMETER;
-	}	
+	}
 
 	GList *iter = NULL;
 	tts_client_s *data = NULL;
@@ -111,8 +118,22 @@ int tts_client_destroy(tts_h tts)
 				while (0 != data->cb_ref_count) {
 					/* wait for release callback function */
 				}
+
+				if (NULL != data->err_msg) {
+					free(data->err_msg);
+					data->err_msg = NULL;
+				}
+
+				if (NULL != data->credential) {
+					free(data->credential);
+					data->credential = NULL;
+				}
+
 				free(data);
 				free(tts);
+
+				data = NULL;
+				tts = NULL;
 
 				SLOG(LOG_DEBUG, TAG_TTSC, "Client destroy");
 				g_list_free(iter);

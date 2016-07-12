@@ -889,8 +889,4 @@ int tts_unset_engine_changed_cb(tts_h tts);
 }
 #endif
 
-/**
-* @}
-*/
-
 #endif	/* __TTS_H__ */
