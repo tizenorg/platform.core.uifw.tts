@@ -1,5 +1,5 @@
 /*
-*  Copyright (c) 2011-2016 Samsung Electronics Co., Ltd All Rights Reserved 
+*  Copyright (c) 2011-2016 Samsung Electronics Co., Ltd All Rights Reserved
 *  Licensed under the Apache License, Version 2.0 (the "License");
 *  you may not use this file except in compliance with the License.
 *  You may obtain a copy of the License at
@@ -15,7 +15,7 @@
 #ifndef __TTSD_DATA_H_
 #define __TTSD_DATA_H_
 
-#include "ttsp.h"
+#include "ttse.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -41,8 +41,8 @@ typedef struct {
 	void*		data;
 	unsigned int	data_size;
 
-	ttsp_result_event_e	event;
-	ttsp_audio_type_e	audio_type;
+	ttse_result_event_e	event;
+	ttse_audio_type_e	audio_type;
 	int			rate;
 	int			channels;
 } sound_data_s;

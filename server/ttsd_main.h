@@ -25,7 +25,7 @@
 #include <dlog.h>
 #include <errno.h>
 
-#include "ttsp.h"
+#include "ttse.h"
 #include "tts_defs.h"
 
 #ifdef __cplusplus
@@ -74,13 +74,39 @@ typedef struct {
 typedef struct {
 	char* language;
 	int type;
-} voice_s;
+}voice_s;
+
+typedef struct {
+	int version;
+
+	ttse_get_info_cb			get_info;
+
+	ttse_initialize_cb			initialize;
+	ttse_deinitialize_cb			deinitialize;
+
+	ttse_foreach_supported_voices_cb	foreach_voices;
+	ttse_is_valid_voice_cb			is_valid_voice;
+	ttse_set_pitch_cb			set_pitch;
+
+	ttse_load_voice_cb			load_voice;
+	ttse_unload_voice_cb			unload_voice;
+
+	ttse_start_synthesis_cb 		start_synth;
+	ttse_cancel_synthesis_cb		cancel_synth;
+
+	ttse_check_app_agreed_cb		check_app_agreed;
+	ttse_need_app_credential_cb		need_app_credential;
+	ttse_private_data_set_cb		private_data_set;
+	ttse_private_data_requested_cb		private_data_requested;
+} tts_engine_callback_s;
+
 
 /* get daemon mode : default, notification or screen reader */
 ttsd_mode_e ttsd_get_mode();
 
 /* Get log tag : default, notification, screen reader */
-const char* get_tag();
+//const char* get_tag();
+const char* tts_tag();
 
 #ifdef __cplusplus
 }

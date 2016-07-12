@@ -60,7 +60,7 @@ int ttsdc_send_hello(int pid, int uid)
 {
 #if 0
 	if (NULL == g_conn_sender) {
-		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] Dbus connection is not available");
+		SLOG(LOG_ERROR, tts_tag(), "[Dbus ERROR] Dbus connection is not available");
 		return -1;
 	}
 
@@ -81,10 +81,10 @@ int ttsdc_send_hello(int pid, int uid)
 		TTSD_METHOD_HELLO);
 
 	if (NULL == msg) {
-		SLOG(LOG_ERROR, get_tag(), "<<<< [Dbus ERROR] Fail to create hello message : uid(%d)", uid);
+		SLOG(LOG_ERROR, tts_tag(), "<<<< [Dbus ERROR] Fail to create hello message : uid(%d)", uid);
 		return -1;
 	} else {
-		SLOG(LOG_DEBUG, get_tag(), "<<<< [Dbus] Send hello message : uid(%d)", uid);
+		SLOG(LOG_DEBUG, tts_tag(), "<<<< [Dbus] Send hello message : uid(%d)", uid);
 	}
 
 	dbus_message_append_args(msg, DBUS_TYPE_INT32, &uid, DBUS_TYPE_INVALID);
@@ -98,7 +98,7 @@ int ttsdc_send_hello(int pid, int uid)
 	result_msg = dbus_connection_send_with_reply_and_block(g_conn_sender, msg, g_waiting_time, &err);
 	dbus_message_unref(msg);
 	if (dbus_error_is_set(&err)) {
-		SLOG(LOG_ERROR, get_tag(), "[ERROR] Send error (%s)", err.message);
+		SLOG(LOG_ERROR, tts_tag(), "[ERROR] Send error (%s)", err.message);
 		dbus_error_free(&err);
 	}
 
@@ -106,14 +106,14 @@ int ttsdc_send_hello(int pid, int uid)
 		dbus_message_get_args(result_msg, &err, DBUS_TYPE_INT32, &result, DBUS_TYPE_INVALID);
 
 		if (dbus_error_is_set(&err)) {
-			SLOG(LOG_ERROR, get_tag(), ">>>> [Dbus] Get arguments error (%s)", err.message);
+			SLOG(LOG_ERROR, tts_tag(), ">>>> [Dbus] Get arguments error (%s)", err.message);
 			dbus_error_free(&err);
 			result = -1;
 		}
 
 		dbus_message_unref(result_msg);
 	} else {
-		SLOG(LOG_DEBUG, get_tag(), ">>>> [Dbus] Result message is NULL. Client is not available");
+		SLOG(LOG_DEBUG, tts_tag(), ">>>> [Dbus] Result message is NULL. Client is not available");
 		result = 0;
 	}
 
@@ -125,7 +125,7 @@ int ttsdc_send_hello(int pid, int uid)
 int ttsdc_send_message(int pid, int uid, int data, const char *method)
 {
 	if (NULL == g_conn_sender) {
-		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] Dbus connection is not available");
+		SLOG(LOG_ERROR, tts_tag(), "[Dbus ERROR] Dbus connection is not available");
 		return -1;
 	}
 
@@ -138,19 +138,19 @@ int ttsdc_send_message(int pid, int uid, int data, const char *method)
 		method);			/* name of the signal */
 
 	if (NULL == msg) {
-		SLOG(LOG_ERROR, get_tag(), "<<<< [Dbus ERROR] Fail to create message : %s", method);
+		SLOG(LOG_ERROR, tts_tag(), "<<<< [Dbus ERROR] Fail to create message : %s", method);
 		return -1;
 	} else {
-		SLOG(LOG_DEBUG, get_tag(), "<<<< [Dbus] Send %s message : uid(%d) data(%d)", method, uid, data);
+		SLOG(LOG_DEBUG, tts_tag(), "<<<< [Dbus] Send %s message : uid(%d) data(%d)", method, uid, data);
 	}
 
 	dbus_message_append_args(msg, DBUS_TYPE_INT32, &uid, DBUS_TYPE_INT32, &data, DBUS_TYPE_INVALID);
 
 	if (1 != dbus_connection_send(g_conn_sender, msg, NULL)) {
-		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] Fail to Send");
+		SLOG(LOG_ERROR, tts_tag(), "[Dbus ERROR] Fail to Send");
 		return -1;
 	} else {
-		SLOG(LOG_DEBUG, get_tag(), "[Dbus] SUCCESS Send");
+		SLOG(LOG_DEBUG, tts_tag(), "[Dbus] SUCCESS Send");
 		dbus_connection_flush(g_conn_sender);
 	}
 
@@ -177,7 +177,7 @@ int ttsdc_send_set_state_message(int pid, int uid, int state)
 int ttsdc_send_error_message(int pid, int uid, int uttid, int reason, char* err_msg)
 {
 	if (NULL == g_conn_sender) {
-		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] Dbus connection is not available");
+		SLOG(LOG_ERROR, tts_tag(), "[Dbus ERROR] Dbus connection is not available");
 		return -1;
 	}
 
@@ -190,7 +190,7 @@ int ttsdc_send_error_message(int pid, int uid, int uttid, int reason, char* err_
 		TTSD_METHOD_ERROR);		/* name of the signal */
 
 	if (NULL == msg) {
-		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] Fail to create error message : uid(%d)", uid);
+		SLOG(LOG_ERROR, tts_tag(), "[Dbus ERROR] Fail to create error message : uid(%d)", uid);
 		return -1;
 	}
 
@@ -204,9 +204,9 @@ int ttsdc_send_error_message(int pid, int uid, int uttid, int reason, char* err_
 	dbus_message_set_no_reply(msg, TRUE);
 
 	if (!dbus_connection_send(g_conn_sender, msg, NULL)) {
-		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] <<<< error message : Out Of Memory !");
+		SLOG(LOG_ERROR, tts_tag(), "[Dbus ERROR] <<<< error message : Out Of Memory !");
 	} else {
-		SLOG(LOG_DEBUG, get_tag(), "<<<< Send error message : uid(%d), reason(%s), uttid(%d), err_msg(%s)",
+		SLOG(LOG_DEBUG, tts_tag(), "<<<< Send error message : uid(%d), reason(%s), uttid(%d), err_msg(%s)",
 			 uid, __ttsd_get_error_code(reason), uttid, (NULL == err_msg) ? "NULL" : err_msg);
 		dbus_connection_flush(g_conn_sender);
 	}
@@ -226,7 +226,7 @@ static Eina_Bool listener_event_callback(void* data, Ecore_Fd_Handler *fd_handle
 	msg = dbus_connection_pop_message(g_conn_listener);
 
 	if (true != dbus_connection_get_is_connected(g_conn_listener)) {
-		SLOG(LOG_ERROR, get_tag(), "[ERROR] Connection is disconnected");
+		SLOG(LOG_ERROR, tts_tag(), "[ERROR] Connection is disconnected");
 		return ECORE_CALLBACK_RENEW;
 	}
 
@@ -289,25 +289,25 @@ int ttsd_dbus_open_connection()
 	/* Create connection for sender */
 	g_conn_sender = dbus_bus_get_private(DBUS_BUS_SESSION, &err);
 	if (dbus_error_is_set(&err)) {
-		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] Fail dbus_bus_get : %s", err.message);
+		SLOG(LOG_ERROR, tts_tag(), "[Dbus ERROR] Fail dbus_bus_get : %s", err.message);
 		dbus_error_free(&err);
 	}
 
 	if (NULL == g_conn_sender) {
-		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] Fail to get dbus connection sender");
+		SLOG(LOG_ERROR, tts_tag(), "[Dbus ERROR] Fail to get dbus connection sender");
 		return -1;
 	}
 
 	/* connect to the bus and check for errors */
 	g_conn_listener = dbus_bus_get_private(DBUS_BUS_SESSION, &err);
 	if (dbus_error_is_set(&err)) {
-		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] Fail dbus_bus_get : %s", err.message);
+		SLOG(LOG_ERROR, tts_tag(), "[Dbus ERROR] Fail dbus_bus_get : %s", err.message);
 		dbus_error_free(&err);
 		return -1;
 	}
 
 	if (NULL == g_conn_listener) {
-		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] Fail to get dbus connection");
+		SLOG(LOG_ERROR, tts_tag(), "[Dbus ERROR] Fail to get dbus connection");
 		return -1;
 	}
 
@@ -340,12 +340,12 @@ int ttsd_dbus_open_connection()
 	/* request our name on the bus and check for errors */
 	ret = dbus_bus_request_name(g_conn_listener, g_service_name, DBUS_NAME_FLAG_REPLACE_EXISTING, &err);
 	if (DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER != ret) {
-		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] Fail to be primary owner");
+		SLOG(LOG_ERROR, tts_tag(), "[Dbus ERROR] Fail to be primary owner");
 		return -1;
 	}
 
 	if (dbus_error_is_set(&err)) {
-		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] Fail to request dbus name : %s", err.message);
+		SLOG(LOG_ERROR, tts_tag(), "[Dbus ERROR] Fail to request dbus name : %s", err.message);
 		dbus_error_free(&err);
 		return -1;
 	}
@@ -359,7 +359,7 @@ int ttsd_dbus_open_connection()
 	dbus_connection_flush(g_conn_listener);
 
 	if (dbus_error_is_set(&err)) {
-		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] dbus_bus_add_match() : %s", err.message);
+		SLOG(LOG_ERROR, tts_tag(), "[Dbus ERROR] dbus_bus_add_match() : %s", err.message);
 		return -1;
 	}
 
@@ -368,7 +368,7 @@ int ttsd_dbus_open_connection()
 
 	g_dbus_fd_handler = ecore_main_fd_handler_add(fd, ECORE_FD_READ, (Ecore_Fd_Cb)listener_event_callback, g_conn_listener, NULL, NULL);
 	if (NULL == g_dbus_fd_handler) {
-		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] Fail to get fd handler");
+		SLOG(LOG_ERROR, tts_tag(), "[Dbus ERROR] Fail to get fd handler");
 		return -1;
 	}
 
@@ -387,7 +387,7 @@ int ttsd_dbus_close_connection()
 
 	dbus_bus_release_name(g_conn_listener, g_service_name, &err);
 	if (dbus_error_is_set(&err)) {
-		SLOG(LOG_ERROR, get_tag(), "[Dbus ERROR] dbus_bus_release_name() : %s", err.message);
+		SLOG(LOG_ERROR, tts_tag(), "[Dbus ERROR] dbus_bus_release_name() : %s", err.message);
 		dbus_error_free(&err);
 	}
 
