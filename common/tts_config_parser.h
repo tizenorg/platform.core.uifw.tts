@@ -41,7 +41,7 @@ typedef struct {
 	char*	setting;
 	GSList*	voices;
 	bool	pitch_support;
-	bool 	need_credential;
+	bool	need_credential;
 } tts_engine_info_s;
 
 typedef struct {
