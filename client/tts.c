@@ -275,6 +275,7 @@ int tts_destroy(tts_h tts)
 
 		client->before_state = client->current_state;
 		client->current_state = TTS_STATE_CREATED;
+		break;
 
 	case TTS_STATE_CREATED:
 		if (NULL != client->conn_timer) {
