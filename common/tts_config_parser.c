@@ -489,7 +489,7 @@ int tts_parser_copy_xml(const char* original, const char* destination)
 		SLOG(LOG_ERROR, tts_tag(), "[ERROR] Fail to change file mode : %d", ret);
 	}
 
-        xmlFreeDoc(doc);
+	xmlFreeDoc(doc);
 	SLOG(LOG_DEBUG, tts_tag(), "[SUCCESS] Copying xml");
 
 	return 0;

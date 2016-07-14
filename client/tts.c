@@ -149,7 +149,7 @@ void _tts_config_engine_changed_cb(const char* engine_id, const char* setting, c
 	if (NULL != engine_id)	SLOG(LOG_DEBUG, TAG_TTSC, "Engine id(%s)", engine_id);
 	if (NULL != setting)	SLOG(LOG_DEBUG, TAG_TTSC, "Engine setting(%s)", setting);
 	if (NULL != language)	SLOG(LOG_DEBUG, TAG_TTSC, "Language(%s)", language);
-	SLOG(LOG_DEBUG, TAG_TTSC, "Voice type(%d), Auto voice(%s), Credential(%s)", voice_type, auto_voice? "on" : "off", need_credential ? "need" : "no need");
+	SLOG(LOG_DEBUG, TAG_TTSC, "Voice type(%d), Auto voice(%s), Credential(%s)", voice_type, auto_voice ? "on" : "off", need_credential ? "need" : "no need");
 
 	/* call callback function */
 	if (NULL != client->engine_changed_cb) {
@@ -405,7 +405,7 @@ int tts_get_mode(tts_h tts, tts_mode_e* mode)
 
 int tts_set_credential(tts_h tts, const char* credential)
 {
-	if(0 != __tts_get_feature_enabled()) {
+	if (0 != __tts_get_feature_enabled()) {
 		return TTS_ERROR_NOT_SUPPORTED;
 	}
 
@@ -802,7 +802,7 @@ int tts_get_speed_range(tts_h tts, int* min, int* normal, int* max)
 
 int tts_get_error_message(tts_h tts, char** err_msg)
 {
-	if(0 != __tts_get_feature_enabled()) {
+	if (0 != __tts_get_feature_enabled()) {
 		return TTS_ERROR_NOT_SUPPORTED;
 	}
 
